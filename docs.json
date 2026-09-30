@@ -1,0 +1,571 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Uzo Labs",
+  "description": "The developer path for BOT Chain. SDKs, templates and infrastructure that take you from zero to shipped.",
+  "colors": {
+    "primary": "#D9A441",
+    "light": "#E8BF6A",
+    "dark": "#B8862E"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://uzolabs.xyz"
+  },
+  "favicon": "/favicon.svg",
+  "appearance": {
+    "default": "dark"
+  },
+  "background": {
+    "color": {
+      "light": "#F5F1EA",
+      "dark": "#0B0A09"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Reggae One"
+    },
+    "body": {
+      "family": "Satoshi",
+      "source": "/fonts/Satoshi-Variable.woff2",
+      "format": "woff2"
+    }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": "dark"
+  },
+  "banner": {
+    "content": "Uzo is in early development and moves fast. Check the [changelog](/changelog) for what's new.",
+    "dismissible": true
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "icon": "github",
+        "href": "https://github.com/uzolabs"
+      },
+      {
+        "label": "npm",
+        "icon": "package",
+        "href": "https://www.npmjs.com/org/uzolabs"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Start building",
+      "href": "https://docs.uzolabs.xyz/get-started/quickstart"
+    }
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "variables": {
+    "mainnet-chain-id": "677",
+    "testnet-chain-id": "968",
+    "mainnet-rpc": "https://rpc.botchain.ai",
+    "testnet-rpc": "https://rpc.bohr.life",
+    "mainnet-explorer": "https://scan.botchain.ai",
+    "testnet-explorer": "https://scan.bohr.life",
+    "faucet-url": "https://faucet.botchain.ai/basic",
+    "sdk-package": "@uzolabs/sdk"
+  },
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/uzolabs"
+        },
+        {
+          "anchor": "BOTScan",
+          "icon": "search",
+          "href": "https://scan.botchain.ai"
+        },
+        {
+          "anchor": "Testnet faucet",
+          "icon": "droplets",
+          "href": "https://faucet.botchain.ai/basic"
+        },
+        {
+          "anchor": "BOT Chain docs",
+          "icon": "external-link",
+          "href": "https://dev-docs.botchain.ai/docs/intro"
+        }
+      ]
+    },
+    "tabs": [
+      {
+        "tab": "Get Started",
+        "icon": "rocket",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "index",
+              "get-started/why-uzo",
+              "get-started/how-it-works"
+            ]
+          },
+          {
+            "group": "Quickstart",
+            "pages": [
+              "get-started/quickstart",
+              "get-started/first-dapp"
+            ]
+          },
+          {
+            "group": "BOT Chain basics",
+            "pages": [
+              "get-started/bot-chain/overview",
+              "get-started/bot-chain/connect-wallet",
+              "get-started/bot-chain/get-testnet-tokens",
+              "get-started/bot-chain/consensus-and-finality",
+              "get-started/bot-chain/gas-and-fees",
+              "get-started/bot-chain/supported-eips",
+              "get-started/bot-chain/known-limitations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Development environment",
+            "pages": [
+              "guides/environment/choose-a-toolchain",
+              "guides/environment/hardhat",
+              "guides/environment/foundry",
+              "guides/environment/remix"
+            ]
+          },
+          {
+            "group": "Deploy and verify",
+            "pages": [
+              "guides/deploy/deploy-with-hardhat",
+              "guides/deploy/deploy-with-foundry",
+              {
+                "group": "Verify contracts",
+                "root": "guides/deploy/verify/overview",
+                "pages": [
+                  "guides/deploy/verify/hardhat",
+                  "guides/deploy/verify/foundry",
+                  "guides/deploy/verify/botscan-ui"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Frontend",
+            "pages": [
+              "guides/frontend/wagmi-setup",
+              "guides/frontend/connect-wallet",
+              "guides/frontend/read-contract-state",
+              "guides/frontend/send-transactions",
+              "guides/frontend/events-without-getlogs"
+            ]
+          },
+          {
+            "group": "DeFi",
+            "pages": [
+              {
+                "group": "Tokens",
+                "pages": [
+                  "guides/defi/tokens/usdt-and-decimals",
+                  "guides/defi/tokens/wrap-bot"
+                ]
+              },
+              {
+                "group": "Swaps",
+                "root": "guides/defi/swaps/overview",
+                "pages": [
+                  "guides/defi/swaps/bdex-v2",
+                  "guides/defi/swaps/bdex-v3",
+                  "guides/defi/swaps/slippage-and-deadlines"
+                ]
+              },
+              {
+                "group": "Liquidity",
+                "pages": [
+                  "guides/defi/liquidity/v2",
+                  "guides/defi/liquidity/v3"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Bridge",
+            "pages": [
+              "guides/bridge/overview",
+              "guides/bridge/bridge-out",
+              "guides/bridge/limits-and-fees",
+              "guides/bridge/tracking-transfers"
+            ]
+          },
+          {
+            "group": "Gasless transactions",
+            "pages": [
+              "guides/gasless/overview",
+              "guides/gasless/meta-transactions",
+              "guides/gasless/run-a-relayer",
+              "guides/gasless/eoa-paymaster"
+            ]
+          },
+          {
+            "group": "AI agents",
+            "pages": [
+              "guides/ai-agents/overview",
+              "guides/ai-agents/agent-vaults",
+              "guides/ai-agents/spending-limits",
+              "guides/ai-agents/tool-calling",
+              "guides/ai-agents/human-approval",
+              "guides/ai-agents/identity-hooks",
+              "guides/ai-agents/security-checklist"
+            ]
+          },
+          {
+            "group": "Data and indexing",
+            "pages": [
+              "guides/data/explorer-api",
+              "guides/data/multicall",
+              "guides/data/indexing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "sdk/overview",
+              "sdk/installation",
+              "sdk/quickstart"
+            ]
+          },
+          {
+            "group": "Modules",
+            "directory": "card",
+            "pages": [
+              {
+                "group": "Chains",
+                "icon": "link",
+                "root": "sdk/chains/overview",
+                "pages": [
+                  "sdk/chains/bot-chain",
+                  "sdk/chains/bot-chain-testnet"
+                ]
+              },
+              {
+                "group": "Contracts",
+                "icon": "file-code",
+                "root": "sdk/contracts/overview",
+                "pages": [
+                  "sdk/contracts/addresses",
+                  "sdk/contracts/abis",
+                  "sdk/contracts/constants"
+                ]
+              },
+              {
+                "group": "Explorer",
+                "icon": "search",
+                "root": "sdk/explorer/overview",
+                "pages": [
+                  "sdk/explorer/get-address-info",
+                  "sdk/explorer/get-contract"
+                ]
+              },
+              {
+                "group": "BDEX",
+                "icon": "arrow-left-right",
+                "root": "sdk/bdex/overview",
+                "pages": [
+                  "sdk/bdex/v2",
+                  "sdk/bdex/v3",
+                  "sdk/bdex/routing-api",
+                  "sdk/bdex/approvals"
+                ]
+              },
+              {
+                "group": "Bridge",
+                "icon": "waypoints",
+                "root": "sdk/bridge/overview",
+                "pages": [
+                  "sdk/bridge/status-and-limits",
+                  "sdk/bridge/build-deposit"
+                ]
+              },
+              {
+                "group": "Paymaster",
+                "icon": "fuel",
+                "root": "sdk/paymaster/overview",
+                "pages": [
+                  "sdk/paymaster/client"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "sdk/guides/wagmi",
+              "sdk/guides/ethers",
+              "sdk/guides/nextjs"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "sdk/reference/errors",
+              "sdk/reference/types",
+              "sdk/reference/changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Templates",
+        "icon": "layout-template",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "templates/overview",
+              "templates/using-templates",
+              "templates/prerequisites"
+            ]
+          },
+          {
+            "group": "Templates",
+            "directory": "card",
+            "pages": [
+              {
+                "group": "Token",
+                "icon": "coins",
+                "root": "templates/token/index",
+                "pages": [
+                  "templates/token/walkthrough",
+                  "templates/token/customize"
+                ]
+              },
+              {
+                "group": "NFT",
+                "icon": "image",
+                "root": "templates/nft/index",
+                "pages": [
+                  "templates/nft/walkthrough",
+                  "templates/nft/customize"
+                ]
+              },
+              {
+                "group": "DEX integration",
+                "icon": "arrow-left-right",
+                "root": "templates/dex-integration/index",
+                "pages": [
+                  "templates/dex-integration/walkthrough",
+                  "templates/dex-integration/customize"
+                ]
+              },
+              {
+                "group": "Bridge integration",
+                "icon": "waypoints",
+                "root": "templates/bridge-integration/index",
+                "pages": [
+                  "templates/bridge-integration/walkthrough",
+                  "templates/bridge-integration/customize"
+                ]
+              },
+              {
+                "group": "Gasless app",
+                "icon": "fuel",
+                "root": "templates/gasless-app/index",
+                "pages": [
+                  "templates/gasless-app/walkthrough",
+                  "templates/gasless-app/customize"
+                ]
+              },
+              {
+                "group": "AI agent",
+                "icon": "bot",
+                "root": "templates/ai-agent/index",
+                "pages": [
+                  "templates/ai-agent/security-model",
+                  "templates/ai-agent/walkthrough",
+                  "templates/ai-agent/customize"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "templates/contributing/add-a-template"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Infrastructure",
+        "icon": "server",
+        "groups": [
+          {
+            "group": "Uzo RPC",
+            "tag": "SOON",
+            "pages": [
+              "infrastructure/rpc/overview",
+              "infrastructure/rpc/endpoints",
+              "infrastructure/rpc/rate-limits",
+              "infrastructure/rpc/logs-and-websockets"
+            ]
+          },
+          {
+            "group": "Uzo Index",
+            "tag": "SOON",
+            "pages": [
+              "infrastructure/index/overview",
+              "infrastructure/index/ponder-starter"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "infrastructure/status"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Hackathons",
+        "icon": "trophy",
+        "groups": [
+          {
+            "group": "Hackathon kit",
+            "pages": [
+              "hackathons/overview",
+              "hackathons/day-one-checklist",
+              "hackathons/tracks",
+              "hackathons/submission",
+              "hackathons/faq"
+            ]
+          },
+          {
+            "group": "Workshops",
+            "pages": [
+              "hackathons/workshops/setup",
+              "hackathons/workshops/first-contract",
+              "hackathons/workshops/ai-agent"
+            ]
+          },
+          {
+            "group": "For organizers",
+            "pages": [
+              "hackathons/organizers/run-a-hackathon",
+              "hackathons/organizers/judging-rubric",
+              "hackathons/organizers/verify-submissions",
+              "hackathons/organizers/faucet-plan"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "icon": "library",
+        "groups": [
+          {
+            "group": "Network",
+            "pages": [
+              "reference/networks",
+              "reference/contract-addresses",
+              {
+                "group": "JSON-RPC",
+                "root": "reference/json-rpc/overview",
+                "pages": [
+                  "reference/json-rpc/differences-from-geth",
+                  "reference/json-rpc/blob-api"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "APIs",
+            "pages": [
+              "reference/explorer-api",
+              "reference/bdex-api"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "reference/troubleshooting",
+              "reference/faq",
+              "reference/glossary"
+            ]
+          },
+          {
+            "group": "Project",
+            "pages": [
+              "changelog",
+              "reference/contributing",
+              "reference/security",
+              "reference/disclaimer"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/uzolabs",
+      "github": "https://github.com/uzolabs",
+      "website": "https://uzolabs.xyz"
+    },
+    "links": [
+      {
+        "header": "Build",
+        "items": [
+          { "label": "Quickstart", "href": "https://docs.uzolabs.xyz/get-started/quickstart" },
+          { "label": "SDK", "href": "https://docs.uzolabs.xyz/sdk/overview" },
+          { "label": "Templates", "href": "https://docs.uzolabs.xyz/templates/overview" }
+        ]
+      },
+      {
+        "header": "BOT Chain",
+        "items": [
+          { "label": "BOTScan", "href": "https://scan.botchain.ai" },
+          { "label": "Testnet faucet", "href": "https://faucet.botchain.ai/basic" },
+          { "label": "Official docs", "href": "https://dev-docs.botchain.ai/docs/intro" }
+        ]
+      },
+      {
+        "header": "Uzo Labs",
+        "items": [
+          { "label": "Website", "href": "https://uzolabs.xyz" },
+          { "label": "GitHub", "href": "https://github.com/uzolabs" },
+          { "label": "Disclaimer", "href": "https://docs.uzolabs.xyz/reference/disclaimer" }
+        ]
+      }
+    ]
+  },
+  "errors": {
+    "404": {
+      "redirect": false,
+      "title": "Page not found",
+      "description": "This path doesn't exist. Head back to the [quickstart](/get-started/quickstart)."
+    }
+  }
+}
