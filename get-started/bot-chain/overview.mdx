@@ -1,8 +1,67 @@
 ---
 title: "What is BOT Chain"
 sidebarTitle: "Overview"
-description: "Learn what BOT Chain is, how EVM compatible it is, and what carries over from Ethereum development."
+description: "BOT Chain is an EVM-compatible layer 1. Learn what carries over from Ethereum and what works differently."
 icon: "blocks"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+BOT Chain is an EVM-compatible layer 1 blockchain, so you can build on it with Solidity and the Ethereum tools you already know. This page explains what carries over from Ethereum and what doesn't.
+
+## Why it matters
+
+Most of what you learn from Ethereum tutorials works on BOT Chain without changes. Knowing the few differences up front saves you from the errors that catch most newcomers.
+
+## How it works
+
+BOT Chain nodes run a client based on Geth, the Go Ethereum client. Validators take turns producing blocks using Parlia, a consensus engine that comes from BNB Smart Chain. Blocks arrive about every 0.75 seconds. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality).
+
+The native token is **BOT**. It pays for gas, just like ETH on Ethereum. On testnet the token is **tBOT**, which you get free from the [faucet](https://faucet.botchain.ai/basic) and which has no value.
+
+BOT Chain also runs its own apps that you can build on:
+
+- **BDEX**, a decentralized exchange with V2 and V3 pools (forks of Uniswap V2 and V3). See [BOT Chain's DEX docs](https://dev-docs.botchain.ai/docs/DEX).
+- **Bridge**, which moves USDT between BOT Chain and Ethereum, BNB Smart Chain and Tron. See [BOT Chain's bridge docs](https://dev-docs.botchain.ai/docs/Bridge).
+- **BOTScan**, a block explorer built on Blockscout, at [scan.botchain.ai](https://scan.botchain.ai) and [scan.bohr.life](https://scan.bohr.life) for testnet.
+
+For the project's own description, roadmap and validator details, see [BOT Chain's documentation](https://dev-docs.botchain.ai/docs/intro).
+
+## What carries over from Ethereum
+
+| Area | Works the same |
+| --- | --- |
+| Smart contracts | Solidity contracts compile and deploy as usual. Target the Cancun EVM. |
+| Accounts | Same address format, same keys. Your MetaMask address works on BOT Chain. |
+| Tools | Foundry, Hardhat, Remix, viem, ethers.js, web3.js and wagmi all work. |
+| JSON-RPC | The standard `eth_` methods work. See [JSON-RPC](/reference/json-rpc/overview). |
+| Token standards | ERC-20, ERC-721 and ERC-1155 work unchanged. |
+| Transactions | Legacy, EIP-1559 (type 2), blob (type 3) and EIP-7702 (type 4) transactions are supported. See [Supported EIPs](/get-started/bot-chain/supported-eips). |
+
+## What's different
+
+| Area | On BOT Chain |
+| --- | --- |
+| Chain IDs | `{{mainnet-chain-id}}` for mainnet and `{{testnet-chain-id}}` for testnet. |
+| Gas token | BOT, not ETH. |
+| Block time | About 0.75 seconds, compared with 12 seconds on Ethereum. |
+| Fees | The base fee is zero, so you pay only the gas price. See [Gas and fees](/get-started/bot-chain/gas-and-fees). |
+| Latest EVM version | Cancun. Contracts compiled for Osaka can fail. |
+| USDT | Has **6 decimals** on BOT Chain. See [Contract addresses](/reference/contract-addresses). |
+| Library support | BOT Chain is not in viem's built-in chain list. You define it yourself. |
+| Event queries | BOT Chain's docs say `eth_getLogs` is disabled on the public RPC, and there's no public WebSocket. See [Known limitations](/get-started/bot-chain/known-limitations). |
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Connect a wallet" icon="wallet" href="/get-started/bot-chain/connect-wallet">
+    Add both networks to MetaMask.
+  </Card>
+  <Card title="Get testnet tokens" icon="droplets" href="/get-started/bot-chain/get-testnet-tokens">
+    Claim free tBOT.
+  </Card>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    Gaps and their workarounds.
+  </Card>
+  <Card title="Networks" icon="network" href="/reference/networks">
+    Chain IDs, RPCs and explorers.
+  </Card>
+</CardGroup>

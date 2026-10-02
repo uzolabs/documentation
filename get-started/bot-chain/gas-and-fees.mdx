@@ -1,7 +1,109 @@
 ---
 title: "Gas and fees"
-description: "How gas works on BOT Chain, how to read the current gas price and how to estimate what a transaction costs."
+description: "How gas works on BOT Chain, how to read the current gas price, and how to estimate what a transaction will cost."
 icon: "fuel"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Read the current gas price and estimate what a transaction will cost before you send it. Fees on BOT Chain are paid in BOT (tBOT on testnet).
+
+## Why it matters
+
+Every transaction needs enough BOT to cover its fee, or it fails with "insufficient funds". Knowing how fees are calculated also helps you set sensible values when a library doesn't pick them for you.
+
+## How it works
+
+Gas works the same way as on Ethereum:
+
+- **Gas used** measures how much work a transaction does. A plain BOT transfer uses 21,000 gas. Deploying or calling a contract uses more.
+- **Gas price** is how much BOT you pay per unit of gas, usually quoted in gwei (one billionth of a BOT).
+- **Fee** = gas used × gas price.
+
+BOT Chain supports EIP-1559 transactions, so blocks carry a base fee. On BOT Chain the base fee is **zero**, so the whole fee is the priority fee (the tip) you set. Fee data from both networks on 2026-10-01:
+
+| Value | Mainnet and testnet, 2026-10-01 |
+| --- | --- |
+| `baseFeePerGas` in each block | `0` |
+| `eth_gasPrice` | 20 gwei |
+| `eth_maxPriorityFeePerGas` | 20 gwei |
+| Block gas limit | 35,000,000 |
+| Blocks used | Under 1% of the gas limit |
+
+These values can change. Always read them from the network rather than hard-coding them.
+
+## Why fees are low
+
+- Blocks are mostly empty, so there's no competition for space and no fee spikes.
+- The base fee stays at zero, so you pay only the fixed tip.
+- Blocks come every 0.75 seconds, so a transaction rarely waits long.
+
+## Read the gas price
+
+<CodeGroup>
+```bash cast
+cast gas-price --rpc-url https://rpc.bohr.life
+cast base-fee --rpc-url https://rpc.bohr.life
+```
+
+```js viem
+import { createPublicClient, formatGwei, http } from "viem";
+
+const client = createPublicClient({
+  transport: http("https://rpc.bohr.life"),
+});
+
+const gasPrice = await client.getGasPrice();
+console.log("Gas price:", formatGwei(gasPrice), "gwei");
+```
+
+```bash curl
+curl -s https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_gasPrice","params":[]}'
+```
+</CodeGroup>
+
+`cast gas-price` prints the value in wei: `20000000000` is 20 gwei.
+
+## Estimate a transaction's cost
+
+Ask the node how much gas a transaction will use, then multiply by the gas price.
+
+```bash
+cast estimate 0x47FA21f684bBAD707A53a0f9BE59F1422F46C265 "getBlockNumber()" --rpc-url https://rpc.bohr.life
+```
+
+Examples at 20 gwei, checked on testnet on 2026-10-01:
+
+| Transaction | Gas used | Fee |
+| --- | --- | --- |
+| Send BOT to another address | 21,000 | 0.00042 BOT |
+| Deploy the quickstart `Counter` contract | 158,018 (estimate) | About 0.0032 BOT |
+
+So the 10 tBOT you get from the faucet covers thousands of small transactions.
+
+## Setting fees yourself
+
+Most tools set fees for you. viem, ethers, Foundry and MetaMask all read the network's suggested values. If you set them by hand, use:
+
+| Transaction type | Field | Value |
+| --- | --- | --- |
+| EIP-1559 (type 2) | `maxPriorityFeePerGas` | The result of `eth_maxPriorityFeePerGas` |
+| EIP-1559 (type 2) | `maxFeePerGas` | At least the priority fee |
+| Legacy (type 0) | `gasPrice` | The result of `eth_gasPrice` |
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Get testnet tokens" icon="droplets" href="/get-started/bot-chain/get-testnet-tokens">
+    Free tBOT for gas.
+  </Card>
+  <Card title="Supported EIPs" icon="list-checks" href="/get-started/bot-chain/supported-eips">
+    EIP-1559 and the other upgrades BOT Chain supports.
+  </Card>
+  <Card title="Send transactions" icon="send" href="/guides/frontend/send-transactions">
+    Send transactions from a frontend.
+  </Card>
+  <Card title="Gasless transactions" icon="sparkles" href="/guides/gasless/overview">
+    Let users act without holding BOT.
+  </Card>
+</CardGroup>

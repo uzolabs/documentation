@@ -1,7 +1,64 @@
 ---
 title: "Why Uzo"
-description: "The problems new BOT Chain developers run into, and how Uzo's guides, SDK and templates remove them."
+description: "The problems new BOT Chain developers hit and how Uzo's docs, SDK and templates remove them."
 icon: "lightbulb"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Uzo removes the setup friction between "I want to build on BOT Chain" and a working app, so you can spend your time on the idea instead of on configuration.
+
+## Why it matters
+
+BOT Chain is EVM compatible, so your Solidity and JavaScript skills carry over. The hard part is everything around the code: finding the right values, wiring up tools and working around a few gaps in the public infrastructure. That work is easy for someone who has done it before and slow for everyone else. At a hackathon it can eat your first evening.
+
+## The problems, and how Uzo fixes each
+
+### Setup information is scattered
+
+Chain IDs, RPC URLs, explorer APIs, contract addresses and token decimals live across several sites. Some pages disagree, and a few are out of date.
+
+**What Uzo does:** puts every value in one place, checks it against the live chain and records the date it was checked. Start with [Networks](/reference/networks) and [Contract addresses](/reference/contract-addresses).
+
+### There are no ready-made configs
+
+BOT Chain is not in viem's built-in chain list, and there is no official package of addresses and ABIs. Every project starts by copying values into a `defineChain` call and hoping nothing is wrong.
+
+**What Uzo does:** the docs give you a tested chain definition you can paste today ([Build your first dApp](/get-started/first-dapp)). The planned [Uzo SDK](/sdk/overview) will ship the chain objects, addresses and ABIs as one package.
+
+### Event queries are hard
+
+BOT Chain's docs say `eth_getLogs` is disabled on the public RPC endpoints, and no WebSocket endpoint is published. Without logs and subscriptions, a frontend can't easily show history or react to events.
+
+**What Uzo does:** the docs show working alternatives, such as the explorer API ([Read events without getLogs](/guides/frontend/events-without-getlogs)). Uzo's planned [RPC](/infrastructure/rpc/overview) and [Index](/infrastructure/index/overview) services aim to close the gap.
+
+### Learning resources assume experience
+
+Most chain docs are written for people who have already shipped on Ethereum. If you have never deployed a contract, it is hard to know where to begin.
+
+**What Uzo does:** every guide starts from a clean machine, uses testnet, and ends with a way to check that it worked. The [Hackathon kit](/hackathons/overview) adds a day-one checklist for teams.
+
+## Principles
+
+{/* TODO: align these with the Uzo Labs org README once it is available. */}
+
+- **Accurate first.** Every fact is checked against the live chain or a cited source. When something changes, the docs change.
+- **Works today.** If an Uzo product isn't ready, the page says so and shows you how to do the same thing by hand.
+- **Testnet by default.** Examples use test tokens, so mistakes cost nothing.
+- **Plain language.** Short sentences and no hype, written for a student at 2 a.m.
+- **Independent.** Uzo Labs is not affiliated with BOT Chain. For anything BOT Chain owns, we link to their docs.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="How Uzo fits together" icon="workflow" href="/get-started/how-it-works">
+    The pieces of Uzo and the status of each.
+  </Card>
+  <Card title="Quickstart" icon="zap" href="/get-started/quickstart">
+    Deploy your first contract on testnet.
+  </Card>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    What's different on BOT Chain today and how to work around it.
+  </Card>
+  <Card title="What is BOT Chain" icon="blocks" href="/get-started/bot-chain/overview">
+    The chain you are building on.
+  </Card>
+</CardGroup>

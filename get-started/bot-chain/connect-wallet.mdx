@@ -1,7 +1,117 @@
 ---
-title: "Connect your wallet"
-description: "Add BOT Chain mainnet and testnet to MetaMask using manual network values or Chainlist."
+title: "Connect a wallet"
+description: "Add BOT Chain mainnet and testnet to MetaMask, either through Chainlist or by entering the network values yourself."
 icon: "wallet"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Add BOT Chain to MetaMask so you can see your balance, sign transactions and use dApps on mainnet and testnet. Other EVM wallets work the same way.
+
+## What you'll do
+
+- Add **BOT Chain testnet** by hand (Chainlist doesn't list it correctly).
+- Add **BOT Chain mainnet** through Chainlist or by hand.
+
+## Prerequisites
+
+- [MetaMask](https://metamask.io/download/) installed in your browser.
+
+BOT Chain also has its own wallet, BO Wallet. See [BOT Chain's quick guide](https://dev-docs.botchain.ai/docs/Developers/quick-guide/) for details.
+
+## Network values
+
+<Tabs>
+  <Tab title="Testnet">
+    | Field | Value |
+    | --- | --- |
+    | Network name | `BOT Chain Testnet` |
+    | RPC URL | `{{testnet-rpc}}` |
+    | Chain ID | `{{testnet-chain-id}}` |
+    | Currency symbol | `tBOT` |
+    | Block explorer URL | `{{testnet-explorer}}` |
+  </Tab>
+  <Tab title="Mainnet">
+    | Field | Value |
+    | --- | --- |
+    | Network name | `BOT Chain` |
+    | RPC URL | `{{mainnet-rpc}}` |
+    | Chain ID | `{{mainnet-chain-id}}` |
+    | Currency symbol | `BOT` |
+    | Block explorer URL | `{{mainnet-explorer}}` |
+  </Tab>
+</Tabs>
+
+The faucet and BOTScan show the testnet token as `BOT`. You can use either `tBOT` or `BOT` as the symbol in your wallet; `tBOT` makes it easier to tell the networks apart.
+
+## Add testnet by hand
+
+<Steps>
+  <Step title="Open the network settings">
+    In MetaMask, open the network menu at the top left and choose **Add a custom network**.
+
+    {/* screenshot: MetaMask network menu with "Add a custom network" highlighted */}
+  </Step>
+  <Step title="Enter the testnet values">
+    Fill in each field from the **Testnet** tab above, then click **Save**.
+
+    {/* screenshot: MetaMask "Add a custom network" form filled with BOT Chain Testnet values */}
+  </Step>
+  <Step title="Switch to the network">
+    Choose **BOT Chain Testnet** from the network menu. Your balance shows in tBOT.
+  </Step>
+</Steps>
+
+<Warning>
+  Chain ID 968 is registered to a different network, Datagram, on [Chainlist](https://chainlist.org) and in the public chain registry. Don't add testnet through Chainlist. MetaMask may show a warning that the network name or symbol doesn't match chain 968. That's expected for BOT Chain testnet, as long as the RPC URL is exactly `{{testnet-rpc}}`.
+</Warning>
+
+## Add mainnet
+
+<Tabs>
+  <Tab title="With Chainlist">
+    1. Open [BOT Chain Mainnet on Chainlist](https://chainlist.org/chain/677).
+    2. Check that the chain ID is 677 and the explorer is `scan.botchain.ai`.
+    3. Click **Add to MetaMask** and approve the request in MetaMask.
+
+    {/* screenshot: chainlist.org/chain/677 page with the Add to MetaMask button */}
+  </Tab>
+  <Tab title="By hand">
+    Follow the same steps as testnet, using the values in the **Mainnet** tab above.
+  </Tab>
+</Tabs>
+
+<Warning>
+  Mainnet uses real BOT. Practise on testnet first, and never paste a seed phrase or private key into a website.
+</Warning>
+
+## Verify it worked
+
+1. Switch to **BOT Chain Testnet** in MetaMask.
+2. Copy your address and open `{{testnet-explorer}}/address/YOUR_ADDRESS` in your browser.
+3. The balance on BOTScan matches the balance in MetaMask.
+
+If your balance is zero, claim tokens from the [faucet](/get-started/bot-chain/get-testnet-tokens).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MetaMask says the chain ID returned by the RPC doesn't match">
+    The chain ID field must match the RPC URL. Use 968 with `{{testnet-rpc}}` and 677 with `{{mainnet-rpc}}`. Check for a trailing space or a typo in the URL.
+  </Accordion>
+  <Accordion title="MetaMask warns that the network details don't match">
+    For chain 968 this is expected, because the public registry lists a different network under that ID. Continue only if the RPC URL is exactly `{{testnet-rpc}}`.
+  </Accordion>
+  <Accordion title="My balance shows 0 after using the faucet">
+    Check that MetaMask is on **BOT Chain Testnet**, not mainnet or another network. Then check the address on BOTScan testnet. If BOTScan also shows 0, the claim didn't go through; see [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Get testnet tokens" icon="droplets" href="/get-started/bot-chain/get-testnet-tokens">
+    Fund your wallet for free.
+  </Card>
+  <Card title="Connect a wallet in your dApp" icon="plug" href="/guides/frontend/connect-wallet">
+    Let users connect their wallet to your app.
+  </Card>
+</CardGroup>

@@ -4,4 +4,34 @@ description: "How to report a security vulnerability in Uzo privately."
 icon: "shield-alert"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Report a security vulnerability in Uzo privately, so it can be fixed before anyone exploits it.
+
+## Report privately
+
+Email [security@uzolabs.xyz](mailto:security@uzolabs.xyz). Don't open a public GitHub issue for a vulnerability.
+
+Include:
+
+- What's affected: a docs example, a template, the SDK or a service.
+- How to reproduce it, step by step.
+- What an attacker could do with it.
+- Your name or handle, if you'd like credit.
+
+## What's in scope
+
+| In scope | Out of scope |
+| --- | --- |
+| Code in [uzolabs](https://github.com/uzolabs) repositories | BOT Chain itself: its nodes, contracts, bridge, DEX, faucet and explorer |
+| Code examples in these docs that would put users' funds or keys at risk | Third-party tools, such as MetaMask, Foundry or viem |
+
+For problems in BOT Chain's own software or services, contact BOT Chain through their [official docs](https://dev-docs.botchain.ai/docs/intro). Uzo Labs is not affiliated with BOT Chain and can't fix their systems.
+
+## Please don't
+
+- Test against other people's accounts or funds.
+- Disrupt services or other users.
+- Share details publicly before a fix is out.
+
+## If you leaked a key
+
+If you published a private key or mnemonic by mistake, including on testnet, assume it's compromised. Create a new wallet, move any funds and stop using the old key. Removing it from a commit doesn't make it safe again.

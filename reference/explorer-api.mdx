@@ -4,4 +4,135 @@ description: "Reference for BOTScan's Blockscout v2 and Etherscan-style API endp
 icon: "search"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+BOTScan, BOT Chain's block explorer, runs on Blockscout and serves two HTTP APIs: a REST API (v2) and an Etherscan-compatible API. Both need no API key. Every example on this page was run against testnet on 2026-10-01.
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| REST API (v2) | `{{mainnet-explorer}}/api/v2` | `{{testnet-explorer}}/api/v2` |
+| Etherscan-style API | `{{mainnet-explorer}}/api` | `{{testnet-explorer}}/api` |
+
+BOT Chain doesn't publish rate limits for these APIs. Cache responses and back off on errors.
+
+## REST API (v2)
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/v2/stats` | Network stats: average block time, gas prices, totals |
+| `GET /api/v2/main-page/blocks` | Latest blocks |
+| `GET /api/v2/main-page/transactions` | Latest transactions |
+| `GET /api/v2/blocks/{number}` | One block |
+| `GET /api/v2/transactions/{hash}` | One transaction, decoded where possible |
+| `GET /api/v2/transactions/{hash}/logs` | Logs emitted by a transaction |
+| `GET /api/v2/addresses/{address}` | Balance, contract flag, verified flag and name |
+| `GET /api/v2/addresses/{address}/transactions` | Transactions sent to or from an address |
+| `GET /api/v2/addresses/{address}/token-balances` | Token balances for an address |
+| `GET /api/v2/addresses/{address}/logs` | Logs emitted by a contract |
+| `GET /api/v2/smart-contracts/{address}` | Verified source code and ABI |
+| `GET /api/v2/tokens/{address}` | Token name, symbol, decimals, supply and holder count |
+| `GET /api/v2/tokens/{address}/holders` | Token holders |
+| `GET /api/v2/search?q={query}` | Search by name, symbol, address or hash |
+
+### Pagination
+
+List endpoints return `page`, `page_size`, `total_pages` and `total_count`. Pass `page` and `page_size` as query parameters. The default page size is 50.
+
+```bash address-transactions.sh
+curl -s "https://scan.bohr.life/api/v2/addresses/0x75edC9335175Fc0552D51D48439F229c10420fe3/transactions?page=2&page_size=10"
+```
+
+On 2026-10-01 BOTScan ignored the `type` and `filter` query parameters on `/transactions`. Filter results in your own code.
+
+### Examples
+
+<CodeGroup>
+```bash Token info
+curl -s https://scan.bohr.life/api/v2/tokens/0x75edC9335175Fc0552D51D48439F229c10420fe3
+```
+
+```bash Contract source
+curl -s https://scan.bohr.life/api/v2/smart-contracts/0x75edC9335175Fc0552D51D48439F229c10420fe3
+```
+
+```bash Latest blocks
+curl -s https://scan.bohr.life/api/v2/main-page/blocks
+```
+</CodeGroup>
+
+The token info call returns JSON like this (trimmed to the main fields):
+
+```json response.json
+{
+  "address": "0x75edC9335175Fc0552D51D48439F229c10420fe3",
+  "decimals": "6",
+  "holders": "1467",
+  "name": "Tether USD",
+  "symbol": "USDT",
+  "type": "ERC-20"
+}
+```
+
+<Warning>
+  Ignore `exchange_rate` and `coin_price` on testnet. On 2026-10-01 the testnet explorer reported a price for tBOT, which has no real-world value.
+</Warning>
+
+## Etherscan-style API
+
+Use this API with tools built for Etherscan. Requests take `module` and `action` query parameters. Responses have `status`, `message` and `result` fields.
+
+| Module | Action | Returns |
+| --- | --- | --- |
+| `account` | `balance` | Native balance in wei |
+| `account` | `txlist` | Transactions for an address |
+| `account` | `tokentx` | Token transfers for an address |
+| `contract` | `getabi` | ABI of a verified contract, as a JSON string |
+| `contract` | `getsourcecode` | Source code of a verified contract |
+| `logs` | `getLogs` | Event logs, filtered by address and topics |
+| `stats` | `tokensupply` | Total supply of a token |
+| `block` | `eth_block_number` | Latest block number |
+
+### Read event logs
+
+This is the main workaround for `eth_getLogs` being documented as disabled on the RPC. It returns up to 1,000 logs per request. Use `page` and `offset` to read more.
+
+```bash get-logs.sh
+curl -s "https://scan.bohr.life/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x75edC9335175Fc0552D51D48439F229c10420fe3&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&page=1&offset=100"
+```
+
+`topic0` above is the hash of `Transfer(address,address,uint256)`.
+
+### More examples
+
+<CodeGroup>
+```bash Balance
+curl -s "https://scan.bohr.life/api?module=account&action=balance&address=0xD5452816194a3784dBa983426cCe7c122F4abd30"
+```
+
+```bash Transactions
+curl -s "https://scan.bohr.life/api?module=account&action=txlist&address=0x75edC9335175Fc0552D51D48439F229c10420fe3&page=1&offset=10&sort=desc"
+```
+
+```bash ABI
+curl -s "https://scan.bohr.life/api?module=contract&action=getabi&address=0x75edC9335175Fc0552D51D48439F229c10420fe3"
+```
+</CodeGroup>
+
+The balance call returns:
+
+```json response.json
+{ "message": "OK", "result": "702219140730455235577345", "status": "1" }
+```
+
+## Verify contracts
+
+Foundry and Hardhat verify contracts through the Etherscan-style endpoint. Use `--verifier blockscout` and the `/api/` URL. See the [quickstart](/get-started/quickstart).
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    Why you need the explorer for logs.
+  </Card>
+  <Card title="Contract addresses" icon="map-pin" href="/reference/contract-addresses">
+    Addresses to query.
+  </Card>
+</CardGroup>

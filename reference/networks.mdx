@@ -4,4 +4,87 @@ description: "Chain IDs, RPC URLs, explorers and wallet settings for BOT Chain m
 icon: "network"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Every value you need to connect to BOT Chain. Checked against the live networks on 2026-10-01.
+
+## Network details
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Chain ID | `{{mainnet-chain-id}}` | `{{testnet-chain-id}}` |
+| Chain ID (hex) | `0x2a5` | `0x3c8` |
+| RPC URL (HTTPS) | `{{mainnet-rpc}}` | `{{testnet-rpc}}` |
+| WebSocket URL | None published | None published |
+| Explorer | `{{mainnet-explorer}}` | `{{testnet-explorer}}` |
+| Explorer API (Blockscout v2) | `{{mainnet-explorer}}/api/v2` | `{{testnet-explorer}}/api/v2` |
+| Explorer API (Etherscan-style) | `{{mainnet-explorer}}/api` | `{{testnet-explorer}}/api` |
+| Native token | BOT, 18 decimals | tBOT, 18 decimals |
+| Faucet | None | `{{faucet-url}}` |
+| Block time | About 0.75 seconds | About 0.75 seconds |
+| Block gas limit | 35,000,000 | 35,000,000 |
+| Highest EVM version | Prague | Prague |
+
+BOTScan and the faucet show the testnet token's symbol as `BOT`. These docs call it tBOT to keep the networks apart.
+
+## Add to wallet
+
+<Tabs>
+  <Tab title="Testnet">
+    | Field | Value |
+    | --- | --- |
+    | Network name | `BOT Chain Testnet` |
+    | RPC URL | `{{testnet-rpc}}` |
+    | Chain ID | `{{testnet-chain-id}}` |
+    | Currency symbol | `tBOT` |
+    | Block explorer URL | `{{testnet-explorer}}` |
+  </Tab>
+  <Tab title="Mainnet">
+    | Field | Value |
+    | --- | --- |
+    | Network name | `BOT Chain` |
+    | RPC URL | `{{mainnet-rpc}}` |
+    | Chain ID | `{{mainnet-chain-id}}` |
+    | Currency symbol | `BOT` |
+    | Block explorer URL | `{{mainnet-explorer}}` |
+  </Tab>
+</Tabs>
+
+Chainlist lists mainnet at [chainlist.org/chain/677](https://chainlist.org/chain/677). Chain 968 on Chainlist is a different network, so add testnet by hand. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+
+## Add to your app
+
+These objects work with `wallet_addEthereumChain` (EIP-3085) in a browser wallet:
+
+<CodeGroup>
+```json Testnet
+{
+  "chainId": "0x3c8",
+  "chainName": "BOT Chain Testnet",
+  "nativeCurrency": { "name": "BOT", "symbol": "tBOT", "decimals": 18 },
+  "rpcUrls": ["https://rpc.bohr.life"],
+  "blockExplorerUrls": ["https://scan.bohr.life"]
+}
+```
+
+```json Mainnet
+{
+  "chainId": "0x2a5",
+  "chainName": "BOT Chain",
+  "nativeCurrency": { "name": "BOT", "symbol": "BOT", "decimals": 18 },
+  "rpcUrls": ["https://rpc.botchain.ai"],
+  "blockExplorerUrls": ["https://scan.botchain.ai"]
+}
+```
+</CodeGroup>
+
+For viem and wagmi, see the `defineChain` example in [Build your first dApp](/get-started/first-dapp).
+
+## Other BOT Chain services
+
+| Service | URL |
+| --- | --- |
+| BDEX (swap) | [dex.botchain.ai](https://dex.botchain.ai) |
+| Bridge | [bridge.botchain.ai](https://bridge.botchain.ai) |
+| BOT Chain wallet | [wallet.botchain.ai](https://wallet.botchain.ai) |
+| BOT Chain developer docs | [dev-docs.botchain.ai](https://dev-docs.botchain.ai/docs/intro) |
+
+Source: [BOT Chain quick guide](https://dev-docs.botchain.ai/docs/Developers/quick-guide/), checked against `eth_chainId` on both RPCs.

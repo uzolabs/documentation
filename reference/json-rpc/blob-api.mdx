@@ -3,4 +3,69 @@ title: "Blob API"
 description: "Reference for BOT Chain's blob sidecar RPC methods, such as eth_getBlobSidecarByTxHash."
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Read EIP-4844 blob data from a BOT Chain node. BOT Chain stores blob sidecars on the execution layer, so it serves them through two extra `eth_` methods instead of Ethereum's Beacon API. Source: BOT Chain's [Blob API page](https://dev-docs.botchain.ai/docs/Developers/blob-api/).
+
+Both methods answered on both public RPCs on 2026-10-01.
+
+## eth_getBlobSidecarByTxHash
+
+Returns the blob sidecar for one blob transaction.
+
+<ParamField body="hash" type="string" required>
+  Transaction hash, as a hex string.
+</ParamField>
+
+<ParamField body="full_blob_flag" type="boolean" default="true">
+  If `true`, returns the full blobs. If `false`, returns only the first 32 bytes of each blob.
+</ParamField>
+
+```bash get-sidecar-by-tx.sh
+curl -s https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_getBlobSidecarByTxHash","params":["0x0000000000000000000000000000000000000000000000000000000000000000",false]}'
+```
+
+Returns `null` if the transaction doesn't exist or carries no blobs.
+
+## eth_getBlobSidecars
+
+Returns the blob sidecars for every blob transaction in a block.
+
+<ParamField body="block" type="string" required>
+  Block number as hex, block hash, or one of the tags `earliest`, `latest`, `safe` or `finalized`.
+</ParamField>
+
+<ParamField body="full_blob_flag" type="boolean" default="true">
+  If `true`, returns the full blobs. If `false`, returns only the first 32 bytes of each blob.
+</ParamField>
+
+```bash get-sidecars.sh
+curl -s https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_getBlobSidecars","params":["latest",false]}'
+```
+
+Returns an empty array if the block has no blob transactions.
+
+## Response shape
+
+BOT Chain's docs don't describe the response fields. We searched the most recent 40,000 blocks on each network on 2026-10-01 and found no blob transactions, so we couldn't capture a real response. {/* TODO: send a blob transaction on testnet and document the response fields. */}
+
+## Blob fees
+
+Blob gas has its own fee market. Read the current blob base fee with `eth_blobBaseFee`. It was `1` wei on both networks on 2026-10-01.
+
+```bash blob-base-fee.sh
+cast rpc eth_blobBaseFee --rpc-url https://rpc.bohr.life
+```
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Supported EIPs" icon="list-checks" href="/get-started/bot-chain/supported-eips">
+    EIP-4844 and other upgrades.
+  </Card>
+  <Card title="Differences from Geth" icon="git-compare" href="/reference/json-rpc/differences-from-geth">
+    Why blobs live on the execution layer.
+  </Card>
+</CardGroup>

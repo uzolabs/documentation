@@ -4,4 +4,90 @@ description: "BOT Chain's Geth-compatible JSON-RPC API and where to find method 
 icon: "terminal"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+BOT Chain's nodes speak the standard Ethereum JSON-RPC API, so any library that works with Ethereum (viem, ethers, web3.py, Foundry) works here. BOT Chain [describes its API](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) as nearly fully compatible with Geth. For the details of any standard method, use the [Geth JSON-RPC documentation](https://geth.ethereum.org/docs/interacting-with-geth/rpc).
+
+## Endpoints
+
+| Network | URL | Transport |
+| --- | --- | --- |
+| Mainnet | `{{mainnet-rpc}}` | HTTPS only |
+| Testnet | `{{testnet-rpc}}` | HTTPS only |
+
+Neither endpoint publishes a WebSocket URL. On 2026-10-01 both nodes reported the client version `Geth/v1.5.13`.
+
+## Make a request
+
+<CodeGroup>
+```bash curl
+curl -s https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
+```
+
+```bash cast
+cast rpc eth_blockNumber --rpc-url https://rpc.bohr.life
+```
+
+```js viem
+import { createPublicClient, http } from "viem";
+
+const client = createPublicClient({
+  transport: http("https://rpc.bohr.life"),
+});
+
+console.log(await client.getBlockNumber());
+```
+</CodeGroup>
+
+## Available namespaces
+
+`rpc_modules` returned these namespaces on both networks on 2026-10-01:
+
+| Namespace | Available | Notes |
+| --- | --- | --- |
+| `eth` | Yes | Standard methods, plus BOT Chain's finality and blob methods |
+| `net` | Yes | |
+| `web3` | Yes | |
+| `txpool` | Yes | `txpool_status` and related methods |
+| `rpc` | Yes | |
+| `debug` | No | Returns error `-32601`. No transaction tracing on public RPCs. |
+| `trace` | No | Returns error `-32601` |
+| `admin`, `personal`, `miner` | No | |
+
+## Method support
+
+Tested on both networks on 2026-10-01.
+
+| Method | Works | Notes |
+| --- | --- | --- |
+| `eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockByHash` | Yes | Accept the `safe` and `finalized` tags |
+| `eth_getBalance`, `eth_getCode`, `eth_getStorageAt`, `eth_getTransactionCount` | Yes | |
+| `eth_call`, `eth_estimateGas` | Yes | |
+| `eth_simulateV1` | Yes | |
+| `eth_createAccessList` | Yes | Checks that the sender can pay for gas. See [Differences from Geth](/reference/json-rpc/differences-from-geth). |
+| `eth_sendRawTransaction` | Yes | `eth_sendTransaction` needs an unlocked account, which public nodes don't have |
+| `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_getBlockReceipts` | Yes | |
+| `eth_gasPrice`, `eth_maxPriorityFeePerGas`, `eth_feeHistory`, `eth_blobBaseFee` | Yes | See [Gas and fees](/get-started/bot-chain/gas-and-fees) |
+| `eth_getProof` | Yes | |
+| `eth_getLogs` | Partly | Documented as disabled. See [Differences from Geth](/reference/json-rpc/differences-from-geth). |
+| `eth_newFilter`, `eth_getFilterChanges` | Unreliable | Filters are often "not found" on the next call |
+| `eth_subscribe` | No | "notifications not supported" over HTTP |
+| `eth_getFinalizedHeader`, `eth_getFinalizedBlock`, `eth_getHeaderByNumber` | Yes | BOT Chain additions. See [Differences from Geth](/reference/json-rpc/differences-from-geth). |
+| `eth_getBlobSidecars`, `eth_getBlobSidecarByTxHash` | Yes | See [Blob API](/reference/json-rpc/blob-api) |
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Differences from Geth" icon="git-compare" href="/reference/json-rpc/differences-from-geth">
+    Where BOT Chain behaves differently.
+  </Card>
+  <Card title="Blob API" icon="database" href="/reference/json-rpc/blob-api">
+    Read blob sidecars.
+  </Card>
+  <Card title="Networks" icon="network" href="/reference/networks">
+    Chain IDs and URLs.
+  </Card>
+  <Card title="Explorer API" icon="search" href="/reference/explorer-api">
+    Logs, ABIs and history over HTTP.
+  </Card>
+</CardGroup>

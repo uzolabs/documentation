@@ -1,7 +1,78 @@
 ---
 title: "Supported EIPs"
-description: "Which Ethereum upgrades BOT Chain supports, including EIP-1559, EIP-4844 and EIP-7702, and which EVM version to target."
+description: "Which Ethereum upgrades BOT Chain supports, including EIP-1559, EIP-4844 and EIP-7702, and which EVM version to compile for."
 icon: "list-checks"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Check which Ethereum features you can use on BOT Chain and which EVM version to compile your contracts for.
+
+## Why it matters
+
+Solidity compilers target a specific EVM version. If you compile for a newer version than the chain supports, your contract can deploy and then fail at runtime with an "invalid opcode" error. Picking the right target avoids that.
+
+## Compile for Cancun
+
+Set your compiler's EVM version to **`cancun`**. It works on both networks and with every Solidity version from 0.8.24.
+
+<CodeGroup>
+```toml foundry.toml
+[profile.default]
+evm_version = "cancun"
+```
+
+```js hardhat.config.js
+export default {
+  solidity: {
+    version: "0.8.28",
+    settings: {
+      evmVersion: "cancun",
+    },
+  },
+};
+```
+</CodeGroup>
+
+`prague` also works on BOT Chain (tested 2026-10-01). **Don't use `osaka`.** BOT Chain doesn't support the Osaka upgrade yet: we ran the Osaka `CLZ` opcode on both networks on 2026-10-01 and it failed with "invalid opcode". Recent Solidity releases may default to a newer EVM version, so set it explicitly.
+
+## Supported upgrades
+
+Checked against both networks on 2026-10-01.
+
+| EIP | What it does | Status on BOT Chain |
+| --- | --- | --- |
+| [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559) | Type 2 transactions with a base fee and a priority fee | Supported. The base fee was 0 in every block we checked. See [Gas and fees](/get-started/bot-chain/gas-and-fees). |
+| [EIP-3855](https://eips.ethereum.org/EIPS/eip-3855) | `PUSH0` opcode (Shanghai) | Supported |
+| [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153) | Transient storage, `TLOAD` and `TSTORE` (Cancun) | Supported |
+| [EIP-5656](https://eips.ethereum.org/EIPS/eip-5656) | `MCOPY` opcode (Cancun) | Supported |
+| [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) | Blob transactions (type 3), `BLOBHASH` and `BLOBBASEFEE` | Supported. See the [Blob API](/reference/json-rpc/blob-api). |
+| [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537) | BLS12-381 precompiles (Prague) | Supported |
+| [EIP-2935](https://eips.ethereum.org/EIPS/eip-2935) | Historical block hashes in state (Prague) | Supported |
+| [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) | Type 4 transactions that let an EOA delegate to contract code (Prague) | Supported. BOTScan shows the authorizations. |
+| [EIP-7939](https://eips.ethereum.org/EIPS/eip-7939) | `CLZ` opcode (Osaka) | Not supported |
+
+Don't use `block.prevrandao` (or the older `block.difficulty`) for randomness. On BOT Chain it returns the Parlia block difficulty, which was `2` in every block we checked on 2026-10-01. Use an oracle if your app needs random numbers.
+
+## Check it yourself
+
+Ask the node for the latest block and look at the fields. `baseFeePerGas` shows EIP-1559, `blobGasUsed` and `excessBlobGas` show EIP-4844, and `requestsHash` shows Prague.
+
+```bash
+cast block latest --rpc-url https://rpc.bohr.life
+```
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Blob API" icon="database" href="/reference/json-rpc/blob-api">
+    Read blob data from the RPC.
+  </Card>
+  <Card title="Gas and fees" icon="fuel" href="/get-started/bot-chain/gas-and-fees">
+    How EIP-1559 fees work on BOT Chain.
+  </Card>
+  <Card title="Foundry setup" icon="hammer" href="/guides/environment/foundry">
+    Configure the compiler target.
+  </Card>
+  <Card title="Hardhat setup" icon="hard-hat" href="/guides/environment/hardhat">
+    Configure the compiler target.
+  </Card>
+</CardGroup>

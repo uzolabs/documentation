@@ -1,7 +1,474 @@
 ---
 title: "Build your first dApp"
-description: "Read and write your deployed contract from a viem script, then from a minimal wagmi web page."
+description: "Read and write your BOT Chain contract from a viem script, then from a small React page with wagmi."
 icon: "app-window"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you talk to the `Counter` contract you deployed in the [quickstart](/get-started/quickstart), first from a Node.js script and then from a web page where anyone with a wallet can increment it.
+
+<TestnetOnly />
+
+## What you'll build
+
+- A script that reads the counter and sends an `increment` transaction with [viem](https://viem.sh).
+- A React page built with [wagmi](https://wagmi.sh) that connects a browser wallet, shows the counter and has an **Increment** button.
+
+BOT Chain is not in viem's built-in chain list, so you'll define it yourself with `defineChain`. The planned [Uzo SDK](/sdk/overview) will ship this definition for you.
+
+## Prerequisites
+
+- A deployed `Counter` contract and its address, from the [quickstart](/get-started/quickstart).
+- The `uzo-dev` wallet from the quickstart, with some tBOT in it.
+- [Node.js](https://nodejs.org) 20.6 or later. This guide was tested with Node.js 24, viem 2.57 and wagmi 3.7.
+- For part 2, a browser wallet such as MetaMask with BOT Chain testnet added. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+
+## Part 1: a viem script
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir counter-script
+    cd counter-script
+    npm init -y
+    npm pkg set type=module
+    npm install viem
+    ```
+  </Step>
+
+  <Step title="Define the chain">
+    This tells viem everything it needs to know about BOT Chain testnet.
+
+    ```js chain.js
+    import { defineChain } from "viem";
+
+    export const botChainTestnet = defineChain({
+      id: 968,
+      name: "BOT Chain Testnet",
+      nativeCurrency: { name: "BOT", symbol: "tBOT", decimals: 18 },
+      rpcUrls: {
+        default: { http: ["https://rpc.bohr.life"] },
+      },
+      blockExplorers: {
+        default: {
+          name: "BOTScan",
+          url: "https://scan.bohr.life",
+          apiUrl: "https://scan.bohr.life/api",
+        },
+      },
+      contracts: {
+        multicall3: {
+          address: "0x47FA21f684bBAD707A53a0f9BE59F1422F46C265",
+        },
+      },
+      testnet: true,
+    });
+    ```
+
+    The `multicall3` address is the one BOT Chain deploys on both networks. Viem uses it to batch reads. The usual Multicall3 address used on other chains is not deployed on testnet, so don't skip this field.
+  </Step>
+
+  <Step title="Add the contract ABI">
+    The ABI tells viem which functions the contract has. Foundry wrote the full ABI to `out/Counter.sol/Counter.json` in your quickstart project. For this guide you only need these three functions:
+
+    ```js counter.js
+    export const counterAbi = [
+      {
+        type: "function",
+        name: "number",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "view",
+      },
+      {
+        type: "function",
+        name: "increment",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+      {
+        type: "function",
+        name: "setNumber",
+        inputs: [{ name: "newNumber", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ];
+    ```
+  </Step>
+
+  <Step title="Set your environment variables">
+    The script reads your contract address and private key from a `.env` file, so they never appear in your code.
+
+    Export the private key of your `uzo-dev` testnet wallet. Cast asks for the keystore password:
+
+    ```bash
+    cast wallet decrypt-keystore uzo-dev
+    ```
+
+    Create a file named `.env` and paste in your values:
+
+    ```bash .env
+    COUNTER_ADDRESS=0xYourCounterAddress
+    PRIVATE_KEY=0xYourTestnetPrivateKey
+    ```
+
+    <Warning>
+      Only ever put a **testnet** key in a `.env` file. Add `.env` to your `.gitignore` before your first commit, so the key never reaches GitHub:
+
+      ```bash
+      echo ".env" >> .gitignore
+      ```
+    </Warning>
+  </Step>
+
+  <Step title="Read the counter">
+    A public client reads from the chain. Reading is free and doesn't need a wallet.
+
+    ```js read.js
+    import { createPublicClient, http } from "viem";
+    import { botChainTestnet } from "./chain.js";
+    import { counterAbi } from "./counter.js";
+
+    const client = createPublicClient({
+      chain: botChainTestnet,
+      transport: http(),
+    });
+
+    const blockNumber = await client.getBlockNumber();
+    console.log("Latest block:", blockNumber);
+
+    const number = await client.readContract({
+      address: process.env.COUNTER_ADDRESS,
+      abi: counterAbi,
+      functionName: "number",
+    });
+    console.log("Counter value:", number);
+    ```
+
+    Run it. The `--env-file` flag loads your `.env` file:
+
+    ```bash
+    node --env-file=.env read.js
+    ```
+
+    ```text Output
+    Latest block: 25377855n
+    Counter value: 1n
+    ```
+
+    Your block number will be higher. The `n` means the value is a JavaScript `BigInt`.
+  </Step>
+
+  <Step title="Send a transaction">
+    A wallet client signs and sends transactions with your key.
+
+    ```js write.js
+    import { createPublicClient, createWalletClient, http } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "./chain.js";
+    import { counterAbi } from "./counter.js";
+
+    const account = privateKeyToAccount(process.env.PRIVATE_KEY);
+
+    const publicClient = createPublicClient({
+      chain: botChainTestnet,
+      transport: http(),
+    });
+
+    const walletClient = createWalletClient({
+      account,
+      chain: botChainTestnet,
+      transport: http(),
+    });
+
+    const hash = await walletClient.writeContract({
+      address: process.env.COUNTER_ADDRESS,
+      abi: counterAbi,
+      functionName: "increment",
+    });
+    console.log("Sent:", `${botChainTestnet.blockExplorers.default.url}/tx/${hash}`);
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log("Status:", receipt.status, "in block", receipt.blockNumber);
+
+    const number = await publicClient.readContract({
+      address: process.env.COUNTER_ADDRESS,
+      abi: counterAbi,
+      functionName: "number",
+    });
+    console.log("Counter value:", number);
+    ```
+
+    ```bash
+    node --env-file=.env write.js
+    ```
+
+    The script prints a BOTScan link, waits about a second for the block, then prints the new value.
+  </Step>
+</Steps>
+
+## Part 2: a wagmi page
+
+Now give the contract a user interface. Visitors connect their own wallet, so this app needs no private key.
+
+<Steps>
+  <Step title="Create a React app">
+    ```bash
+    npm create vite@latest counter-web -- --template react-ts
+    cd counter-web
+    npm install
+    npm install wagmi viem @tanstack/react-query
+    ```
+  </Step>
+
+  <Step title="Configure wagmi">
+    This file defines the chain (the same values as `chain.js`) and creates the wagmi config. The `injected` connector works with MetaMask and other browser wallets.
+
+    ```ts src/wagmi.ts
+    import { createConfig, http } from "wagmi";
+    import { injected } from "wagmi/connectors";
+    import { defineChain } from "viem";
+
+    export const botChainTestnet = defineChain({
+      id: 968,
+      name: "BOT Chain Testnet",
+      nativeCurrency: { name: "BOT", symbol: "tBOT", decimals: 18 },
+      rpcUrls: {
+        default: { http: ["https://rpc.bohr.life"] },
+      },
+      blockExplorers: {
+        default: {
+          name: "BOTScan",
+          url: "https://scan.bohr.life",
+          apiUrl: "https://scan.bohr.life/api",
+        },
+      },
+      contracts: {
+        multicall3: {
+          address: "0x47FA21f684bBAD707A53a0f9BE59F1422F46C265",
+        },
+      },
+      testnet: true,
+    });
+
+    export const config = createConfig({
+      chains: [botChainTestnet],
+      connectors: [injected()],
+      transports: {
+        [botChainTestnet.id]: http(),
+      },
+    });
+
+    declare module "wagmi" {
+      interface Register {
+        config: typeof config;
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Add the contract">
+    Vite exposes variables that start with `VITE_` to your frontend. A contract address is public, so it's safe here.
+
+    ```bash .env.local
+    VITE_COUNTER_ADDRESS=0xYourCounterAddress
+    ```
+
+    ```ts src/counter.ts
+    export const counterAddress = import.meta.env.VITE_COUNTER_ADDRESS as `0x${string}`;
+
+    export const counterAbi = [
+      {
+        type: "function",
+        name: "number",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "view",
+      },
+      {
+        type: "function",
+        name: "increment",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ] as const;
+    ```
+
+    `as const` lets TypeScript check your function names and argument types.
+  </Step>
+
+  <Step title="Wrap the app in providers">
+    Replace `src/main.tsx`:
+
+    ```tsx src/main.tsx
+    import { StrictMode } from "react";
+    import { createRoot } from "react-dom/client";
+    import { WagmiProvider } from "wagmi";
+    import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+    import { config } from "./wagmi";
+    import App from "./App";
+
+    const queryClient = new QueryClient();
+
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </WagmiProvider>
+      </StrictMode>,
+    );
+    ```
+  </Step>
+
+  <Step title="Build the page">
+    Replace `src/App.tsx`:
+
+    ```tsx src/App.tsx
+    import { useEffect } from "react";
+    import {
+      useConnect,
+      useConnection,
+      useConnectors,
+      useDisconnect,
+      useReadContract,
+      useSwitchChain,
+      useWaitForTransactionReceipt,
+      useWriteContract,
+    } from "wagmi";
+    import { botChainTestnet } from "./wagmi";
+    import { counterAbi, counterAddress } from "./counter";
+
+    export default function App() {
+      const { address, chainId, isConnected } = useConnection();
+      const connectors = useConnectors();
+      const connect = useConnect();
+      const disconnect = useDisconnect();
+      const switchChain = useSwitchChain();
+
+      const { data: number, refetch } = useReadContract({
+        address: counterAddress,
+        abi: counterAbi,
+        functionName: "number",
+        chainId: botChainTestnet.id,
+      });
+
+      const write = useWriteContract();
+      const receipt = useWaitForTransactionReceipt({ hash: write.data });
+
+      useEffect(() => {
+        if (receipt.isSuccess) refetch();
+      }, [receipt.isSuccess, refetch]);
+
+      return (
+        <main>
+          <h1>Counter on BOT Chain testnet</h1>
+          <p>Current value: {number?.toString() ?? "loading"}</p>
+
+          {!isConnected &&
+            connectors.map((connector) => (
+              <button key={connector.uid} onClick={() => connect.mutate({ connector })}>
+                Connect {connector.name}
+              </button>
+            ))}
+
+          {isConnected && chainId !== botChainTestnet.id && (
+            <button onClick={() => switchChain.mutate({ chainId: botChainTestnet.id })}>
+              Switch to BOT Chain testnet
+            </button>
+          )}
+
+          {isConnected && chainId === botChainTestnet.id && (
+            <>
+              <p>Connected: {address}</p>
+              <button
+                disabled={write.isPending || receipt.isLoading}
+                onClick={() =>
+                  write.mutate({
+                    address: counterAddress,
+                    abi: counterAbi,
+                    functionName: "increment",
+                  })
+                }
+              >
+                {write.isPending ? "Confirm in your wallet" : receipt.isLoading ? "Waiting for block" : "Increment"}
+              </button>
+              <button onClick={() => disconnect.mutate()}>Disconnect</button>
+            </>
+          )}
+
+          {write.data && (
+            <p>
+              <a href={`${botChainTestnet.blockExplorers.default.url}/tx/${write.data}`} target="_blank" rel="noreferrer">
+                View transaction on BOTScan
+              </a>
+            </p>
+          )}
+          {write.error && <p>Error: {write.error.message.split("\n")[0]}</p>}
+        </main>
+      );
+    }
+    ```
+
+    The page reads the counter through the public RPC, so it shows the value before anyone connects. Writing needs a connected wallet on chain 968.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npm run dev
+    ```
+
+    Open the local URL that Vite prints, usually `http://localhost:5173`.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+{/* screenshot: the counter-web page in a browser, connected to MetaMask on BOT Chain testnet, showing the current value and the Increment button */}
+
+1. The page shows the same counter value that `read.js` printed.
+2. Click **Connect**, then approve in your wallet.
+3. Click **Increment** and confirm. After about a second the value goes up by one.
+4. The **View transaction on BOTScan** link opens your transaction.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="InvalidAddressError or Address &quot;undefined&quot; is invalid">
+    The script couldn't find `COUNTER_ADDRESS`. Run it with `node --env-file=.env`, and check that `.env` is in the folder you're running from. In the React app, restart `npm run dev` after creating `.env.local`, and check that the name starts with `VITE_`.
+  </Accordion>
+  <Accordion title="The contract function &quot;number&quot; returned no data (&quot;0x&quot;)">
+    There is no `Counter` contract at that address on testnet. Check that you copied the `Deployed to` address from the quickstart, not your wallet address or the transaction hash.
+  </Accordion>
+  <Accordion title="invalid private key, expected hex or 32 bytes">
+    `PRIVATE_KEY` must be 64 hex characters with a `0x` prefix. Copy it again from `cast wallet decrypt-keystore uzo-dev`.
+  </Accordion>
+  <Accordion title="No Connect button appears">
+    The `injected` connector needs a browser wallet extension. Install MetaMask or another EVM wallet and reload the page.
+  </Accordion>
+  <Accordion title="The wallet shows the wrong network or a chain mismatch warning">
+    Click **Switch to BOT Chain testnet**. If your wallet doesn't know chain 968 yet, add it first using the values in [Connect a wallet](/get-started/bot-chain/connect-wallet).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="wagmi setup" icon="plug" href="/guides/frontend/wagmi-setup">
+    Configure wagmi for both networks in a real project.
+  </Card>
+  <Card title="Read events without getLogs" icon="list" href="/guides/frontend/events-without-getlogs">
+    Show contract history on BOT Chain.
+  </Card>
+  <Card title="Send transactions" icon="send" href="/guides/frontend/send-transactions">
+    Gas, errors and confirmations in more depth.
+  </Card>
+  <Card title="Networks" icon="network" href="/reference/networks">
+    Every chain value in one table.
+  </Card>
+</CardGroup>

@@ -3,4 +3,89 @@ title: "Differences from Geth"
 description: "Documented ways the BOT Chain JSON-RPC API differs from standard Geth."
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Ways BOT Chain's public JSON-RPC differs from a standard Geth node. Each row lists BOT Chain's documented behaviour, where there is one, and what we measured on 2026-10-01.
+
+## Summary
+
+| Area | Standard Geth | BOT Chain public RPC |
+| --- | --- | --- |
+| `eth_getLogs` | Enabled | Documented as disabled. Bounded ranges answered in our tests. |
+| Blob data | Blobs live on the consensus layer | Blob sidecars are stored on the execution layer and served by extra `eth_` methods |
+| Finality | Gasper (LMD-GHOST and Casper FFG) | Parlia with FFG, plus extra finality methods |
+| WebSocket and subscriptions | Available if enabled | No WebSocket endpoint. `eth_subscribe` fails over HTTP. |
+| `debug` and `trace` | Available if enabled | Not available |
+| Filters | Persist on the node | Often "not found" on the next call |
+
+## eth_getLogs
+
+**Documented:** BOT Chain's [JSON-RPC page](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) says `eth_getLogs` is disabled on the public endpoints and points to third-party providers.
+
+**Measured:** On 2026-10-01 both public RPCs answered `eth_getLogs` for bounded ranges. A 50,000-block range, queried in 5,000-block chunks, returned results in about 8 seconds. A query from block 0 to `latest` timed out.
+
+**What to do:** Treat `eth_getLogs` as unsupported in production. Query small ranges, or use the [Explorer API](/reference/explorer-api). See [Known limitations](/get-started/bot-chain/known-limitations#event-queries).
+
+## Blob API
+
+**Documented:** BOT Chain implements EIP-4844 and keeps blob data on the execution layer, so it adds two methods: `eth_getBlobSidecarByTxHash` and `eth_getBlobSidecars`. Ethereum serves blobs from the consensus layer's Beacon API instead.
+
+See [Blob API](/reference/json-rpc/blob-api) for parameters.
+
+## Finality methods
+
+**Documented:** BOT Chain uses Parlia, a difficulty-based fork choice with FFG finality, as described in [BEP-126](https://github.com/bnb-chain/BEPs/blob/master/BEPs/BEP126.md). Validators produce several blocks in a row, as described in [BEP-341](https://github.com/bnb-chain/BEPs/blob/master/BEPs/BEP-341.md).
+
+**Measured:** The standard `safe` and `finalized` block tags work. These extra methods from the BNB Smart Chain client also answered on both networks:
+
+| Method | Parameters | Returns |
+| --- | --- | --- |
+| `eth_getFinalizedHeader` | Number of validators that must have signed | Block header |
+| `eth_getFinalizedBlock` | Number of validators that must have signed, and a full-transactions flag | Block |
+| `eth_getHeaderByNumber` | Block number or tag | Block header without transactions |
+
+On 2026-10-01 the validator-count parameter accepted values from 1 to 7, matching the 7 validators producing blocks. For most apps, the `finalized` tag is simpler:
+
+```bash finalized.sh
+cast block finalized --field number --rpc-url https://rpc.bohr.life
+```
+
+See [Consensus and finality](/get-started/bot-chain/consensus-and-finality).
+
+## Block header fields
+
+Headers follow the Ethereum Prague format, with these Parlia-specific values:
+
+| Field | Value on BOT Chain |
+| --- | --- |
+| `difficulty` | `2` in every block we checked. Parlia uses difficulty in its fork choice. |
+| `mixHash` | Zero, so `block.prevrandao` is not random |
+| `extraData` | Holds Parlia consensus data, such as the producer's signature, so it is longer than on Ethereum |
+| `baseFeePerGas` | `0` in every block we checked |
+
+## Subscriptions, filters, debug and trace
+
+These are not documented by BOT Chain. We found them on 2026-10-01:
+
+- **No WebSocket.** `eth_subscribe` returns "notifications not supported". Poll over HTTP instead.
+- **Filters are unreliable.** `eth_newFilter` returns an ID, but `eth_getFilterChanges` and `eth_getFilterLogs` returned "filter not found" for about half of calls. The public endpoint likely spreads requests across several nodes. Don't use filters; poll with block numbers.
+- **No `debug_*` or `trace_*`.** Both return error `-32601`. To trace transactions, run your own node with these APIs enabled.
+
+## eth_createAccessList
+
+Not documented by BOT Chain. On testnet on 2026-10-01, `eth_createAccessList` checks that the sender can pay for gas at the default price, and fails with "insufficient funds" otherwise. Pass a funded `from` address, or set `gasPrice` to `0x0`:
+
+```bash access-list.sh
+curl -s https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_createAccessList","params":[{"to":"0x47FA21f684bBAD707A53a0f9BE59F1422F46C265","data":"0x42cbb15c","gasPrice":"0x0"},"latest"]}'
+```
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="JSON-RPC" icon="terminal" href="/reference/json-rpc/overview">
+    Endpoints and method support.
+  </Card>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    Workarounds for each gap.
+  </Card>
+</CardGroup>

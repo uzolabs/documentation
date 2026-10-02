@@ -4,4 +4,95 @@ description: "How to suggest edits, open issues and follow the Uzo docs style gu
 icon: "git-pull-request"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Fix a mistake, suggest a page or improve an example. The docs live in the [uzolabs/documentation](https://github.com/uzolabs/documentation) repository on GitHub.
+
+## Report a problem
+
+[Open an issue](https://github.com/uzolabs/documentation/issues/new) and include:
+
+- The page URL.
+- What's wrong, or what you expected to find.
+- For a broken example: the command you ran, the full error and your tool versions.
+
+## Edit a page
+
+Each page's file path matches its URL. For example, `/get-started/quickstart` is `get-started/quickstart.mdx`.
+
+<Steps>
+  <Step title="Fork and clone">
+    Fork [uzolabs/documentation](https://github.com/uzolabs/documentation), then clone your fork.
+  </Step>
+  <Step title="Run the site locally">
+    You need Node.js 20.17 or newer.
+
+    ```bash terminal
+    npm i -g mint
+    mint dev
+    ```
+
+    The site opens at `http://localhost:3000`.
+  </Step>
+  <Step title="Make your change">
+    Edit the `.mdx` file. To add, move or rename a page, open an issue first so we can agree where it goes.
+  </Step>
+  <Step title="Run the checks">
+    CI runs the same checks:
+
+    ```bash terminal
+    mint validate
+    mint broken-links
+    ```
+  </Step>
+  <Step title="Open a pull request">
+    Describe what you changed and why. If you tested code, say on which network and with which tool versions.
+  </Step>
+</Steps>
+
+## Style rules
+
+### Voice
+
+- Write plainly, directly and kindly, for someone at a hackathon at 2 a.m.
+- Use "you". Keep sentences short, with one idea per paragraph.
+- Start each page with what the reader will be able to do.
+- No marketing language, such as "blazing fast" or "seamless".
+- **No em dashes anywhere**, including code comments and alt text. Use commas, colons, full stops or parentheses.
+
+### Frontmatter
+
+Every page needs a `title` (short, sentence case) and a `description` (one sentence, under 160 characters). Add a Lucide `icon` where it helps.
+
+### Page shapes
+
+| Page type | Shape |
+| --- | --- |
+| Concept | One-line summary, why it matters, how it works, related pages as cards |
+| How-to | What you'll build, prerequisites, steps, how to check it worked, troubleshooting, next steps |
+| Reference | Short intro, then tables or parameter fields. No narrative. |
+
+### Code
+
+- Give every code block a language and, where useful, a filename.
+- Show alternatives with `<CodeGroup>`.
+- Examples must run on testnet as written, with no `...` gaps.
+- Use testnet values. Show mainnet only on production pages, with a warning.
+- Test what you can. Run read-only calls against both RPCs and compile Solidity.
+
+### Facts and sources
+
+- Don't invent facts, numbers, endpoints, prices or dates. If you don't know, leave it out.
+- Date anything you measured, such as "checked 2026-10-01".
+- Never present a planned Uzo product as live. Use the status snippets in `snippets/`.
+- Link to BOT Chain's docs for anything BOT Chain owns, such as nodes and validators. Write in your own words. Don't copy text from their docs.
+
+### Links
+
+Use root-relative internal links without the extension, such as `/get-started/quickstart`.
+
+## Never commit secrets
+
+Never put a private key, mnemonic or API key in a page, an example or a commit. Examples read secrets from environment variables. If you commit a secret by mistake, treat it as leaked: move any funds and replace the key.
+
+## Licence
+
+Text is licensed under CC BY 4.0 and code snippets under MIT. See the [LICENSE](https://github.com/uzolabs/documentation/blob/main/LICENSE) file.

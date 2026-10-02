@@ -4,4 +4,242 @@ description: "Deploy and verify your first smart contract on BOT Chain testnet i
 icon: "zap"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this quickstart you deploy a smart contract to BOT Chain testnet, verify its source code on BOTScan and call it from your terminal. It takes about 15 minutes and needs nothing from Uzo, so it works today.
+
+<TestnetOnly />
+
+## What you'll build
+
+You'll build a `Counter` contract that stores a number. You can increment the number and read it back. You will:
+
+1. Create a wallet that lives only on your machine.
+2. Fund it with free test tokens.
+3. Deploy the contract with [Foundry](https://getfoundry.sh).
+4. Verify the source on [BOTScan](https://scan.bohr.life).
+5. Send a transaction and read the result.
+
+## Prerequisites
+
+- A terminal. On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) or Git Bash, because the Foundry installer needs a Unix shell.
+- [Git](https://git-scm.com/downloads), which `forge init` uses.
+- About 15 minutes.
+
+You don't need MetaMask for this page. If you want to see your balance in a browser wallet later, follow [Connect a wallet](/get-started/bot-chain/connect-wallet).
+
+## Steps
+
+<Steps>
+  <Step title="Install Foundry">
+    Install `foundryup`, then use it to install `forge`, `cast` and `anvil`.
+
+    ```bash
+    curl -L https://foundry.paradigm.xyz | bash
+    ```
+
+    Open a new terminal so your `PATH` updates, then run:
+
+    ```bash
+    foundryup
+    ```
+
+    Check that it worked:
+
+    ```bash
+    forge --version
+    ```
+
+    These docs were tested with Foundry 1.8.3. Any later 1.x version should work.
+  </Step>
+
+  <Step title="Create a wallet">
+    Create a new key and save it as an encrypted keystore named `uzo-dev`. Cast asks you for a password. Pick one you'll remember, because you'll type it each time you send a transaction.
+
+    ```bash
+    cast wallet new uzo-dev
+    ```
+
+    The keystore is saved in `~/.foundry/keystores/uzo-dev`. Cast prints your new address. You can print it again at any time:
+
+    ```bash
+    cast wallet address --account uzo-dev
+    ```
+
+    <Warning>
+      Use this wallet for testnet only. Never send real funds to a key you created for testing, and never paste a private key into a file you might commit.
+    </Warning>
+  </Step>
+
+  <Step title="Get test tokens">
+    1. Open the [BOT Chain faucet](https://faucet.botchain.ai/basic).
+    2. Paste your address, complete the check and claim.
+    3. Wait a few seconds, then check your balance:
+
+    ```bash
+    cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life
+    ```
+
+    Replace `YOUR_ADDRESS` with the address from the last step. You should see `10.000000000000000000`. The faucet gives each address up to 10 tBOT every 24 hours, which is far more than this quickstart uses. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens) if it doesn't arrive.
+  </Step>
+
+  <Step title="Create a project">
+    ```bash
+    forge init hello-bot
+    cd hello-bot
+    ```
+
+    This creates `src/Counter.sol`, a test in `test/Counter.t.sol` and a deploy script in `script/`. The contract looks like this:
+
+    ```solidity src/Counter.sol
+    // SPDX-License-Identifier: UNLICENSED
+    pragma solidity ^0.8.13;
+
+    contract Counter {
+        uint256 public number;
+
+        function setNumber(uint256 newNumber) public {
+            number = newNumber;
+        }
+
+        function increment() public {
+            number++;
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Point Foundry at BOT Chain">
+    Replace the contents of `foundry.toml` with this:
+
+    ```toml foundry.toml
+    [profile.default]
+    src = "src"
+    out = "out"
+    libs = ["lib"]
+    evm_version = "cancun"
+
+    [rpc_endpoints]
+    bot_testnet = "https://rpc.bohr.life"
+    bot_mainnet = "https://rpc.botchain.ai"
+    ```
+
+    `evm_version = "cancun"` matters. Newer Solidity compilers can target upgrades that BOT Chain doesn't support yet. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+
+    Build and run the tests:
+
+    ```bash
+    forge build
+    forge test
+    ```
+
+    Both tests should pass.
+  </Step>
+
+  <Step title="Deploy the contract">
+    ```bash
+    forge create src/Counter.sol:Counter --rpc-url bot_testnet --account uzo-dev --broadcast
+    ```
+
+    Enter your keystore password when asked. The output ends like this:
+
+    ```text
+    Deployer: 0x...
+    Deployed to: 0x...
+    Transaction hash: 0x...
+    ```
+
+    Copy the `Deployed to` address and save it in a shell variable so the next steps can use it:
+
+    ```bash
+    export COUNTER=PASTE_DEPLOYED_ADDRESS_HERE
+    ```
+  </Step>
+
+  <Step title="Verify the source on BOTScan">
+    BOTScan runs on Blockscout, so use Foundry's Blockscout verifier. No API key is needed.
+
+    ```bash
+    forge verify-contract $COUNTER src/Counter.sol:Counter \
+      --chain 968 \
+      --verifier blockscout \
+      --verifier-url https://scan.bohr.life/api/
+    ```
+
+    Foundry submits the source and waits for the result. Verification usually finishes in a few seconds.
+  </Step>
+
+  <Step title="Call the contract">
+    Send a transaction that increments the counter:
+
+    ```bash
+    cast send $COUNTER "increment()" --rpc-url bot_testnet --account uzo-dev
+    ```
+
+    Then read the value back. Reads are free and need no wallet:
+
+    ```bash
+    cast call $COUNTER "number()(uint256)" --rpc-url bot_testnet
+    ```
+
+    It prints `1`.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Open your contract on BOTScan. Replace the address at the end of this URL with yours:
+
+```text
+https://scan.bohr.life/address/PASTE_DEPLOYED_ADDRESS_HERE
+```
+
+{/* screenshot: BOTScan testnet contract page for the deployed Counter, showing the green verified badge and the Contract tab */}
+
+You should see:
+
+- A green check next to **Contract**, which means the source is verified.
+- Two transactions: the deployment and your `increment` call.
+- On the **Contract** tab, a **Read** view showing `number` as `1`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="insufficient funds for gas * price + value">
+    Your wallet has no tBOT on testnet. Check the balance with `cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life`, then claim from the [faucet](https://faucet.botchain.ai/basic). Make sure you claimed for the same address that `cast wallet address --account uzo-dev` prints.
+  </Accordion>
+  <Accordion title="invalid opcode or EVM error 0x1e when deploying">
+    Your compiler targeted an EVM upgrade newer than BOT Chain supports. Set `evm_version = "cancun"` in `foundry.toml`, run `forge clean`, then build and deploy again.
+  </Accordion>
+  <Accordion title="forge create prints the transaction but nothing is deployed">
+    Foundry only simulates unless you pass `--broadcast`. Run the command again with `--broadcast` at the end.
+  </Accordion>
+  <Accordion title="Verification fails or says the contract is not found">
+    The explorer may not have indexed the deployment yet. Wait 10 to 20 seconds and run `forge verify-contract` again. Check that you used the address from `Deployed to`, not the transaction hash, and that `--verifier-url` ends in `/api/`.
+  </Accordion>
+  <Accordion title="Error: keystore not found or wrong password">
+    `--account uzo-dev` looks in `~/.foundry/keystores/`. Run `cast wallet list` to see the names you have. If you forgot the password, create a new wallet and claim from the faucet again.
+  </Accordion>
+  <Accordion title="curl or foundryup not found on Windows">
+    Run the installer inside WSL or Git Bash, not PowerShell or Command Prompt. Open a new terminal after installing so `foundryup` is on your `PATH`.
+  </Accordion>
+</AccordionGroup>
+
+More errors and fixes are in [Troubleshooting](/reference/troubleshooting).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Build your first dApp" icon="app-window" href="/get-started/first-dapp">
+    Read and write this contract from JavaScript and a web page.
+  </Card>
+  <Card title="Foundry setup" icon="hammer" href="/guides/environment/foundry">
+    A fuller Foundry setup for real projects.
+  </Card>
+  <Card title="Connect a wallet" icon="wallet" href="/get-started/bot-chain/connect-wallet">
+    Add BOT Chain to MetaMask.
+  </Card>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    What works differently on BOT Chain.
+  </Card>
+</CardGroup>

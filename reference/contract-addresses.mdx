@@ -4,4 +4,99 @@ description: "Addresses of core BOT Chain contracts on mainnet and testnet, each
 icon: "map-pin"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Addresses of the core contracts deployed on BOT Chain. Every BOT Chain address below was checked on BOTScan on 2026-10-01: each one holds verified contract code under the expected name.
+
+<Warning>
+  Always copy addresses from this page or from [BOT Chain's docs](https://dev-docs.botchain.ai/docs/intro), never from a token list or a search result. Other tokens named "USDT" exist on testnet, with different addresses and decimals.
+</Warning>
+
+## Mainnet (chain 677)
+
+| Contract | Address | Notes |
+| --- | --- | --- |
+| WBOT | [`0xD5452816194a3784dBa983426cCe7c122F4abd30`](https://scan.botchain.ai/address/0xD5452816194a3784dBa983426cCe7c122F4abd30) | Wrapped BOT, 18 decimals |
+| USDT | [`0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C`](https://scan.botchain.ai/address/0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C) | Tether USD, **6 decimals** |
+| Multicall3 | [`0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`](https://scan.botchain.ai/address/0x47FA21f684bBAD707A53a0f9BE59F1422F46C265) | Same address on testnet |
+| Multicall3 (standard address) | [`0xcA11bde05977b3631167028862bE2a173976CA11`](https://scan.botchain.ai/address/0xcA11bde05977b3631167028862bE2a173976CA11) | Mainnet only. Not deployed on testnet. |
+| Permit2 | [`0x8366170f09a04f715a13549D616a06aED16Db7c3`](https://scan.botchain.ai/address/0x8366170f09a04f715a13549D616a06aED16Db7c3) | |
+| BDEX UniversalRouter | [`0xaE6ae8630f7A888dEc0B9195C85F7515d5887655`](https://scan.botchain.ai/address/0xaE6ae8630f7A888dEc0B9195C85F7515d5887655) | |
+| BDEX V2 Factory | [`0x117115f3B72C8d1989178089A67D0C26f8EE0AA3`](https://scan.botchain.ai/address/0x117115f3B72C8d1989178089A67D0C26f8EE0AA3) | |
+| BDEX V2 Router02 | [`0x1414eD29FdFD322c3c0a830330ed982E2D629e76`](https://scan.botchain.ai/address/0x1414eD29FdFD322c3c0a830330ed982E2D629e76) | |
+| BDEX V3 Factory | [`0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419`](https://scan.botchain.ai/address/0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419) | Same address on testnet |
+| BDEX V3 SwapRouter | [`0x07032d47A1b9f8460cBeE9dC17c1d3E438693929`](https://scan.botchain.ai/address/0x07032d47A1b9f8460cBeE9dC17c1d3E438693929) | Same address on testnet |
+| BDEX V3 QuoterV2 | [`0x034A705b36067cff99ABf5C662Be881cBd8d0176`](https://scan.botchain.ai/address/0x034A705b36067cff99ABf5C662Be881cBd8d0176) | Same address on testnet |
+| BDEX V3 NonfungiblePositionManager | [`0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090`](https://scan.botchain.ai/address/0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090) | Same address on testnet |
+| Bridge router | [`0xef8DC669ECa13E612b67Ff09478352E85bD6CC53`](https://scan.botchain.ai/address/0xef8DC669ECa13E612b67Ff09478352E85bD6CC53) | Upgradeable proxy |
+
+V2 pair init code hash (mainnet): `0xa075aa7c03cb5559a4c6202459721232c21e18148152410f6beec063e8499e6c`
+
+## Testnet (chain 968)
+
+| Contract | Address | Notes |
+| --- | --- | --- |
+| WBOT | [`0xD5452816194a3784dBa983426cCe7c122F4abd30`](https://scan.bohr.life/address/0xD5452816194a3784dBa983426cCe7c122F4abd30) | Wrapped tBOT, 18 decimals |
+| USDT | [`0x75edC9335175Fc0552D51D48439F229c10420fe3`](https://scan.bohr.life/address/0x75edC9335175Fc0552D51D48439F229c10420fe3) | Tether USD, **6 decimals** |
+| Multicall3 | [`0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`](https://scan.bohr.life/address/0x47FA21f684bBAD707A53a0f9BE59F1422F46C265) | Use this one on testnet |
+| Permit2 | [`0xaE85b2bc7578F8Ca9217900a2D548151F96447de`](https://scan.bohr.life/address/0xaE85b2bc7578F8Ca9217900a2D548151F96447de) | |
+| BDEX UniversalRouter | [`0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5`](https://scan.bohr.life/address/0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5) | |
+| BDEX V2 Factory | [`0x65b8e98ceA190d8c28B3e4716402027f634d15a3`](https://scan.bohr.life/address/0x65b8e98ceA190d8c28B3e4716402027f634d15a3) | |
+| BDEX V2 Router02 | [`0xD6425a02f0845B8D99e349C34D2E7A576E177345`](https://scan.bohr.life/address/0xD6425a02f0845B8D99e349C34D2E7A576E177345) | |
+| BDEX V3 Factory | [`0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419`](https://scan.bohr.life/address/0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419) | |
+| BDEX V3 SwapRouter | [`0x07032d47A1b9f8460cBeE9dC17c1d3E438693929`](https://scan.bohr.life/address/0x07032d47A1b9f8460cBeE9dC17c1d3E438693929) | |
+| BDEX V3 QuoterV2 | [`0x034A705b36067cff99ABf5C662Be881cBd8d0176`](https://scan.bohr.life/address/0x034A705b36067cff99ABf5C662Be881cBd8d0176) | |
+| BDEX V3 NonfungiblePositionManager | [`0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090`](https://scan.bohr.life/address/0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090) | |
+| Bridge router | [`0x6239404Aa276ba68486E2Fa40E90CDd36ff8ec3A`](https://scan.bohr.life/address/0x6239404Aa276ba68486E2Fa40E90CDd36ff8ec3A) | Upgradeable proxy |
+
+V2 pair init code hash (testnet): `0x9d2cc5d1f5560e2a4119c794e0fa625b8c50af562e72436c234ec1addb77de47`
+
+The V2 contracts and init code hashes differ between networks. The V3 contracts share addresses.
+
+## Bridge gateways on other chains
+
+The BOT Chain bridge uses a gateway contract on each connected chain. These addresses come from BOT Chain's [Bridge contract addresses](https://dev-docs.botchain.ai/docs/Bridge/contract-addresses/) page.
+
+### Mainnet routes
+
+| Chain | Gateway | USDT on that chain |
+| --- | --- | --- |
+| Ethereum | [`0x2945d3aF6f012e49f7421252b5fB57D1bb7E6Edd`](https://etherscan.io/address/0x2945d3aF6f012e49f7421252b5fB57D1bb7E6Edd) | [`0xdAC17F958D2ee523a2206206994597C13D831ec7`](https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7) (6 decimals) |
+| BNB Smart Chain | [`0x3cd6fB6b0CDdD3610f0f4769AA7Bb686Cd4a4b55`](https://bscscan.com/address/0x3cd6fB6b0CDdD3610f0f4769AA7Bb686Cd4a4b55) | [`0x55d398326f99059fF775485246999027B3197955`](https://bscscan.com/address/0x55d398326f99059fF775485246999027B3197955) (**18 decimals**) |
+| Tron | [`TGhXbQpjBgC6bDp5jAexzeQPHEXXsx5f35`](https://tronscan.org/#/contract/TGhXbQpjBgC6bDp5jAexzeQPHEXXsx5f35) | [`TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`](https://tronscan.org/#/token20/TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t) (6 decimals) |
+
+### Testnet routes
+
+| Chain | Gateway | USDT on that chain |
+| --- | --- | --- |
+| Sepolia | [`0xc83AE6F73e8918750b87DD001E36093A1AB7b272`](https://sepolia.etherscan.io/address/0xc83AE6F73e8918750b87DD001E36093A1AB7b272) | [`0x7B1e05a39adF207a759EAf89E867dBcC1C615130`](https://sepolia.etherscan.io/address/0x7B1e05a39adF207a759EAf89E867dBcC1C615130) |
+| BSC testnet (97) | [`0xbCAA929FdB16f5a7185C96A4Ed0CC4F25ab86E40`](https://testnet.bscscan.com/address/0xbCAA929FdB16f5a7185C96A4Ed0CC4F25ab86E40) | [`0x5d012516D129Ab3aE7673FE32E5ABFCD9be4d086`](https://testnet.bscscan.com/address/0x5d012516D129Ab3aE7673FE32E5ABFCD9be4d086) |
+| Tron Nile | [`TMGhDtUkEhARjd1uYDVssubqH4ivnarfv7`](https://nile.tronscan.org/#/contract/TMGhDtUkEhARjd1uYDVssubqH4ivnarfv7) | [`TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`](https://nile.tronscan.org/#/token20/TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf) |
+
+USDT has different decimals on different chains. Convert amounts when you move between them.
+
+### Resource IDs
+
+The bridge identifies each asset by a resource ID. This value comes from BOT Chain's docs and was not checked on chain.
+
+| Asset | Resource ID |
+| --- | --- |
+| USDT | `0xac589789ed8c9d2c61f17b13369864b5f181e58eba230a6ee4ec4c3e7750cd1d` |
+
+## Check an address yourself
+
+Ask BOTScan for the contract's name and whether its source is verified:
+
+```bash check-address.sh
+curl -s https://scan.bohr.life/api/v2/addresses/0x75edC9335175Fc0552D51D48439F229c10420fe3 \
+  | grep -oE '"(is_verified|name)":("[^"]*"|true|false)'
+```
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Networks" icon="network" href="/reference/networks">
+    Chain IDs, RPCs and explorers.
+  </Card>
+  <Card title="BDEX API" icon="arrow-left-right" href="/reference/bdex-api">
+    Pools, pairs and tokens over HTTP.
+  </Card>
+</CardGroup>

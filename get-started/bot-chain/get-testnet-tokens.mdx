@@ -4,4 +4,76 @@ description: "Claim free tBOT from the BOT Chain faucet so you can deploy and te
 icon: "droplets"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Claim free tBOT from the BOT Chain faucet so you can pay for gas on testnet. tBOT has no value and can't be used on mainnet.
+
+## What you'll do
+
+Send up to 10 tBOT to your wallet address, then check that it arrived.
+
+## Prerequisites
+
+- A wallet address. Create one with `cast wallet new` (see the [quickstart](/get-started/quickstart)) or use MetaMask (see [Connect a wallet](/get-started/bot-chain/connect-wallet)).
+
+## Steps
+
+<Steps>
+  <Step title="Open the faucet">
+    Go to the [BOT Chain faucet](https://faucet.botchain.ai/basic). The network should read **BOT Chain Testnet**.
+
+    {/* screenshot: faucet.botchain.ai/basic with the network, address field and verification check visible */}
+  </Step>
+  <Step title="Enter your address">
+    Paste your wallet address (it starts with `0x`). Double-check it; tokens sent to the wrong address can't be returned.
+  </Step>
+  <Step title="Complete the check and claim">
+    Complete the "I am not a robot" check, then click the send button. The faucet shows a transaction hash when it's done.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Click the transaction hash the faucet returns to open it on BOTScan testnet. Or check your balance from a terminal:
+
+```bash
+cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life
+```
+
+You should see up to `10.000000000000000000`.
+
+## Limits
+
+Each address can claim **up to 10 tBOT every 24 hours** (checked 2026-10-01 on the faucet and in [BOT Chain's faucet guide](https://dev-docs.botchain.ai/docs/Developers/claim-test-tbot-tokens/)).
+
+That's plenty for development. Deploying and calling a small contract costs a tiny fraction of one tBOT. See [Gas and fees](/get-started/bot-chain/gas-and-fees) for how to check costs yourself.
+
+## When you need more
+
+- **Wait for the next claim.** You can claim again after 24 hours.
+- **Use one funded wallet for deploys.** Keep one deployer wallet and claim for it each day, rather than spreading tokens across many test addresses.
+- **Test locally first.** Run your tests on a local chain with `forge test` or `anvil`, which cost nothing. Only deploy to testnet when the code works.
+- **Teams and hackathons.** Ask a teammate to claim for their own address and send you some. If you're running an event, see the [faucet plan](/hackathons/organizers/faucet-plan).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The faucet won't let me claim again">
+    You've probably hit the 24-hour limit for that address. Wait 24 hours, or use one of the options in [When you need more](#when-you-need-more).
+  </Accordion>
+  <Accordion title="The claim succeeded but my wallet shows 0">
+    Check that your wallet is on **BOT Chain Testnet** (chain 968), not mainnet. Look up your address on [BOTScan testnet](https://scan.bohr.life) to confirm the balance.
+  </Accordion>
+  <Accordion title="The verification check won't load">
+    Disable ad or script blockers for the faucet page and reload.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="zap" href="/get-started/quickstart">
+    Deploy your first contract.
+  </Card>
+  <Card title="Gas and fees" icon="fuel" href="/get-started/bot-chain/gas-and-fees">
+    How much your transactions cost.
+  </Card>
+</CardGroup>

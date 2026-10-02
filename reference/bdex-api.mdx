@@ -4,4 +4,142 @@ description: "Reference for the public BDEX data API, such as pool and pair list
 icon: "arrow-left-right"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Read BDEX pools, pairs and tokens over HTTP, without querying the chain. BDEX is BOT Chain's decentralized exchange, with V2 and V3 pools. This data API needs no key. Every endpoint below was tested on both networks on 2026-10-01.
+
+| Network | Base URL |
+| --- | --- |
+| Mainnet | `https://dex-wallet.botchain.ai` |
+| Testnet | `https://dex-wallet.bohr.life` |
+
+BOT Chain publishes its own API reference on Apifox, linked from the [DEX API reference page](https://dev-docs.botchain.ai/docs/DEX/api-reference/). We couldn't load the Apifox pages on 2026-10-01, so this page covers only the endpoints we tested.
+
+<Note>
+  BDEX swaps use a routing API to find the best path between tokens. Its base URL is not public, so it is not covered here. To quote a swap on chain, call the QuoterV2 contract listed in [Contract addresses](/reference/contract-addresses).
+</Note>
+
+## List pairs
+
+```bash pairs.sh
+curl -s "https://dex-wallet.bohr.life/api/v1/pairs?pool_type=v2"
+```
+
+<ParamField query="pool_type" type="string" default="all">
+  `all`, `v2` or `v3`.
+</ParamField>
+
+<ResponseField name="data" type="object[]">
+  One entry per pool.
+  <Expandable title="fields">
+    <ResponseField name="chain_id" type="number">Chain ID, 677 or 968.</ResponseField>
+    <ResponseField name="pair" type="string">Pool contract address.</ResponseField>
+    <ResponseField name="poolType" type="string">`v2` or `v3`.</ResponseField>
+    <ResponseField name="token0" type="string">Address of the first token.</ResponseField>
+    <ResponseField name="token1" type="string">Address of the second token.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="success" type="boolean">
+  `true` if the request worked.
+</ResponseField>
+
+## List pools
+
+Returns pools with volume, liquidity and fee statistics, sorted by total value locked (TVL), highest first.
+
+```bash pools.sh
+curl -s "https://dex-wallet.bohr.life/api/v1/pools?page_num=1&page_size=10&pool_type=all"
+```
+
+<ParamField query="page_num" type="number">
+  Page number, starting at 1.
+</ParamField>
+
+<ParamField query="page_size" type="number">
+  Pools per page.
+</ParamField>
+
+<ParamField query="pool_type" type="string" default="all">
+  `all`, `v2` or `v3`.
+</ParamField>
+
+<ResponseField name="data" type="object[]">
+  One entry per pool.
+  <Expandable title="fields">
+    <ResponseField name="poolId" type="string">Pool contract address.</ResponseField>
+    <ResponseField name="name" type="string">Pair name, such as `USDT/WBOT`.</ResponseField>
+    <ResponseField name="dex" type="string">DEX name.</ResponseField>
+    <ResponseField name="poolType" type="string">`v2` or `v3`.</ResponseField>
+    <ResponseField name="feeTier" type="string">Fee in hundredths of a basis point. `3000` is 0.30%.</ResponseField>
+    <ResponseField name="baseTokenAddress" type="string">Base token address.</ResponseField>
+    <ResponseField name="quoteTokenAddress" type="string">Quote token address.</ResponseField>
+    <ResponseField name="token0Amount" type="string">Pool balance of token0, in whole tokens.</ResponseField>
+    <ResponseField name="token1Amount" type="string">Pool balance of token1, in whole tokens.</ResponseField>
+    <ResponseField name="baseTokenVolume24" type="string">24-hour volume in the base token.</ResponseField>
+    <ResponseField name="quoteTokenVolume24" type="string">24-hour volume in the quote token.</ResponseField>
+    <ResponseField name="volumeUsd24" type="string">24-hour volume in USD.</ResponseField>
+    <ResponseField name="volumeChangePercent" type="string">Change in volume.</ResponseField>
+    <ResponseField name="fees24Usd" type="string">24-hour fees in USD.</ResponseField>
+    <ResponseField name="feeApr" type="string">Fee APR, as a fraction.</ResponseField>
+    <ResponseField name="fdvUsd" type="string">Fully diluted value in USD.</ResponseField>
+    <ResponseField name="tvlChangePercent" type="string">Change in TVL.</ResponseField>
+    <ResponseField name="transactionsH24" type="string">Transactions in the last 24 hours.</ResponseField>
+    <ResponseField name="hasUserLiquidity" type="boolean">Whether the requesting user has liquidity. `false` when no user is given.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Paging details: `count`, `page_num`, `page_size`, `pool_type`, `sort_by` (`tvl`), `sort_order` (`desc`) and `total`.
+</ResponseField>
+
+<ResponseField name="code" type="number">
+  `0` on success.
+</ResponseField>
+
+<ResponseField name="success" type="boolean">
+  `true` if the request worked.
+</ResponseField>
+
+<Warning>
+  USD values on testnet are not real. Test tokens have no real-world value.
+</Warning>
+
+## List tokens
+
+Returns tokens known to BDEX, newest first.
+
+```bash tokens.sh
+curl -s "https://dex-wallet.bohr.life/api/v1/tokens"
+```
+
+<ResponseField name="data" type="object[]">
+  One entry per token.
+  <Expandable title="fields">
+    <ResponseField name="id" type="number">Internal ID.</ResponseField>
+    <ResponseField name="token_address" type="string">Token contract address.</ResponseField>
+    <ResponseField name="chain_id" type="number">Chain ID.</ResponseField>
+    <ResponseField name="symbol" type="string">Token symbol.</ResponseField>
+    <ResponseField name="name" type="string">Token name.</ResponseField>
+    <ResponseField name="decimals" type="number">Token decimals.</ResponseField>
+    <ResponseField name="last_updated" type="string">When the entry was last updated.</ResponseField>
+    <ResponseField name="created_at" type="string">Creation time. Returned as `0001-01-01T00:00:00Z` for every token we checked.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Warning>
+  Anyone can create a token, so this list includes test tokens and copies of real ones. On testnet it includes a second token named "USDT" with 18 decimals. Match tokens by address, using [Contract addresses](/reference/contract-addresses), never by symbol.
+</Warning>
+
+## Fees
+
+BDEX V2 pools charge 0.30% per swap. V3 pools use fee tiers of 0.05%, 0.30% or 1.00%. Source: BOT Chain's [DEX core concepts](https://dev-docs.botchain.ai/docs/DEX/core-concepts/).
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Contract addresses" icon="map-pin" href="/reference/contract-addresses">
+    BDEX routers, factories and quoter.
+  </Card>
+  <Card title="Explorer API" icon="search" href="/reference/explorer-api">
+    Token and transaction data from BOTScan.
+  </Card>
+</CardGroup>

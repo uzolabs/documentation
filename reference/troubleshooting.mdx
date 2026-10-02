@@ -4,4 +4,122 @@ description: "Common BOT Chain error messages, what causes them and how to fix t
 icon: "life-buoy"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Find the error you're seeing, then read its cause and fix. We captured most messages from BOT Chain's RPC or the named tool on 2026-10-01. The two nonce errors are standard Geth messages that we didn't reproduce. Search the page for a few words of your error.
+
+## Transactions
+
+<AccordionGroup>
+  <Accordion title="insufficient funds for gas * price + value">
+    **Cause:** The sending account doesn't hold enough BOT (or tBOT) to pay for gas plus any value sent.
+
+    **Fix:** Check the balance with `cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life`. On testnet, claim tBOT from the [faucet](/get-started/bot-chain/get-testnet-tokens). Make sure you're sending from the account you funded.
+  </Accordion>
+
+  <Accordion title="nonce too low">
+    **Cause:** You sent a transaction with a nonce that the account has already used. This often happens when two scripts send from the same account at once, or after you reset a local wallet.
+
+    **Fix:** Let your library pick the nonce, or read it with `cast nonce YOUR_ADDRESS --rpc-url https://rpc.bohr.life`.
+  </Accordion>
+
+  <Accordion title="replacement transaction underpriced">
+    **Cause:** A pending transaction already uses this nonce, and the new one doesn't pay enough more to replace it.
+
+    **Fix:** Wait for the pending transaction to confirm. Blocks arrive every 0.75 seconds, so this rarely takes long. To replace it, raise the priority fee.
+  </Accordion>
+
+  <Accordion title="invalid opcode">
+    **Cause:** Your contract was compiled for an EVM version newer than BOT Chain supports, such as Osaka.
+
+    **Fix:** Set the EVM version to `cancun` and redeploy. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+  </Accordion>
+
+  <Accordion title="Transaction confirmed, but my app still shows the old value">
+    **Cause:** Your app read state before the transaction was included, or it read from a cached value.
+
+    **Fix:** Wait for the receipt before reading. For value transfers, wait for the `finalized` block. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality).
+  </Accordion>
+</AccordionGroup>
+
+## Contracts and reads
+
+<AccordionGroup>
+  <Accordion title="The contract function &quot;...&quot; returned no data (&quot;0x&quot;)">
+    **Cause:** This viem error means there is no contract code at the address on the network you're reading from. Usually the address is wrong, or the contract is on the other network.
+
+    **Fix:** Open the address on [BOTScan testnet](https://scan.bohr.life) and [BOTScan mainnet](https://scan.botchain.ai) to see where it lives. Check that your client's RPC URL matches that network.
+  </Accordion>
+
+  <Accordion title="Chain &quot;...&quot; does not support contract &quot;multicall3&quot;">
+    **Cause:** You called `multicall` in viem, and your chain definition has no Multicall3 address.
+
+    **Fix:** Add `contracts.multicall3.address` set to `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265` to your `defineChain` call. The standard `0xcA11...CA11` address is not deployed on testnet. See [Build your first dApp](/get-started/first-dapp).
+  </Accordion>
+
+  <Accordion title="Token amounts are off by a factor of a trillion">
+    **Cause:** USDT on BOT Chain has 6 decimals, and your code assumed 18.
+
+    **Fix:** Read `decimals()` from the token contract instead of hard-coding it. Use the official address from [Contract addresses](/reference/contract-addresses), because other tokens named "USDT" exist on testnet.
+  </Accordion>
+
+  <Accordion title="Contract verification fails on BOTScan">
+    **Cause:** The verifier settings don't match BOTScan, or the compiler settings differ from the ones you deployed with.
+
+    **Fix:** Use `--verifier blockscout` and `--verifier-url https://scan.bohr.life/api/` (with the trailing slash), and the same compiler version, optimizer settings and EVM version you deployed with. See the [quickstart](/get-started/quickstart).
+  </Accordion>
+</AccordionGroup>
+
+## RPC
+
+<AccordionGroup>
+  <Accordion title="eth_getLogs times out or returns a gateway error">
+    **Cause:** BOT Chain documents `eth_getLogs` as disabled on the public RPCs. Bounded ranges answered in our tests, but large ranges time out.
+
+    **Fix:** Query in chunks of a few thousand blocks, or read logs from the [Explorer API](/reference/explorer-api). See [Known limitations](/get-started/bot-chain/known-limitations#event-queries).
+  </Accordion>
+
+  <Accordion title="notifications not supported">
+    **Cause:** You called `eth_subscribe`, or your library tried to open a subscription. BOT Chain has no public WebSocket endpoint.
+
+    **Fix:** Poll over HTTP. In viem, use an `http` transport and the `watch` actions, which poll automatically.
+  </Accordion>
+
+  <Accordion title="filter not found">
+    **Cause:** You created a filter with `eth_newFilter` or `eth_newBlockFilter`. The public RPC seems to spread requests across several nodes, so the next request often reaches a node that doesn't know the filter.
+
+    **Fix:** Don't use filters. Track the last block you processed and poll for new blocks.
+  </Accordion>
+
+  <Accordion title="the method debug_traceTransaction does not exist/is not available">
+    **Cause:** The public RPCs don't expose the `debug` or `trace` namespaces (error code `-32601`).
+
+    **Fix:** Use BOTScan to inspect a transaction, or run your own node with these APIs enabled. See BOT Chain's [node types](https://dev-docs.botchain.ai/docs/Developers/node-types/) page.
+  </Accordion>
+
+  <Accordion title="Chain ID mismatch, or the wallet calls testnet &quot;Datagram&quot;">
+    **Cause:** Chain ID 968 is registered to a network called Datagram on Chainlist and in the public chain registry. Wallets that look up chain details can show the wrong name or RPC.
+
+    **Fix:** Add BOT Chain testnet by hand with the values in [Networks](/reference/networks).
+  </Accordion>
+</AccordionGroup>
+
+## Wallets and faucet
+
+<AccordionGroup>
+  <Accordion title="Faucet tokens don't arrive">
+    **Cause:** The claim is still processing, you're looking at the wrong network, or you've already claimed in the last 24 hours.
+
+    **Fix:** Check that your wallet is on BOT Chain testnet (chain 968). Look up your address on [BOTScan testnet](https://scan.bohr.life). See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+
+  <Accordion title="My balance shows BOT on testnet">
+    **Cause:** BOTScan and the faucet display the testnet token's symbol as `BOT`.
+
+    **Fix:** Nothing to fix. It's tBOT, with no real-world value. These docs call it tBOT to keep the networks apart.
+  </Accordion>
+</AccordionGroup>
+
+{/* TODO: add the template errors once the templates brief is available. */}
+
+## Still stuck?
+
+Check [Known limitations](/get-started/bot-chain/known-limitations) and the [FAQ](/reference/faq). If you think the docs are wrong, [open an issue](https://github.com/uzolabs/documentation/issues).

@@ -4,4 +4,44 @@ description: "Short definitions of BOT Chain and Uzo terms, from BOT and BDEX to
 icon: "book-a"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Short definitions of terms used across these docs, in alphabetical order.
+
+| Term | Definition |
+| --- | --- |
+| **ABI** | Application binary interface. A JSON description of a contract's functions and events, used by libraries to encode calls. |
+| **BDEX** | BOT Chain's decentralized exchange, with V2 and V3 pools. Shown as "B DEX" in some places. See [BDEX API](/reference/bdex-api). |
+| **BEP** | BNB Evolution Proposal. BOT Chain's consensus follows several BEPs, such as BEP-126 and BEP-341. |
+| **Blob** | A large chunk of data attached to a type 3 transaction (EIP-4844). See [Blob API](/reference/json-rpc/blob-api). |
+| **Block tag** | A name for a block in RPC calls: `latest`, `safe`, `finalized`, `earliest` or `pending`. |
+| **BOT** | The native token of BOT Chain mainnet. It pays for gas. 18 decimals. |
+| **BOT Chain** | An EVM-compatible blockchain with Parlia consensus. Mainnet is chain 677, testnet is chain 968. See [What is BOT Chain](/get-started/bot-chain/overview). |
+| **BOTScan** | BOT Chain's block explorer, built on Blockscout. See [Explorer API](/reference/explorer-api). |
+| **Bridge** | The BOT Chain service that moves assets, such as USDT, between BOT Chain and other chains. See the [bridge guide](/guides/bridge/overview). |
+| **Chain ID** | A number that identifies a network and stops a transaction signed for one network being replayed on another. |
+| **EOA** | Externally owned account. An account controlled by a private key, as opposed to a contract. |
+| **EVM version** | The set of opcodes a compiler targets, named after Ethereum upgrades such as `cancun` and `prague`. |
+| **Faucet** | A site that gives out free testnet tokens. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens). |
+| **FFG** | Friendly finality gadget. The voting process that finalizes blocks on BOT Chain. |
+| **Finalized block** | A block that can't be reverted without a large share of validators breaking the rules. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality). |
+| **Gas** | The unit for the work a transaction does. You pay gas used times gas price. See [Gas and fees](/get-started/bot-chain/gas-and-fees). |
+| **Gateway** | The bridge contract on a chain connected to BOT Chain. See [Contract addresses](/reference/contract-addresses#bridge-gateways-on-other-chains). |
+| **gwei** | One billionth of a BOT. Gas prices are usually quoted in gwei. |
+| **JSON-RPC** | The API wallets and libraries use to talk to a node. See [JSON-RPC](/reference/json-rpc/overview). |
+| **Keystore** | An encrypted file that holds a private key, unlocked with a password. Foundry's `cast wallet new` creates one. |
+| **Meta-transaction** | A message a user signs off chain, which a relayer submits and pays gas for. See [Meta-transactions](/guides/gasless/meta-transactions). |
+| **Multicall3** | A contract that bundles many read calls into one. On BOT Chain, use `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`. |
+| **Parlia** | The consensus engine BOT Chain uses, taken from BNB Smart Chain. Validators take turns producing blocks. |
+| **Paymaster** | A service that pays gas for users' transactions. See [EOA paymaster](/guides/gasless/eoa-paymaster). |
+| **Permit2** | A contract that manages token approvals with signatures. Used by the BDEX UniversalRouter. |
+| **Relayer** | A server that submits transactions on users' behalf and pays the gas. See [Run a relayer](/guides/gasless/run-a-relayer). |
+| **Resource ID** | A 32-byte value the BOT Chain bridge uses to identify an asset across chains. |
+| **RPC endpoint** | A URL that accepts JSON-RPC requests. See [Networks](/reference/networks). |
+| **Sidecar** | The blob data that travels with a blob transaction. |
+| **tBOT** | The native token of BOT Chain testnet. Free from the faucet, with no real-world value. BOTScan and the faucet show its symbol as `BOT`. |
+| **Testnet** | A network for testing, with free tokens. BOT Chain's testnet is chain 968. |
+| **Uzo** | Igbo for road, path or way. Also the name of these docs and the tools built around them. |
+| **Uzo Index** | A planned Uzo service for indexed events. See [Uzo Index](/infrastructure/index/overview). |
+| **Uzo RPC** | A planned Uzo RPC service. See [Uzo RPC](/infrastructure/rpc/overview). |
+| **Validator** | A node that produces and votes on blocks. |
+| **Verification** | Publishing a contract's source code on BOTScan so anyone can read it and check it matches the deployed code. |
+| **WBOT** | Wrapped BOT. An ERC-20 token backed one to one by BOT, at `0xD5452816194a3784dBa983426cCe7c122F4abd30` on both networks. |

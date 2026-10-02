@@ -6,6 +6,49 @@ icon: "house"
 
 import NotAffiliated from "/snippets/not-affiliated.mdx";
 
+**BOT Chain has the pieces. Uzo is the path.**
+
+Use these docs to go from zero to a working app on BOT Chain: set up a wallet, deploy a contract, connect a frontend and use the chain's DEX and bridge.
+
+*Uzo* is Igbo for road, path or way. Uzo Labs builds the developer path for BOT Chain: guides, an SDK, starter templates and infrastructure. The docs are written for developers who are new to BOT Chain, including students building at their first hackathon.
+
 <NotAffiliated />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="zap" href="/get-started/quickstart">
+    Deploy and verify a contract on testnet in under 15 minutes.
+  </Card>
+  <Card title="Guides" icon="book-open" href="/guides/environment/choose-a-toolchain">
+    Step-by-step how-tos for tools, frontends, DeFi, the bridge and more.
+  </Card>
+  <Card title="SDK" icon="package" href="/sdk/overview">
+    Chain configs, addresses and helpers for TypeScript. In development.
+  </Card>
+  <Card title="Templates" icon="layout-template" href="/templates/overview">
+    Starter projects you can clone and change. In development.
+  </Card>
+  <Card title="Hackathons" icon="trophy" href="/hackathons/overview">
+    A checklist and kit for building at a hackathon.
+  </Card>
+  <Card title="Reference" icon="book-a" href="/reference/networks">
+    Networks, contract addresses, APIs and troubleshooting.
+  </Card>
+</CardGroup>
+
+## Network quick facts
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Chain ID | `{{mainnet-chain-id}}` | `{{testnet-chain-id}}` |
+| RPC URL | `{{mainnet-rpc}}` | `{{testnet-rpc}}` |
+| Explorer (BOTScan) | [scan.botchain.ai](https://scan.botchain.ai) | [scan.bohr.life](https://scan.bohr.life) |
+| Native token | BOT, 18 decimals | tBOT, 18 decimals |
+| Block time | About 0.75 seconds | About 0.75 seconds |
+
+Free test tokens come from the [BOT Chain faucet](https://faucet.botchain.ai/basic). See [Networks](/reference/networks) for every value you need to add the chains to a wallet.
+
+## What you can use today
+
+BOT Chain itself is live, so every guide that talks to the chain works now. The Uzo SDK, templates and hosted infrastructure are still being built. Pages about them carry a status note and show you how to do the same thing by hand today. See [How Uzo fits together](/get-started/how-it-works) for the status of each piece.

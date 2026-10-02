@@ -4,4 +4,80 @@ description: "Answers to common questions about Uzo and building on BOT Chain."
 icon: "messages-square"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Quick answers to the questions developers ask most about Uzo and BOT Chain.
+
+## About Uzo
+
+<AccordionGroup>
+  <Accordion title="What is Uzo?">
+    Uzo is a set of docs and developer tools for building on BOT Chain. These docs are live. The SDK and templates are in development, and Uzo RPC and Uzo Index are planned. See [How Uzo works](/get-started/how-it-works).
+  </Accordion>
+
+  <Accordion title="Is Uzo part of BOT Chain?">
+    No. Uzo Labs is an independent project and is not affiliated with or endorsed by BOT Chain. See the [disclaimer](/reference/disclaimer).
+  </Accordion>
+
+  <Accordion title="Can I use the Uzo SDK today?">
+    Not yet. It hasn't been published. Until it is, use viem or wagmi directly, as shown in [Build your first dApp](/get-started/first-dapp). See the [SDK overview](/sdk/overview) for the plan.
+  </Accordion>
+
+  <Accordion title="Does Uzo cost anything?">
+    The docs are free. Uzo RPC and Uzo Index are planned, and their pricing hasn't been decided.
+  </Accordion>
+
+  <Accordion title="How do I report a mistake in the docs?">
+    [Open an issue](https://github.com/uzolabs/documentation/issues) or send a pull request. See [Contributing](/reference/contributing).
+  </Accordion>
+</AccordionGroup>
+
+## Building on BOT Chain
+
+<AccordionGroup>
+  <Accordion title="Is BOT Chain EVM-compatible?">
+    Yes. Solidity contracts, Foundry, Hardhat, viem, ethers and MetaMask all work. Compile for the `cancun` EVM version. See [What is BOT Chain](/get-started/bot-chain/overview).
+  </Accordion>
+
+  <Accordion title="Which network should I start on?">
+    Testnet, chain 968. Its tokens are free from the [faucet](/get-started/bot-chain/get-testnet-tokens) and have no real-world value. Move to mainnet only when your app is tested.
+  </Accordion>
+
+  <Accordion title="How much does a transaction cost?">
+    On 2026-10-01 the gas price was 20 gwei, so a simple transfer cost 0.00042 BOT. Read the live price from the network. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Accordion>
+
+  <Accordion title="How fast are blocks and finality?">
+    A block arrives about every 0.75 seconds. In our checks, blocks were finalized 1 to 2 blocks after they were produced. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality).
+  </Accordion>
+
+  <Accordion title="Why can't I use eth_getLogs?">
+    BOT Chain documents it as disabled on the public RPCs. Use bounded ranges or the explorer API instead. See [Known limitations](/get-started/bot-chain/known-limitations#event-queries).
+  </Accordion>
+
+  <Accordion title="Is there a WebSocket endpoint?">
+    Not a public one. Poll over HTTP. See [Known limitations](/get-started/bot-chain/known-limitations).
+  </Accordion>
+
+  <Accordion title="Can users send transactions without holding BOT?">
+    Yes, with a relayer that pays gas on their behalf. See [Gasless transactions](/guides/gasless/overview).
+  </Accordion>
+
+  <Accordion title="How do I move USDT onto BOT Chain?">
+    Use the [BOT Chain bridge](https://bridge.botchain.ai). It connects Ethereum, BNB Smart Chain and Tron on mainnet. See the [bridge guide](/guides/bridge/overview).
+  </Accordion>
+
+  <Accordion title="Where do I find contract addresses?">
+    On [Contract addresses](/reference/contract-addresses). Every address there is linked to BOTScan.
+  </Accordion>
+
+  <Accordion title="How do I run a node or become a validator?">
+    BOT Chain owns those docs. See BOT Chain's [node types](https://dev-docs.botchain.ai/docs/Developers/node-types/) and [node configuration](https://dev-docs.botchain.ai/docs/Developers/bot-chain-node-configuration-best-practices/) pages.
+  </Accordion>
+</AccordionGroup>
+
+## Hackathons
+
+<AccordionGroup>
+  <Accordion title="Is there an Uzo hackathon?">
+    A hackathon kit is planned for the UNN event in late January 2027. See [Hackathons](/hackathons/overview).
+  </Accordion>
+</AccordionGroup>

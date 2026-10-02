@@ -1,7 +1,145 @@
 ---
 title: "Known limitations"
-description: "BOT Chain gaps that trip up new developers, such as disabled eth_getLogs, with a workaround for each one."
+description: "Gaps in BOT Chain's public infrastructure and docs, such as event queries, WebSockets and paymasters, with a workaround for each."
 icon: "triangle-alert"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Work around the gaps in BOT Chain's public infrastructure and docs that most often trip up new developers. Each section says what the limitation is and what to do instead.
+
+All behaviour on this page was checked against the live networks on 2026-10-01. Things change, so if a workaround stops being needed, [tell us](/reference/contributing).
+
+## Event queries
+
+**The limitation.** BOT Chain's [JSON-RPC page](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) says `eth_getLogs` is disabled on the public endpoints and recommends third-party endpoints. In our tests on 2026-10-01, `eth_getLogs` did answer on both public RPCs for bounded block ranges, such as 50,000 blocks. Queries from block 0 to the latest block timed out or returned a gateway error. Because BOT Chain documents the method as disabled, don't build on it working in production.
+
+**Workarounds:**
+
+- Query in small block ranges, and keep your own record of the last block you processed.
+- Use the BOTScan explorer API, which serves logs over HTTP. See [Explorer API](/reference/explorer-api).
+- Read the [events without getLogs](/guides/frontend/events-without-getlogs) guide for frontend patterns.
+- [Uzo Index](/infrastructure/index/overview) is planned to provide indexed events.
+
+<CodeGroup>
+```js logs-chunked.js
+import { createPublicClient, http, parseAbiItem } from "viem";
+
+const client = createPublicClient({
+  transport: http("https://rpc.bohr.life"),
+});
+
+const transfer = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+);
+
+// Fetch logs in fixed-size block ranges instead of one large query.
+async function getLogsChunked({ address, event, fromBlock, toBlock, chunk = 5_000n }) {
+  const logs = [];
+  for (let start = fromBlock; start <= toBlock; start += chunk) {
+    const end = start + chunk - 1n < toBlock ? start + chunk - 1n : toBlock;
+    logs.push(...(await client.getLogs({ address, event, fromBlock: start, toBlock: end })));
+  }
+  return logs;
+}
+
+const latest = await client.getBlockNumber();
+const logs = await getLogsChunked({
+  address: "0x75edC9335175Fc0552D51D48439F229c10420fe3",
+  event: transfer,
+  fromBlock: latest - 50_000n,
+  toBlock: latest,
+});
+console.log(`Found ${logs.length} USDT transfers in the last 50,000 blocks`);
+```
+
+```bash Explorer API
+curl -s "https://scan.bohr.life/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x75edC9335175Fc0552D51D48439F229c10420fe3&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+```
+</CodeGroup>
+
+Both examples read `Transfer` events from testnet USDT.
+
+## No WebSocket endpoint
+
+**The limitation.** BOT Chain doesn't publish a WebSocket URL, and `wss://` versions of both RPC URLs failed to connect on 2026-10-01. You can't use `eth_subscribe` for new blocks or events.
+
+**Workaround.** Poll over HTTP. Viem's `watch` actions poll automatically when the transport is `http`. Blocks arrive every 0.75 seconds, so a 1-second interval keeps you close to the head of the chain.
+
+```js watch.js
+import { createPublicClient, http } from "viem";
+
+const client = createPublicClient({
+  transport: http("https://rpc.bohr.life"),
+  pollingInterval: 1_000,
+});
+
+const unwatch = client.watchBlockNumber({
+  onBlockNumber: (blockNumber) => console.log("New block:", blockNumber),
+});
+
+setTimeout(unwatch, 5_000);
+```
+
+[Uzo RPC](/infrastructure/rpc/overview) is planned to offer WebSockets.
+
+## Not in viem's chain list
+
+**The limitation.** You can't `import { botChain } from "viem/chains"`. Neither network is built in.
+
+**Workaround.** Define the chain yourself with `defineChain`. A tested definition is in [Build your first dApp](/get-started/first-dapp). The planned [Uzo SDK](/sdk/overview) will export ready-made chain objects.
+
+## Chain 968 is registered to another network
+
+**The limitation.** In the public chain registry and on [Chainlist](https://chainlist.org), chain ID 968 belongs to a network called Datagram, not BOT Chain testnet. Wallets that look up chain details may warn you or offer the wrong values.
+
+**Workaround.** Add BOT Chain testnet to your wallet by hand. See [Connect a wallet](/get-started/bot-chain/connect-wallet). Mainnet (677) is listed correctly.
+
+## Standard Multicall3 address missing on testnet
+
+**The limitation.** Many tools assume Multicall3 is at `0xcA11bde05977b3631167028862bE2a173976CA11`. That contract exists on BOT Chain mainnet but not on testnet.
+
+**Workaround.** Use BOT Chain's own Multicall3 at `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`, which is deployed on both networks. Set it in your viem chain definition under `contracts.multicall3`.
+
+## No confirmed paymaster for BOT Chain
+
+**The limitation.** BOT Chain's [EOA paymaster page](https://dev-docs.botchain.ai/docs/Developers/eoa-paymaster/) describes a paymaster API and names NodeReal's MegaFuel as an implementation. MegaFuel is documented as a BNB Chain service. We found no public paymaster endpoint confirmed for chain 677.
+
+**Workaround.** Use meta-transactions: the user signs a message and your relayer pays the gas. See [Meta-transactions](/guides/gasless/meta-transactions) and [Run a relayer](/guides/gasless/run-a-relayer).
+
+## Osaka opcodes aren't supported
+
+**The limitation.** BOT Chain supports EVM features up to Prague. Contracts compiled for Osaka can fail with "invalid opcode".
+
+**Workaround.** Set `evm_version = "cancun"` in Foundry or `evmVersion: "cancun"` in Hardhat. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+
+## Errors in BOT Chain's docs
+
+BOT Chain's docs are the source for anything they own, but a few details were wrong or out of date on 2026-10-01:
+
+| Where | What it says | What's correct |
+| --- | --- | --- |
+| [EOA paymaster](https://dev-docs.botchain.ai/docs/Developers/eoa-paymaster/) | Uses two method names, `pm_isSponsorable` and `gm_sponsorable`. | The API specification on the same page defines `pm_isSponsorable`. |
+| [Node types](https://dev-docs.botchain.ai/docs/Developers/node-types/) | Links to a node deployment repository on GitHub. | The link returns 404. |
+| [JSON-RPC](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) | `eth_getLogs` is disabled on the public endpoints. | It answered bounded queries in our tests. See [above](#event-queries). |
+| [JSON-RPC](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) and [homepage](https://www.botchain.ai/en) | The homepage gives about 0.9 seconds average finality; the JSON-RPC page gives no number. | Read finality from the `finalized` block tag. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality). |
+
+## Other things to watch for
+
+- **USDT has 6 decimals** on BOT Chain, not 18. Use the official address from [Contract addresses](/reference/contract-addresses); other tokens named "USDT" exist on testnet.
+- **`block.prevrandao` is not random.** See [Supported EIPs](/get-started/bot-chain/supported-eips).
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="life-buoy" href="/reference/troubleshooting">
+    Error messages and fixes.
+  </Card>
+  <Card title="Differences from Geth" icon="git-compare" href="/reference/json-rpc/differences-from-geth">
+    How the RPC differs from standard Geth.
+  </Card>
+  <Card title="Uzo RPC" icon="server" href="/infrastructure/rpc/overview">
+    Planned: logs and WebSockets.
+  </Card>
+  <Card title="Explorer API" icon="search" href="/reference/explorer-api">
+    The main workaround for event queries.
+  </Card>
+</CardGroup>
