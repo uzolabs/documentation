@@ -4,4 +4,62 @@ description: "Set up your wallet, test tokens and toolchain, and deploy a first 
 icon: "list-checks"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Get every member of your team ready to build on BOT Chain testnet: a wallet, tBOT, working tools and one contract deployed and verified. Tick each box as you go.
+
+Do this before the event if you can. Venue Wi-Fi is slowest in the first hour, when everyone installs tools at once.
+
+## Wallet
+
+- [ ] Create a development wallet with `cast wallet new uzo-dev`, or a fresh MetaMask account. Don't use a wallet that holds real money.
+- [ ] Write down your address (it starts with `0x`). Never share the private key or recovery phrase, including with mentors.
+- [ ] If you use MetaMask, add BOT Chain testnet by hand: chain ID `968`, RPC `https://rpc.bohr.life`. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+
+## tBOT
+
+- [ ] Claim from the [BOT Chain faucet](https://faucet.botchain.ai/basic): up to 10 tBOT per address per 24 hours.
+- [ ] If that doesn't work, claim 0.1 tBOT from the [Uzo Labs faucet](https://www.uzolabs.xyz/faucet), or ask the organizers. Some events pre-fund wallets.
+- [ ] Check your balance:
+
+```bash check-balance.sh
+cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life
+```
+
+0.1 tBOT is enough for the quickstart many times over. It used about 0.004 tBOT in our test.
+
+## Toolchain
+
+- [ ] On Windows, open WSL or Git Bash. The Foundry installer needs a Unix shell.
+- [ ] Install [Git](https://git-scm.com/downloads).
+- [ ] Install Foundry and check it: `forge --version`. See [Foundry setup](/guides/environment/foundry).
+- [ ] If you'll build a web app, install [Node.js](https://nodejs.org) LTS and check `node --version`.
+- [ ] Optional: install the Uzo SDK in your app with `npm install @uzolabs/sdk viem`. See [Installation](/sdk/installation).
+
+Prefer a browser-only setup? [Remix](/guides/environment/remix) needs no installs, and works with MetaMask.
+
+## First deploy
+
+- [ ] Follow the [quickstart](/get-started/quickstart) to deploy `Counter` to testnet.
+- [ ] Verify it on BOTScan with `forge verify-contract`. The quickstart shows the command.
+- [ ] Open your contract at `https://scan.bohr.life/address/YOUR_CONTRACT` and check the **Contract** tab shows the source.
+- [ ] Call it once with `cast send` and read the result with `cast call`.
+
+## Team
+
+- [ ] Create one GitHub repo for the team and give everyone access.
+- [ ] Agree who owns the deployer wallet. Keep its key in a Foundry keystore (`--account`) or a local `.env` file listed in `.gitignore`. Never commit a key.
+- [ ] Read the [submission requirements](/hackathons/submission) and pick a [track](/hackathons/tracks).
+
+## Stuck?
+
+Check the [hackathon FAQ](/hackathons/faq) first, then ask a mentor. Bring the exact error message and the command you ran.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Example tracks" icon="map" href="/hackathons/tracks">
+    Pick something to build.
+  </Card>
+  <Card title="Templates" icon="layout-template" href="/templates/overview">
+    Start from a working project.
+  </Card>
+</CardGroup>

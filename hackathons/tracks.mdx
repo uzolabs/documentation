@@ -5,4 +5,64 @@ description: "Example hackathon track ideas for BOT Chain: AI agents, payments, 
 icon: "map"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Pick a project idea for a BOT Chain hackathon from these example tracks, each with the docs and templates that get you started fastest.
+
+<Note>
+  These tracks are **examples**. Each event sets its own tracks, rules and prizes. Check with your organizers.
+</Note>
+
+## AI agents
+
+Build an agent that can act on-chain within limits a human sets.
+
+**Ideas:**
+- A shopping or bill-paying agent that spends from a vault with a daily cap.
+- An agent that asks for human approval above a threshold.
+- A treasury bot that reports balances and proposes transfers.
+
+**Start with:** [AI agents overview](/guides/ai-agents/overview), [Agent vaults](/guides/ai-agents/agent-vaults), [Spending limits](/guides/ai-agents/spending-limits), [Human approval](/guides/ai-agents/human-approval). The [AI agent template](/templates/ai-agent/index) is in development.
+
+## Payments
+
+Move value between people and businesses, often in USDT.
+
+**Ideas:**
+- A checkout or invoice link that accepts testnet USDT.
+- Split bills or group savings, settled on-chain.
+- A gasless app where new users pay nothing to start.
+
+**Start with:** [USDT and decimals](/guides/defi/tokens/usdt-and-decimals) (USDT has 6 decimals on BOT Chain; get testnet USDT by [swapping tBOT on BDEX V2](/guides/defi/swaps/bdex-v2)), [Gasless transactions](/guides/gasless/overview), the [Gasless app template](/templates/gasless-app/index) and the [Token template](/templates/token/index).
+
+## DeFi
+
+Build on BDEX, BOT Chain's Uniswap V2 and V3 style exchange.
+
+**Ideas:**
+- A swap interface with clear slippage and price impact.
+- A dashboard that tracks pools and liquidity positions.
+- A savings or rewards token with its own pool.
+
+**Start with:** [Swaps overview](/guides/defi/swaps/overview), [Slippage and deadlines](/guides/defi/swaps/slippage-and-deadlines), [Liquidity on V2](/guides/defi/liquidity/v2) and the [DEX integration template](/templates/dex-integration/index).
+
+## Open
+
+Anything else that uses BOT Chain: NFTs, ticketing, credentials, games, community tools.
+
+**Start with:** the [NFT template](/templates/nft/index), [Build your first dApp](/get-started/first-dapp) and [Events without getLogs](/guides/frontend/events-without-getlogs), which matters for feeds and galleries.
+
+## Before you choose
+
+- **Scope small.** One working flow beats five half-built features. Judges can only score what they can see.
+- **Check the limits.** BOT Chain's public RPCs have no WebSockets, and `eth_getLogs` is documented as disabled. Read [Known limitations](/get-started/bot-chain/known-limitations) before you design around events.
+- **Stay on testnet.** Every track can be built and demoed with tBOT and testnet USDT.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Submission" icon="upload" href="/hackathons/submission">
+    What you need to hand in.
+  </Card>
+  <Card title="Judging rubric" icon="scale" href="/hackathons/organizers/judging-rubric">
+    How projects may be scored.
+  </Card>
+</CardGroup>

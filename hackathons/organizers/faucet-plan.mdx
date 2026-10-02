@@ -4,4 +4,133 @@ description: "Plan around the faucet's daily tBOT limit so every participant has
 icon: "droplets"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Make sure every team at your event has enough tBOT, even though the public faucets only give a small amount per address per day.
+
+## Why the faucet limit matters
+
+The [BOT Chain faucet](https://faucet.botchain.ai/basic) gives up to **10 tBOT per address every 24 hours**, behind a robot check. The [Uzo Labs faucet](https://www.uzolabs.xyz/faucet) gives **0.1 tBOT per wallet every 24 hours** and skips wallets that already hold enough.
+
+For one developer, that's plenty. At an event it causes problems:
+
+- Many people claiming from one venue at the same time can hit the robot check or fail, and the first hour gets lost.
+- Anyone who loses their wallet, or creates a new one, waits up to 24 hours or asks for help.
+- Your organizer wallet can only collect 10 tBOT a day from the faucet, so building a reserve takes days.
+
+## How much tBOT teams need
+
+Costs at 20 gwei, measured on testnet:
+
+| Action | Fee |
+| --- | --- |
+| Send tBOT to another address | 0.00042 tBOT |
+| Deploy the quickstart `Counter` | About 0.0032 tBOT |
+| Call a small function | About 0.00087 tBOT |
+| Deploy the gasless app's two contracts | About 0.029 tBOT |
+
+A suggested budget is **0.5 tBOT per participant**. That covers more than 10 large deploys or a few hundred small calls. Teams building relayers or agents that send many transactions may need more.
+
+## Options
+
+| Option | How it works | Good for |
+| --- | --- | --- |
+| **Self-serve** | Participants claim from the faucets themselves. | Small events, online events. |
+| **Pre-fund wallets** | Collect addresses at registration and send tBOT before day one. | Most in-person events. |
+| **Help desk top-ups** | Organizers send tBOT on request during the event. | A backup for every event. |
+
+Use pre-funding plus a help desk for in-person events. Self-serve alone is risky when everyone starts at once.
+
+## Build the organizer reserve
+
+Work out what you need: participants × budget, plus about 20% for top-ups. For 100 participants at 0.5 tBOT, that's 60 tBOT.
+
+- **Start early.** Claim 10 tBOT a day for the organizer wallet in the weeks before the event.
+- **Pool claims.** Organizers and mentors each claim for their own address and send the tBOT to the organizer wallet.
+- **Ask BOT Chain.** For a large event, contact BOT Chain about testnet support. Uzo doesn't know of a formal program.
+
+Don't drain the Uzo Labs faucet for event funding. It's meant for individual developers.
+
+## Pre-fund wallets
+
+This script sends the same amount to every address in a file. It skips blank lines and anything that isn't a valid address.
+
+<Steps>
+  <Step title="Collect addresses">
+    Save one address per line in `addresses.txt`. Ask participants for a new wallet created for the event.
+  </Step>
+  <Step title="Save the script">
+    ```bash fund-wallets.sh
+    #!/usr/bin/env bash
+    # Send the same amount of tBOT to every address in a file, one per line.
+    # Usage: AMOUNT=0.5 ./fund-wallets.sh addresses.txt
+    set -euo pipefail
+
+    RPC_URL="https://rpc.bohr.life"   # BOT Chain Testnet only
+    AMOUNT="${AMOUNT:-0.5}"           # tBOT per wallet
+    : "${PRIVATE_KEY:?Set PRIVATE_KEY to the key of the funding wallet}"
+
+    while read -r address; do
+      [ -z "$address" ] && continue
+      if ! cast to-check-sum-address "$address" > /dev/null 2>&1; then
+        echo "skip   $address (not an address)"
+        continue
+      fi
+      tx=$(cast send "$address" --value "${AMOUNT}ether" --rpc-url "$RPC_URL" \
+        --private-key "$PRIVATE_KEY" | awk '/^transactionHash/ {print $2}')
+      echo "sent   $AMOUNT tBOT to $address  https://scan.bohr.life/tx/$tx"
+    done < "$1"
+    ```
+
+    It needs [Foundry](/guides/environment/foundry) for `cast`.
+  </Step>
+  <Step title="Run it">
+    Use a dedicated testnet-only organizer wallet. Read the key without echoing it, so it doesn't end up in your shell history:
+
+    ```bash
+    read -rs PRIVATE_KEY && export PRIVATE_KEY
+    chmod +x fund-wallets.sh
+    AMOUNT=0.5 ./fund-wallets.sh addresses.txt
+    ```
+
+    Each line prints the BOTScan link for the transfer. Sending to 100 addresses costs about 0.042 tBOT in gas.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Check any participant's balance:
+
+```bash check-balance.sh
+cast balance --ether PARTICIPANT_ADDRESS --rpc-url https://rpc.bohr.life
+```
+
+We tested the script on 2026-10-03 by sending 0.0001 tBOT to two new addresses. Both balances read `0.000100000000000000`, and an invalid line was skipped.
+
+## During and after the event
+
+- Keep the organizer wallet's address on the help desk sign, and check its balance a few times a day.
+- Ask teams to send unused tBOT back to the organizer wallet at the end. Pass any leftover on to the [Uzo Labs faucet](/get-started/bot-chain/get-testnet-tokens#give-back-unused-tbot) for other developers.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="PRIVATE_KEY: Set PRIVATE_KEY to the key of the funding wallet">
+    The variable isn't set in this shell. Run the `read -rs PRIVATE_KEY && export PRIVATE_KEY` line again in the same terminal.
+  </Accordion>
+  <Accordion title="insufficient funds">
+    The organizer wallet doesn't hold `AMOUNT` times the number of addresses, plus gas. Check with `cast balance` and lower `AMOUNT` or top up.
+  </Accordion>
+  <Accordion title="The script stops partway">
+    `set -e` stops on the first failed send. Remove the addresses that were already funded from the file, then run it again.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run a hackathon" icon="calendar" href="/hackathons/organizers/run-a-hackathon">
+    The full logistics checklist.
+  </Card>
+  <Card title="Gas and fees" icon="fuel" href="/get-started/bot-chain/gas-and-fees">
+    Check transaction costs yourself.
+  </Card>
+</CardGroup>

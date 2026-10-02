@@ -5,4 +5,69 @@ description: "Outline for a workshop where participants write, deploy and verify
 icon: "file-code"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Run a 75-minute workshop where participants write, deploy, verify and call their first smart contract on BOT Chain testnet.
+
+Timings are suggestions. Participants need to have finished the [setup workshop](/hackathons/workshops/setup) or the [day-one checklist](/hackathons/day-one-checklist).
+
+## What participants build
+
+A `Counter` contract, deployed to testnet, verified on BOTScan and called from the terminal. The steps follow the [quickstart](/get-started/quickstart), which you can project on screen.
+
+## Outline
+
+| Time | Segment | What happens |
+| --- | --- | --- |
+| 0:00 | Why contracts | A contract is code at an address. Anyone can call it; only transactions change it. |
+| 0:05 | Create the project | `forge init hello-bot`. Walk through `src/Counter.sol` line by line. |
+| 0:15 | Point at BOT Chain | Edit `foundry.toml`: add the testnet RPC and `evm_version = "cancun"`. Explain why the EVM version matters. |
+| 0:20 | Build and test | `forge build` and `forge test`. Show a failing test, then fix it. |
+| 0:30 | Deploy | `forge create ... --broadcast`. Open the transaction on BOTScan. |
+| 0:40 | Verify | `forge verify-contract` with the Blockscout verifier. Show the **Contract** tab. |
+| 0:50 | Call it | `cast send` to increment, `cast call` to read. Explain why reads are free. |
+| 0:55 | Change it | Participants add a function (for example `decrement`), redeploy and verify. |
+| 1:10 | Wrap up | Point to [templates](/templates/overview) and [example tracks](/hackathons/tracks). |
+
+## Talking points
+
+- **Testnet only.** tBOT has no value. The same commands work on mainnet with real BOT, which nobody needs this weekend.
+- **Gas.** Deploying and calling `Counter` cost about 0.004 tBOT in our test. Show the fee on BOTScan.
+- **Verification.** Judges and users trust what they can read. Unverified code is a black box.
+- **The EVM version.** BOT Chain doesn't support Osaka yet. Setting `cancun` avoids "invalid opcode" errors. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+
+## The exercise
+
+Ask participants to add this to `Counter` and redeploy:
+
+```solidity src/Counter.sol
+function decrement() public {
+    require(number > 0, "Counter: already zero");
+    number--;
+}
+```
+
+Then call it with `cast send $COUNTER "decrement()" --rpc-url bot_testnet --account uzo-dev`. Calling it again when the value is 0 shows a revert with the message, which is a good moment to explain errors.
+
+## Common problems
+
+| Symptom | Fix |
+| --- | --- |
+| `insufficient funds` | Fund the address from `cast wallet address --account uzo-dev`. |
+| Nothing deployed | Missing `--broadcast`. |
+| Verification fails | Used the transaction hash instead of the `Deployed to` address, or verified too soon. Wait and retry. |
+
+More in the [hackathon FAQ](/hackathons/faq).
+
+## Done when
+
+Every participant has a verified contract on BOTScan testnet and has called it at least once.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Templates" icon="layout-template" href="/templates/overview">
+    Start a real project from a working template.
+  </Card>
+  <Card title="Build your first dApp" icon="app-window" href="/get-started/first-dapp">
+    Put a web frontend on a contract.
+  </Card>
+</CardGroup>

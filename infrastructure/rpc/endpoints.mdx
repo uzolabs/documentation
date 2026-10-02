@@ -9,4 +9,49 @@ import Planned from "/snippets/status-planned.mdx";
 
 <Planned />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Find the RPC endpoints to use on BOT Chain today. Uzo RPC endpoints are not live yet, so this page lists BOT Chain's public endpoints instead.
+
+## Uzo RPC endpoints
+
+Not live yet. Endpoint URLs will be listed here when Uzo RPC launches. Until then, don't use any URL that claims to be an Uzo RPC endpoint.
+
+## Public endpoints you can use now
+
+These are run by BOT Chain, not Uzo. Checked on 2026-10-01 with `eth_chainId`.
+
+| Network | Chain ID | HTTP RPC | WebSocket |
+| --- | --- | --- | --- |
+| BOT Chain Testnet | `968` | `https://rpc.bohr.life` | Not published |
+| BOT Chain Mainnet | `677` | `https://rpc.botchain.ai` | Not published |
+
+Check an endpoint yourself:
+
+```bash check-chain-id.sh
+curl -s -X POST https://rpc.bohr.life \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+```
+
+The response should contain `"result":"0x3c8"`, which is 968 in hex. Mainnet returns `0x2a5` (677).
+
+<Warning>
+  Build and test against testnet. Switch to `https://rpc.botchain.ai` only when you deploy to mainnet with real BOT.
+</Warning>
+
+## What the public endpoints don't cover
+
+- `eth_getLogs` is documented as disabled. Bounded ranges answered in our tests; unbounded ranges failed.
+- No WebSocket endpoint, so no `eth_subscribe`.
+
+See [Logs and WebSockets](/infrastructure/rpc/logs-and-websockets) for workarounds, and [Networks](/reference/networks) for explorers and other network details.
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Uzo RPC" icon="server" href="/infrastructure/rpc/overview">
+    What the planned service will add.
+  </Card>
+  <Card title="Rate limits" icon="gauge" href="/infrastructure/rpc/rate-limits">
+    What is known about limits today.
+  </Card>
+</CardGroup>

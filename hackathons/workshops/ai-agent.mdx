@@ -9,4 +9,53 @@ import InDevelopment from "/snippets/status-in-development.mdx";
 
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Plan a workshop where participants build an AI agent that pays on BOT Chain testnet from a vault with a daily limit and asks a human before larger payments.
+
+This workshop depends on the [AI agent template](/templates/ai-agent/index), which is in development. The outline below is a draft. You can run a version today with the [AI agent guides](/guides/ai-agents/overview), which were tested on testnet.
+
+## What participants will build
+
+An agent that:
+
+1. Takes a request in plain language, such as "pay 2 USDT to this address".
+2. Calls a payment tool that sends testnet USDT from an agent vault.
+3. Is stopped by the vault's daily spending limit, enforced on-chain.
+4. Asks a human to approve anything above a threshold.
+
+## Draft outline
+
+Timings are suggestions for a 90-minute session.
+
+| Time | Segment | Guide to use today |
+| --- | --- | --- |
+| 0:00 | Why agents need on-chain limits | [AI agents overview](/guides/ai-agents/overview) |
+| 0:10 | Deploy an agent vault | [Agent vaults](/guides/ai-agents/agent-vaults) |
+| 0:30 | Set a daily limit and test it | [Spending limits](/guides/ai-agents/spending-limits) |
+| 0:45 | Give the model a payment tool | [Tool calling](/guides/ai-agents/tool-calling) |
+| 1:05 | Add human approval | [Human approval](/guides/ai-agents/human-approval) |
+| 1:20 | Security review | [Security checklist](/guides/ai-agents/security-checklist) |
+
+## Prerequisites
+
+- The [setup workshop](/hackathons/workshops/setup) and [first contract workshop](/hackathons/workshops/first-contract), or equivalent experience.
+- Node.js LTS.
+- An API key for an LLM provider. Organizers should decide before the event whether they provide keys or participants bring their own, and never share one key in a public channel.
+- Testnet USDT, from a swap on [BDEX V2](/guides/defi/swaps/bdex-v2).
+
+## What's not ready
+
+- The AI agent template repository, which the workshop is meant to start from.
+- A tested end-to-end run of this outline as a single session.
+
+When the template is ready, this page will have step-by-step instructions and tested timings.
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="AI agent template" icon="bot" href="/templates/ai-agent/index">
+    Status and planned contents.
+  </Card>
+  <Card title="AI agents guides" icon="book-open" href="/guides/ai-agents/overview">
+    Everything you can build today.
+  </Card>
+</CardGroup>

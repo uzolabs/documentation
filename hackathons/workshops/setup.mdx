@@ -5,4 +5,58 @@ description: "Outline and timing for a workshop that gets every participant's en
 icon: "laptop"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Run a 60-minute setup workshop that gets every participant a wallet, tBOT and a working toolchain before building starts.
+
+Timings are suggestions. Adjust them to your group's size and Wi-Fi.
+
+## Before the workshop
+
+- Fund one organizer wallet with enough tBOT for every participant. See [Faucet plan](/hackathons/organizers/faucet-plan).
+- Test the [quickstart](/get-started/quickstart) on the venue Wi-Fi the day before.
+- Have offline installers ready (Git, Node.js LTS) on USB drives in case downloads are slow.
+- One helper for every 10 to 15 participants. Windows users usually need the most help.
+
+## Outline
+
+| Time | Segment | What happens |
+| --- | --- | --- |
+| 0:00 | Welcome | What BOT Chain is, testnet vs mainnet, what tBOT is. Keep it to 5 minutes. |
+| 0:05 | Terminal check | Windows users open WSL or Git Bash. Everyone runs `git --version`. |
+| 0:10 | Install Foundry | Run the installer from the [quickstart](/get-started/quickstart), then `foundryup`. Check with `forge --version`. |
+| 0:25 | Create a wallet | `cast wallet new uzo-dev`. Talk about keys: never share them, never commit them. |
+| 0:35 | Get tBOT | Faucet, or organizers send from a pre-funded wallet. Check with `cast balance`. |
+| 0:45 | Wallet in the browser | Optional: add BOT Chain testnet to MetaMask by hand. |
+| 0:50 | Check everyone | Each participant shows a non-zero balance. Helpers fix stragglers. |
+| 0:55 | What's next | Point to the [first contract workshop](/hackathons/workshops/first-contract) and the [day-one checklist](/hackathons/day-one-checklist). |
+
+## What to say about keys
+
+Spend two minutes on this. It prevents the worst mistakes of the event:
+
+- A private key or recovery phrase controls the wallet. Anyone who has it can take everything.
+- Use a new wallet for the hackathon. Never use one with real money.
+- Mentors will never ask for your key. Share addresses and transaction hashes instead.
+- Put keys in a Foundry keystore or a `.env` file that's in `.gitignore`.
+
+## Fallbacks
+
+| Problem | Fallback |
+| --- | --- |
+| Foundry won't install | Use [Remix](/guides/environment/remix) in the browser with MetaMask. |
+| Faucet limit or robot check fails | Send tBOT from the organizer wallet. See [Faucet plan](/hackathons/organizers/faucet-plan). |
+| A laptop can't run anything | Pair the participant with a teammate. |
+
+## Done when
+
+Every participant has run `forge --version` and `cast balance` and seen a non-zero tBOT balance.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="First contract workshop" icon="file-code" href="/hackathons/workshops/first-contract">
+    Deploy and verify a contract together.
+  </Card>
+  <Card title="Hackathon FAQ" icon="messages-square" href="/hackathons/faq">
+    Answers for helpers.
+  </Card>
+</CardGroup>

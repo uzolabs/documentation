@@ -4,4 +4,70 @@ description: "Criteria and weights for judging BOT Chain hackathon projects fair
 icon: "scale"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Score BOT Chain hackathon projects consistently with this rubric: five criteria, suggested weights and what each score means.
+
+<Note>
+  The weights are **suggestions**. Change them to fit your event, and publish the final rubric with your rules before building starts.
+</Note>
+
+## Eligibility check
+
+Before scoring, confirm each project meets the [submission requirements](/hackathons/submission). Run [check_submissions.py](/hackathons/organizers/verify-submissions) to confirm every contract is deployed on testnet and verified. Decide in advance whether an unverified contract disqualifies a project or only loses points.
+
+## Criteria and suggested weights
+
+| Criterion | Suggested weight | What judges ask |
+| --- | --- | --- |
+| **Working product** | 30% | Does it run? Did the demo show a real testnet transaction? |
+| **Use of BOT Chain** | 20% | Is the chain essential to the idea, or bolted on? Does it use BOT Chain features such as BDEX, the bridge or gasless transactions sensibly? |
+| **Problem and impact** | 20% | Is the problem real and specific? Would the people who have it use this? |
+| **Technical quality** | 15% | Verified contracts, readable code, tests, no secrets in the repo, sensible security. |
+| **Presentation** | 15% | Clear demo and pitch inside the time limit. A README that lets a stranger run it. |
+
+## Scoring scale
+
+Score each criterion from 1 to 5, then multiply by its weight.
+
+| Score | Meaning |
+| --- | --- |
+| 5 | Excellent. Would impress outside a hackathon. |
+| 4 | Strong, with small gaps. |
+| 3 | Meets the bar. Works, but nothing stands out. |
+| 2 | Partly there. Major gaps or parts don't work. |
+| 1 | Missing or doesn't work. |
+
+**Example.** Scores of 4, 3, 5, 3, 4 give
+`(4 × 0.30) + (3 × 0.20) + (5 × 0.20) + (3 × 0.15) + (4 × 0.15) = 3.85` out of 5.
+
+## Score sheet
+
+Copy this into a spreadsheet, one row per project per judge:
+
+```csv score-sheet.csv
+team,judge,working_product,use_of_bot_chain,problem_and_impact,technical_quality,presentation,notes
+Team Example,Judge A,4,3,5,3,4,"Demo showed a swap on BDEX V2"
+```
+
+Total each row with the weights, then average across judges.
+
+## Track prizes
+
+If your event has tracks, judge each track with the same rubric, and add a track-fit question under **Use of BOT Chain**: does the project solve a problem the track is about?
+
+## Fair judging
+
+- At least two judges per project. Discuss differences of 2 or more points on any criterion.
+- Judges declare conflicts of interest (mentored the team, know a member) and skip those projects.
+- Score what you saw working, not what the team plans to build.
+- Don't penalize teams for BOT Chain limitations, such as no WebSockets. Reward good workarounds.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify submissions" icon="badge-check" href="/hackathons/organizers/verify-submissions">
+    Check every contract before judging.
+  </Card>
+  <Card title="Run a hackathon" icon="calendar" href="/hackathons/organizers/run-a-hackathon">
+    The full logistics checklist.
+  </Card>
+</CardGroup>

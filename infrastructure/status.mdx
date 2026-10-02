@@ -5,4 +5,61 @@ description: "The current status of every Uzo product, from live to planned."
 icon: "activity"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Check which Uzo products and BOT Chain services you can use today, which are in development and which are planned.
+
+Last checked: 2026-10-03.
+
+## What the statuses mean
+
+| Status | Meaning |
+| --- | --- |
+| **Live** | Running now. You can use it today. |
+| **Early release** | Published and usable. The API may change before 1.0. |
+| **Ready** | Published template, deployed and verified on testnet. Not audited. |
+| **In development** | Being built. Docs describe the planned design and may change. |
+| **Planned** | Not started or not public. Docs explain the idea and what to use meanwhile. |
+
+## BOT Chain
+
+Run by BOT Chain, not Uzo. Uzo is [not affiliated](/reference/disclaimer) with BOT Chain.
+
+| Service | Status | Notes |
+| --- | --- | --- |
+| BOT Chain Mainnet (677) | Live | [Networks](/reference/networks) |
+| BOT Chain Testnet (968) | Live | [Networks](/reference/networks) |
+| Public RPCs | Live | No WebSockets; `eth_getLogs` documented as disabled. [Logs and WebSockets](/infrastructure/rpc/logs-and-websockets) |
+| BOTScan explorer and API | Live | [Explorer API](/reference/explorer-api) |
+| BOT Chain faucet | Live | Up to 10 tBOT per address per 24 hours. [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens) |
+| BDEX V2 and V3 | Live | [Swaps](/guides/defi/swaps/overview) |
+| Bridge (USDT) | Live | [Bridge](/guides/bridge/overview) |
+
+## Uzo
+
+| Product | Status | Notes |
+| --- | --- | --- |
+| Uzo Labs faucet | Live | 0.1 tBOT per wallet per 24 hours. [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens#uzo-labs-faucet) |
+| SDK: chains, contracts, explorer | Early release | `@uzolabs/sdk` 0.2.0. [SDK overview](/sdk/overview) |
+| SDK: bdex | Planned | For 0.3.0, no date announced. [BDEX module](/sdk/bdex/overview) |
+| SDK: bridge | Planned | For 0.4.0, no date announced. [Bridge module](/sdk/bridge/overview) |
+| SDK: paymaster | Planned | For 0.5.0, no date announced. [Paymaster module](/sdk/paymaster/overview) |
+| Templates: token, NFT, DEX integration, gasless app | Ready | [Templates](/templates/overview) |
+| Templates: bridge integration, AI agent | In development | [Templates](/templates/overview) |
+| Uzo RPC | Planned | [Uzo RPC](/infrastructure/rpc/overview) |
+| Uzo Index | Planned | [Uzo Index](/infrastructure/index/overview) |
+| Ponder starter | Planned | Depends on Uzo RPC. [Ponder starter](/infrastructure/index/ponder-starter) |
+| Hackathon kit | Planned for the UNN event (late January 2027) | Participant and organizer pages are usable now. The AI agent workshop depends on the AI agent template. [Hackathon kit](/hackathons/overview) |
+
+## Stay up to date
+
+Follow [Uzo Labs on GitHub](https://github.com/uzolabs) for releases. The [SDK changelog](/sdk/reference/changelog) lists every published version.
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    Gaps in BOT Chain's public infrastructure and how to work around them.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/get-started/quickstart">
+    Deploy a contract on testnet in about 15 minutes. Needs nothing from Uzo.
+  </Card>
+</CardGroup>

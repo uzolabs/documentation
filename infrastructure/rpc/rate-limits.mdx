@@ -9,4 +9,35 @@ import Planned from "/snippets/status-planned.mdx";
 
 <Planned />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Learn what to expect from RPC rate limits on BOT Chain today and how to keep your app within them. Uzo RPC's rate limits will be published at launch.
+
+## Uzo RPC limits
+
+Will be published at launch. There are no numbers to share yet.
+
+## Public endpoint limits
+
+BOT Chain doesn't publish rate limits for `https://rpc.bohr.life` or `https://rpc.botchain.ai`. BOTScan's API doesn't publish limits either. Treat both as shared resources with unknown limits.
+
+## Stay within unknown limits
+
+- **Batch reads.** Combine many `eth_call` reads into one with [Multicall](/guides/data/multicall).
+- **Poll at a sensible interval.** Blocks arrive about every 0.75 seconds, so polling faster than once a second gains nothing.
+- **Bound event queries.** Read logs in chunks of a few thousand blocks, not from block 0. See [Known limitations](/get-started/bot-chain/known-limitations#event-queries).
+- **Cache on a server.** Don't call the RPC or explorer API from every visitor's browser for data that changes rarely.
+- **Retry with backoff.** If a request fails with HTTP 429 or a gateway error, wait and retry with increasing delays.
+
+## At a hackathon
+
+Many teams on one network can hit the same endpoints at once. See [Faucet plan](/hackathons/organizers/faucet-plan) for funding, and ask teams to follow the tips above.
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Endpoints" icon="plug" href="/infrastructure/rpc/endpoints">
+    Public endpoints you can use today.
+  </Card>
+  <Card title="Uzo RPC" icon="server" href="/infrastructure/rpc/overview">
+    What the planned service will add.
+  </Card>
+</CardGroup>

@@ -8,4 +8,29 @@ import Planned from "/snippets/status-planned.mdx";
 
 <Planned />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Learn what the planned Ponder starter for BOT Chain will include and why it isn't available yet.
+
+## What it will be
+
+A starter project for [Ponder](https://ponder.sh), an open-source TypeScript framework for indexing EVM events into a database you can query. The starter is planned to come with BOT Chain testnet and mainnet already configured, so you add your contract's ABI and address and start indexing.
+
+## Why it isn't available yet
+
+Ponder reads events with `eth_getLogs`. BOT Chain documents that method as disabled on its public RPCs, and unbounded ranges failed in our tests. An indexer that backfills from a contract's deployment block needs a reliable logs-enabled RPC. The starter depends on [Uzo RPC](/infrastructure/rpc/overview), which is also planned.
+
+## What to use meanwhile
+
+- For history, read decoded logs from the [BOTScan API](/guides/data/explorer-api).
+- For recent events, use [chunked `eth_getLogs`](/get-started/bot-chain/known-limitations#event-queries).
+- If you run your own BOT Chain node, its RPC has no public limits, and you can point an indexer at it. See [Index chain data](/guides/data/indexing).
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Uzo Index" icon="database" href="/infrastructure/index/overview">
+    The planned hosted index.
+  </Card>
+  <Card title="Product status" icon="activity" href="/infrastructure/status">
+    What is live, in development and planned.
+  </Card>
+</CardGroup>

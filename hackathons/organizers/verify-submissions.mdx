@@ -4,4 +4,152 @@ description: "Check that a team's contract is deployed and verified on BOTScan u
 icon: "badge-check"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Check that every team's contract is deployed on BOT Chain testnet, verified on BOTScan and created during your event, using BOTScan's public API.
+
+## What you'll build
+
+A script that reads a CSV of team names and contract addresses and prints, for each one, whether it's a contract, whether its source is verified, its name and when it was deployed.
+
+## Prerequisites
+
+- Python 3.8 or later. The script uses only the standard library.
+- A CSV of submissions with a `team,address` header. Most form tools can export this.
+- No API key. BOTScan's API is public. It doesn't publish rate limits, so the script pauses between requests.
+
+## The API calls
+
+The script uses two BOTScan (Blockscout v2) endpoints on `https://scan.bohr.life/api/v2`:
+
+| Call | Fields used |
+| --- | --- |
+| `GET /addresses/{address}` | `is_contract`, `is_verified`, `name`, `creation_transaction_hash`. Returns 404 if BOTScan has never seen the address. |
+| `GET /transactions/{hash}` | `timestamp` of the deployment transaction. |
+
+Try one by hand:
+
+```bash check-one.sh
+curl -s https://scan.bohr.life/api/v2/addresses/0x4aF0c8bE7D7C43F1cF17Bd421F8f7bE7Bd8927E8
+```
+
+See [Explorer API](/reference/explorer-api) for more endpoints.
+
+## Steps
+
+<Steps>
+  <Step title="Export the submissions">
+    Save the contract addresses as `submissions.csv`. If a team deployed more than one contract, give each its own row.
+
+    ```csv submissions.csv
+    team,address
+    Team Guest,0x4aF0c8bE7D7C43F1cF17Bd421F8f7bE7Bd8927E8
+    Team Wallet,0x000000000000000000000000000000000000dEaD
+    Team Typo,0x1234567890123456789012345678901234567891
+    ```
+  </Step>
+  <Step title="Save the script">
+    Set `EVENT_START` to when building started, in UTC.
+
+    ```python check_submissions.py
+    # Check each team's contract on BOTScan: deployed, verified, and created during the event.
+    # Usage: python check_submissions.py submissions.csv
+    import csv
+    import json
+    import sys
+    import time
+    import urllib.error
+    import urllib.request
+
+    EXPLORER = "https://scan.bohr.life"  # BOTScan testnet
+    EVENT_START = "2026-10-01T00:00:00Z"  # set to your event's start, in UTC
+
+    def get(path):
+        request = urllib.request.Request(EXPLORER + path, headers={"User-Agent": "uzo-hackathon-check"})
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return None
+            raise
+
+    def check(address):
+        info = get(f"/api/v2/addresses/{address}")
+        if info is None:
+            return "not found", "", ""
+        if not info.get("is_contract"):
+            return "not a contract", "", ""
+        created = ""
+        tx_hash = info.get("creation_transaction_hash")
+        if tx_hash:
+            tx = get(f"/api/v2/transactions/{tx_hash}") or {}
+            created = tx.get("timestamp", "")
+        verified = "verified" if info.get("is_verified") else "NOT verified"
+        in_window = "yes" if created and created >= EVENT_START else "no"
+        return verified, info.get("name") or "", f"{created} (during event: {in_window})"
+
+    with open(sys.argv[1], newline="") as file:
+        for row in csv.DictReader(file):
+            status, name, created = check(row["address"].strip())
+            print(f"{row['team']:<20} {row['address']}  {status:<14} {name:<20} {created}")
+            time.sleep(0.5)  # be gentle with the public API
+    ```
+  </Step>
+  <Step title="Run it">
+    ```bash
+    python check_submissions.py submissions.csv
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+For the example CSV, on 2026-10-03 the script printed:
+
+```text Output
+Team Guest           0x4aF0c8bE7D7C43F1cF17Bd421F8f7bE7Bd8927E8  verified       GuestBook            2026-10-01T22:28:04.000000Z (during event: yes)
+Team Wallet          0x000000000000000000000000000000000000dEaD  not a contract
+Team Typo            0x1234567890123456789012345678901234567891  not found
+```
+
+How to read each status:
+
+| Status | Meaning | What to do |
+| --- | --- | --- |
+| `verified` | Contract with published source | Check the name matches what the team described. |
+| `NOT verified` | Contract, but no source on BOTScan | Ask the team to verify, if your rules allow a fix window. |
+| `not a contract` | A wallet address, not a contract | The team probably submitted their wallet. Ask for the contract address. |
+| `not found` | BOTScan has never seen it | Typo, or deployed to another network such as mainnet. |
+| `during event: no` | Deployed before `EVENT_START` | Check your rules on earlier code. Teams may have reused a contract. |
+
+Open any address at `https://scan.bohr.life/address/ADDRESS` to read the source and transactions yourself.
+
+## Limits of this check
+
+- It proves a contract exists and its source is published. It doesn't prove the team wrote it. BOTScan verifies contracts automatically when their bytecode matches one already verified, so an unmodified template shows as verified too. Look at the source.
+- "Created during the event" uses the deployment transaction time. A team could deploy a copy of older code during the event.
+- Deployments through a factory contract may have no `creation_transaction_hash`. The script then prints `during event: no` with an empty time; check those by hand.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="HTTP Error 429 or timeouts">
+    The public API is being rate limited or is slow. Increase the `time.sleep` value to 1 or 2 seconds and run again.
+  </Accordion>
+  <Accordion title="KeyError: 'address' or 'team'">
+    The CSV header must be exactly `team,address`. Rename the columns in your export.
+  </Accordion>
+  <Accordion title="A team says their contract is verified, but the script says NOT verified">
+    Check the address in the CSV matches the one on BOTScan. Verification may also have been done on a different address, such as a proxy's implementation.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Judging rubric" icon="scale" href="/hackathons/organizers/judging-rubric">
+    Score the eligible projects.
+  </Card>
+  <Card title="Use the BOTScan API" icon="search" href="/guides/data/explorer-api">
+    More of what the explorer API can do.
+  </Card>
+</CardGroup>

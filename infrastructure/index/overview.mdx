@@ -9,4 +9,38 @@ import Planned from "/snippets/status-planned.mdx";
 
 <Planned />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Learn what Uzo Index is meant to do for BOT Chain apps and how to get indexed data today without it.
+
+## Why it's needed
+
+Apps often need questions answered across many blocks: every transfer for a wallet, every swap in a pool, the top 10 holders of a token. Answering those from raw RPC calls is slow, and on BOT Chain it's harder because `eth_getLogs` is documented as disabled on the public endpoints. See [Logs and WebSockets](/infrastructure/rpc/logs-and-websockets).
+
+## What Uzo Index will do
+
+Uzo Index is planned as a hosted index of BOT Chain events that lets you:
+
+- Query decoded events for your contracts without scanning blocks yourself.
+- Get history from a contract's deployment, not only recent blocks.
+- Serve data to your frontend from one API instead of many RPC calls.
+
+It depends on a logs-enabled RPC, which is what [Uzo RPC](/infrastructure/rpc/overview) is planned to provide. API shape, pricing and limits will be published at launch.
+
+## What to use meanwhile
+
+| Option | Good for | Guide |
+| --- | --- | --- |
+| BOTScan API | Decoded logs, transactions, token holders | [Use the BOTScan API](/guides/data/explorer-api) |
+| Chunked `eth_getLogs` | Recent events for one contract | [Known limitations](/get-started/bot-chain/known-limitations#event-queries) |
+| Contract state | Counts, recent items, leaderboards | [Events without getLogs](/guides/frontend/events-without-getlogs) |
+| Your own node and indexer | Full control at scale | [Index chain data](/guides/data/indexing) |
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Ponder starter" icon="boxes" href="/infrastructure/index/ponder-starter">
+    The planned starter for self-hosted indexing.
+  </Card>
+  <Card title="Index chain data" icon="database" href="/guides/data/indexing">
+    Your options for indexing today.
+  </Card>
+</CardGroup>

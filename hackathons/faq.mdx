@@ -5,4 +5,90 @@ description: "Fixes for the most common blockers participants hit during a BOT C
 icon: "messages-square"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Fix the problems that most often block hackathon teams on BOT Chain, from empty wallets to failed verification.
+
+If your problem isn't here, check [Troubleshooting](/reference/troubleshooting), then ask a mentor with the exact command and error message.
+
+## Wallet and tBOT
+
+<AccordionGroup>
+  <Accordion title="The faucet says I already claimed, or the robot check won't load">
+    The BOT Chain faucet gives up to 10 tBOT per address per 24 hours. Use the [Uzo Labs faucet](https://www.uzolabs.xyz/faucet) (0.1 tBOT per wallet per 24 hours), ask a teammate to send you some, or ask the organizers. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+  <Accordion title="insufficient funds for gas">
+    The wallet sending the transaction has no tBOT. Check with `cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life`. Make sure the address you funded is the same one your tool signs with: `cast wallet address --account uzo-dev`.
+  </Accordion>
+  <Accordion title="MetaMask warns that chain 968 belongs to another network">
+    In public chain lists, 968 is registered to a different network. Add BOT Chain testnet by hand with RPC `https://rpc.bohr.life` and symbol `tBOT`. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+  </Accordion>
+  <Accordion title="I need testnet USDT">
+    Testnet USDT can't be minted by the public. Swap tBOT for it on [BDEX V2](/guides/defi/swaps/bdex-v2). It has 6 decimals, not 18.
+  </Accordion>
+</AccordionGroup>
+
+## Deploying
+
+<AccordionGroup>
+  <Accordion title="invalid opcode, or the deploy reverts with no reason">
+    Your compiler targeted an EVM upgrade BOT Chain doesn't support. Set `evm_version = "cancun"` in `foundry.toml` (or `evmVersion: "cancun"` in Hardhat), clean and rebuild. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+  </Accordion>
+  <Accordion title="forge create prints a transaction but nothing is deployed">
+    Add `--broadcast`. Without it Foundry only simulates.
+  </Accordion>
+  <Accordion title="Transaction underpriced or stuck">
+    Testnet accepted 20 gwei as the minimum gas price in our tests. Most tools pick this up automatically. If yours doesn't, pass `--gas-price 20gwei` to `cast send` or `forge create`. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Accordion>
+  <Accordion title="Foundry install fails on Windows">
+    The installer needs a Unix shell. Use WSL or Git Bash, not PowerShell or Command Prompt.
+  </Accordion>
+</AccordionGroup>
+
+## Verifying
+
+<AccordionGroup>
+  <Accordion title="Verification fails or says the bytecode doesn't match">
+    Use the deployed address, not the transaction hash. Use the same compiler version, optimizer settings and EVM version you deployed with. If it's too soon after deploying, wait 20 seconds and retry.
+  </Accordion>
+  <Accordion title="It says the contract is already verified">
+    That's fine. BOTScan verifies contracts automatically when their bytecode matches one that's already verified.
+  </Accordion>
+</AccordionGroup>
+
+## Frontend and data
+
+<AccordionGroup>
+  <Accordion title="My WebSocket connection fails">
+    BOT Chain has no public WebSocket endpoint. Use an `http` transport and poll. See [Logs and WebSockets](/infrastructure/rpc/logs-and-websockets).
+  </Accordion>
+  <Accordion title="eth_getLogs times out">
+    Query a bounded range, a few thousand blocks at a time, not from block 0. Or read decoded logs from the [BOTScan API](/guides/data/explorer-api).
+  </Accordion>
+  <Accordion title="viem says the chain is not defined">
+    BOT Chain isn't in viem's built-in chain list. Import `botChainTestnet` from [`@uzolabs/sdk/chains`](/sdk/chains/overview) or define it with `defineChain`.
+  </Accordion>
+</AccordionGroup>
+
+## Rules and security
+
+<AccordionGroup>
+  <Accordion title="Can we deploy to mainnet?">
+    Build and judge on testnet. Mainnet uses real BOT and gains you nothing at a hackathon unless your event's rules ask for it.
+  </Accordion>
+  <Accordion title="Someone asked for my private key or recovery phrase">
+    Don't share it, with anyone. Mentors and organizers never need it. To get help with a transaction, share the address or transaction hash instead.
+  </Accordion>
+  <Accordion title="Can we use code we wrote before the event?">
+    It depends on your event's rules. Ask the organizers, and say in your README what you built during the event.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Day-one checklist" icon="list-checks" href="/hackathons/day-one-checklist">
+    Make sure the basics are done.
+  </Card>
+  <Card title="Known limitations" icon="triangle-alert" href="/get-started/bot-chain/known-limitations">
+    Every gap in BOT Chain's public infrastructure.
+  </Card>
+</CardGroup>

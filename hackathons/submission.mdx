@@ -5,4 +5,114 @@ description: "What to submit: repo, testnet contract address, verified source, d
 icon: "upload"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Prepare a hackathon submission that judges can check in minutes: a public repo, a verified testnet contract, a short demo video and a one-page pitch.
+
+<Note>
+  This is the default list for events that use the kit. Your organizers may add to it or set a different format. Their rules win.
+</Note>
+
+## What to submit
+
+| Item | What judges look for |
+| --- | --- |
+| **Repository** | Public GitHub repo with a README: what it does, how to run it, contract addresses. No private keys or `.env` files. |
+| **Testnet contract address** | Every contract you deployed on BOT Chain testnet (chain ID 968). |
+| **Verified source** | Each contract verified on BOTScan, so the **Contract** tab shows your code. |
+| **Demo video** | 3 minutes or less. Show the app working end to end, including a transaction. |
+| **One-page pitch** | The problem, who has it, your solution, what works today, what's next. |
+
+## Steps
+
+<Steps>
+  <Step title="Verify every contract">
+    If you deployed with Foundry, run this for each contract. No API key is needed.
+
+    ```bash verify.sh
+    forge verify-contract YOUR_CONTRACT src/YourContract.sol:YourContract \
+      --chain 968 \
+      --verifier blockscout \
+      --verifier-url https://scan.bohr.life/api/ \
+      --watch
+    ```
+
+    Used Hardhat or Remix? See [Verify with Hardhat](/guides/deploy/verify/hardhat) or [Verify in the BOTScan UI](/guides/deploy/verify/botscan-ui).
+  </Step>
+  <Step title="Check it the way judges will">
+    Organizers may check submissions with BOTScan's API. Run the same check yourself:
+
+    ```bash check-contract.sh
+    curl -s https://scan.bohr.life/api/v2/addresses/YOUR_CONTRACT \
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('message') or f\"contract: {d['is_contract']} | verified: {d['is_verified']} | name: {d['name']}\")"
+    ```
+
+    You want `contract: True | verified: True | name: YourContract`. `Not found` means BOTScan has never seen the address, so check you copied it correctly. `contract: False` means it's a wallet, not a contract.
+  </Step>
+  <Step title="Clean up the repo">
+    - Search the history for secrets: `git log -p | grep -i "private_key\|mnemonic"` should print nothing.
+    - Make sure `.env` is in `.gitignore` and commit a `.env.example` with empty values instead.
+    - List contract addresses and BOTScan links at the top of the README.
+  </Step>
+  <Step title="Record the demo">
+    Show the problem in one sentence, then the app. Do at least one real testnet transaction on camera and open it on BOTScan. Upload it where judges can watch without signing in.
+  </Step>
+  <Step title="Write the pitch">
+    One page. Don't repeat the README. Answer: who has this problem, why on-chain, what you built in the time you had and what you'd do next.
+  </Step>
+</Steps>
+
+## README template
+
+```markdown README.md
+# Project name
+
+One sentence on what it does and who it's for.
+
+## Contracts (BOT Chain testnet, chain 968)
+
+| Contract | Address |
+| --- | --- |
+| MyContract | [0xYOUR_CONTRACT](https://scan.bohr.life/address/0xYOUR_CONTRACT) |
+
+## Run it
+
+1. `cp .env.example .env` and fill in the values.
+2. `npm install`
+3. `npm run dev`
+
+## Demo
+
+Link to the video.
+
+## Team
+
+Names and roles.
+```
+
+## If you're out of time
+
+A smaller project that works and is verified beats a bigger one that doesn't run. If something's broken, say so in the README and the video. Judges respect honesty more than a demo that hides gaps.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Verification fails">
+    Use the same compiler version and settings you deployed with, and the address from `Deployed to`, not the transaction hash. See [Verify contracts](/guides/deploy/verify/overview).
+  </Accordion>
+  <Accordion title="I committed a private key">
+    Treat the key as public. Create a new wallet, move your tBOT to it and redeploy if needed. Deleting the file in a later commit doesn't remove it from history.
+  </Accordion>
+  <Accordion title="BOTScan shows my contract as not verified, but Foundry said it passed">
+    Wait a minute and refresh. Then run the curl check above. If it still shows `False`, verify again.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Judging rubric" icon="scale" href="/hackathons/organizers/judging-rubric">
+    How submissions may be scored.
+  </Card>
+  <Card title="Hackathon FAQ" icon="messages-square" href="/hackathons/faq">
+    Fixes for common blockers.
+  </Card>
+</CardGroup>

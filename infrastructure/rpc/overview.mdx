@@ -9,4 +9,49 @@ import Planned from "/snippets/status-planned.mdx";
 
 <Planned />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Learn what Uzo RPC is meant to do, why BOT Chain developers need it, and what to use until it launches.
+
+## Why it's needed
+
+BOT Chain's public RPC endpoints work well for reading state and sending transactions. Two things are missing for apps that react to on-chain activity:
+
+- **Event queries.** BOT Chain's [JSON-RPC page](https://dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint/) documents `eth_getLogs` as disabled on the public endpoints. In our tests it answered bounded block ranges, but you can't rely on a method the operator says is off.
+- **WebSockets.** No WebSocket URL is published, so `eth_subscribe` for new blocks, logs or pending transactions isn't available.
+
+See [Logs and WebSockets](/infrastructure/rpc/logs-and-websockets) for the details and tested workarounds.
+
+## What Uzo RPC will do
+
+Uzo RPC is planned as an RPC service for BOT Chain mainnet and testnet that adds:
+
+- `eth_getLogs` that is supported, so event-driven apps and indexers can use it in production.
+- WebSocket endpoints for `eth_subscribe`.
+- Standard JSON-RPC, so existing tools such as viem, ethers, Foundry and Hardhat work by changing only the URL.
+
+Endpoints, pricing and limits will be published when it launches. Nothing on this site is a commitment to a launch date.
+
+## What to use meanwhile
+
+| You need | Use today |
+| --- | --- |
+| Read state, send transactions | Public RPCs: `https://rpc.bohr.life` (testnet) and `https://rpc.botchain.ai` (mainnet) |
+| Recent events | Chunked `eth_getLogs` over bounded ranges ([Known limitations](/get-started/bot-chain/known-limitations#event-queries)) |
+| Event history | The [BOTScan API](/guides/data/explorer-api) |
+| Live updates | HTTP polling at about 1 second ([Logs and WebSockets](/infrastructure/rpc/logs-and-websockets)) |
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Logs and WebSockets" icon="radio-tower" href="/infrastructure/rpc/logs-and-websockets">
+    The limitation and every workaround that works today.
+  </Card>
+  <Card title="Endpoints" icon="plug" href="/infrastructure/rpc/endpoints">
+    The public endpoints to use until Uzo RPC launches.
+  </Card>
+  <Card title="Uzo Index" icon="database" href="/infrastructure/index/overview">
+    The planned event index that builds on a logs-enabled RPC.
+  </Card>
+  <Card title="Product status" icon="activity" href="/infrastructure/status">
+    What is live, in development and planned.
+  </Card>
+</CardGroup>
