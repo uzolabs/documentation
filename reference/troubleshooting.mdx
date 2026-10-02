@@ -27,6 +27,18 @@ Find the error you're seeing, then read its cause and fix. We captured most mess
     **Fix:** Wait for the pending transaction to confirm. Blocks arrive every 0.75 seconds, so this rarely takes long. To replace it, raise the priority fee.
   </Accordion>
 
+  <Accordion title="gasPrice too low, or transaction underpriced: effective gas tip ... minimum needed 20000000000">
+    **Cause:** You set a gas price or priority fee below 20 gwei, the minimum the network accepts. The first message comes from legacy transactions, the second from EIP-1559 transactions.
+
+    **Fix:** Remove the hard-coded fee and let your tool read it from the network, or set it to at least 20 gwei. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Accordion>
+
+  <Accordion title="rlp: expected input list for []kzg4844.Blob">
+    **Cause:** You sent a blob transaction in the EIP-7594 (PeerDAS) format. BOT Chain accepts only the original EIP-4844 format.
+
+    **Fix:** With Foundry, add `--eip4844` to `cast send --blob`. See [Blob API](/reference/json-rpc/blob-api#send-a-blob-transaction).
+  </Accordion>
+
   <Accordion title="invalid opcode">
     **Cause:** Your contract was compiled for an EVM version newer than BOT Chain supports, such as Osaka.
 

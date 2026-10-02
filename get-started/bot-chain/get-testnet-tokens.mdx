@@ -46,6 +46,31 @@ Each address can claim **up to 10 tBOT every 24 hours** (checked 2026-10-01 on t
 
 That's plenty for development. Deploying and calling a small contract costs a tiny fraction of one tBOT. See [Gas and fees](/get-started/bot-chain/gas-and-fees) for how to check costs yourself.
 
+## Uzo Labs faucet
+
+If the BOT Chain faucet isn't working for you, claim from the [Uzo Labs faucet](https://www.uzolabs.xyz/faucet) instead. Paste your address and click **Claim 0.1 tBOT**.
+
+- Each wallet can claim **0.1 tBOT every 24 hours**. That's enough for the [quickstart](/get-started/quickstart), which used about 0.004 tBOT when we tested it.
+- Wallets that already hold enough tBOT are skipped.
+
+### Give back unused tBOT
+
+When you're done testing, please send your unused tBOT back to the Uzo Labs faucet so other developers can claim it. Every top-up keeps the faucet running.
+
+```text Faucet address (testnet only)
+0xe3e5D9f7eD994A6b5f697e60218a29F3Bf98B485
+```
+
+From a terminal, this sends 0.05 tBOT from your `uzo-dev` wallet:
+
+```bash
+cast send 0xe3e5D9f7eD994A6b5f697e60218a29F3Bf98B485 --value 0.05ether --rpc-url https://rpc.bohr.life --account uzo-dev
+```
+
+<Warning>
+  Send testnet tBOT on chain 968 only. Never send mainnet BOT or any other token to this address.
+</Warning>
+
 ## When you need more
 
 - **Wait for the next claim.** You can claim again after 24 hours.

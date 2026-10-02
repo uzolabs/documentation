@@ -30,6 +30,8 @@ BOT Chain supports EIP-1559 transactions, so blocks carry a base fee. On BOT Cha
 
 These values can change. Always read them from the network rather than hard-coding them.
 
+On 2026-10-02 testnet rejected transactions that paid less than 20 gwei. A legacy transaction at 1 gwei failed with `gasPrice too low`, and an EIP-1559 transaction with a 1 gwei tip failed with `transaction underpriced: effective gas tip 1000000000, minimum needed 20000000000`. Treat the suggested price as the minimum.
+
 ## Why fees are low
 
 - Blocks are mostly empty, so there's no competition for space and no fee spikes.
@@ -78,8 +80,9 @@ Examples at 20 gwei, checked on testnet on 2026-10-01:
 | --- | --- | --- |
 | Send BOT to another address | 21,000 | 0.00042 BOT |
 | Deploy the quickstart `Counter` contract | 158,018 (estimate) | About 0.0032 BOT |
+| Call `increment()` on `Counter` | 43,482 | About 0.00087 BOT |
 
-So the 10 tBOT you get from the faucet covers thousands of small transactions.
+So the 10 tBOT you can get from the BOT Chain faucet covers thousands of small transactions, and even the 0.1 tBOT from the [Uzo Labs faucet](/get-started/bot-chain/get-testnet-tokens#uzo-labs-faucet) covers about 100 small contract calls.
 
 ## Setting fees yourself
 

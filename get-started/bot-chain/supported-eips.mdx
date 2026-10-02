@@ -44,10 +44,10 @@ Checked against both networks on 2026-10-01.
 | [EIP-3855](https://eips.ethereum.org/EIPS/eip-3855) | `PUSH0` opcode (Shanghai) | Supported |
 | [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153) | Transient storage, `TLOAD` and `TSTORE` (Cancun) | Supported |
 | [EIP-5656](https://eips.ethereum.org/EIPS/eip-5656) | `MCOPY` opcode (Cancun) | Supported |
-| [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) | Blob transactions (type 3), `BLOBHASH` and `BLOBBASEFEE` | Supported. See the [Blob API](/reference/json-rpc/blob-api). |
+| [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) | Blob transactions (type 3), `BLOBHASH` and `BLOBBASEFEE` | Supported in the original EIP-4844 format only, not the newer EIP-7594 format. See the [Blob API](/reference/json-rpc/blob-api#send-a-blob-transaction). |
 | [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537) | BLS12-381 precompiles (Prague) | Supported |
 | [EIP-2935](https://eips.ethereum.org/EIPS/eip-2935) | Historical block hashes in state (Prague) | Supported |
-| [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) | Type 4 transactions that let an EOA delegate to contract code (Prague) | Supported. BOTScan shows the authorizations. |
+| [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) | Type 4 transactions that let an EOA delegate to contract code (Prague) | Supported. On testnet on 2026-10-02 we delegated an EOA to a contract and cleared it again with type 4 transactions. BOTScan shows the authorizations. |
 | [EIP-7939](https://eips.ethereum.org/EIPS/eip-7939) | `CLZ` opcode (Osaka) | Not supported |
 
 Don't use `block.prevrandao` (or the older `block.difficulty`) for randomness. On BOT Chain it returns the Parlia block difficulty, which was `2` in every block we checked on 2026-10-01. Use an oracle if your app needs random numbers.

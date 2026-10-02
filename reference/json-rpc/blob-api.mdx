@@ -47,9 +47,60 @@ curl -s https://rpc.bohr.life \
 
 Returns an empty array if the block has no blob transactions.
 
+Returns `null` for a block that doesn't exist yet.
+
 ## Response shape
 
-BOT Chain's docs don't describe the response fields. We searched the most recent 40,000 blocks on each network on 2026-10-01 and found no blob transactions, so we couldn't capture a real response. {/* TODO: send a blob transaction on testnet and document the response fields. */}
+BOT Chain's docs don't describe the response fields. We sent a blob transaction on testnet on 2026-10-02 and captured this response from `eth_getBlobSidecarByTxHash` with `full_blob_flag` set to `false`:
+
+```json response.json
+{
+  "blobSidecar": {
+    "blobs": ["0x0000000000000000140000000000000000000000000000000000000000000000"],
+    "commitments": ["0x9732e36cf9d17dffd555150cc0023412166076f6591b3143debcf8a8bbbdcdbd385ca69471402fd0b81c78e86c658b18"],
+    "proofs": ["0x8b8bc807b9fd67ed0d40e7b6b55982a83e519a7b51efe208e1e747730daf063103b42cffe13248871baf40ac9be3467b"]
+  },
+  "blockHash": "0x3ca8c9953eb68bac23eff75ec0263abc739f3d6c796b6173830b8effbcab1ab3",
+  "blockNumber": "0x18383ca",
+  "txHash": "0x2fdbde3757d070add8cd74be3b7f9d7a2f2d7fc056be4d635d4c315b764de5df",
+  "txIndex": "0x0"
+}
+```
+
+`eth_getBlobSidecars` returns an array of these objects, one per blob transaction in the block.
+
+<ResponseField name="blobSidecar.blobs" type="string[]">
+  One entry per blob. Each full blob is 131,072 bytes. With `full_blob_flag` set to `false`, you get only the first 32 bytes.
+</ResponseField>
+<ResponseField name="blobSidecar.commitments" type="string[]">
+  The KZG commitment for each blob, 48 bytes each.
+</ResponseField>
+<ResponseField name="blobSidecar.proofs" type="string[]">
+  The KZG proof for each blob, 48 bytes each.
+</ResponseField>
+<ResponseField name="blockHash" type="string">
+  Hash of the block that includes the transaction.
+</ResponseField>
+<ResponseField name="blockNumber" type="string">
+  Block number, as hex.
+</ResponseField>
+<ResponseField name="txHash" type="string">
+  Hash of the blob transaction.
+</ResponseField>
+<ResponseField name="txIndex" type="string">
+  Position of the transaction in the block, as hex.
+</ResponseField>
+
+## Send a blob transaction
+
+BOT Chain accepts blobs in the original EIP-4844 format, with one proof per blob. It does not accept the newer EIP-7594 (PeerDAS) format, which recent Foundry versions use by default. With Foundry, add `--eip4844`:
+
+```bash send-blob.sh
+echo "hello from BOT Chain" > blob.txt
+cast send YOUR_ADDRESS --blob --eip4844 --path blob.txt --rpc-url https://rpc.bohr.life --account uzo-dev
+```
+
+Without `--eip4844`, the node rejects the transaction with `rlp: expected input list for []kzg4844.Blob`. Our test transaction used 131,072 blob gas at a blob gas price of 1 wei.
 
 ## Blob fees
 

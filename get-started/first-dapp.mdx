@@ -15,7 +15,7 @@ In this guide you talk to the `Counter` contract you deployed in the [quickstart
 - A script that reads the counter and sends an `increment` transaction with [viem](https://viem.sh).
 - A React page built with [wagmi](https://wagmi.sh) that connects a browser wallet, shows the counter and has an **Increment** button.
 
-BOT Chain is not in viem's built-in chain list, so you'll define it yourself with `defineChain`. The planned [Uzo SDK](/sdk/overview) will ship this definition for you.
+BOT Chain is not in viem's built-in chain list, so you'll define it yourself with `defineChain`. That way you see every value your app depends on. In your own projects you can import `botChainTestnet` from the [Uzo SDK](/sdk/overview) instead.
 
 ## Prerequisites
 
@@ -206,7 +206,13 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
     node --env-file=.env write.js
     ```
 
-    The script prints a BOTScan link, waits about a second for the block, then prints the new value.
+    The script prints a BOTScan link, waits about a second for the block, then prints the new value:
+
+    ```text Output
+    Sent: https://scan.bohr.life/tx/0xb17abcc5797a77a3a9de68ff5d9d2b7654af5b810fbedfc7e658ee063074b5a0
+    Status: success in block 25395524n
+    Counter value: 2n
+    ```
   </Step>
 </Steps>
 
@@ -448,8 +454,8 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
   <Accordion title="invalid private key, expected hex or 32 bytes">
     `PRIVATE_KEY` must be 64 hex characters with a `0x` prefix. Copy it again from `cast wallet decrypt-keystore uzo-dev`.
   </Accordion>
-  <Accordion title="No Connect button appears">
-    The `injected` connector needs a browser wallet extension. Install MetaMask or another EVM wallet and reload the page.
+  <Accordion title="Clicking Connect Injected does nothing">
+    The `injected` connector needs a browser wallet extension. Without one, the button still appears but nothing happens when you click it. Install MetaMask or another EVM wallet and reload the page.
   </Accordion>
   <Accordion title="The wallet shows the wrong network or a chain mismatch warning">
     Click **Switch to BOT Chain testnet**. If your wallet doesn't know chain 968 yet, add it first using the values in [Connect a wallet](/get-started/bot-chain/connect-wallet).

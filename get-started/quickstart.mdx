@@ -80,7 +80,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
     cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life
     ```
 
-    Replace `YOUR_ADDRESS` with the address from the last step. You should see `10.000000000000000000`. The faucet gives each address up to 10 tBOT every 24 hours, which is far more than this quickstart uses. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens) if it doesn't arrive.
+    Replace `YOUR_ADDRESS` with the address from the last step. You should see `10.000000000000000000`. The faucet gives each address up to 10 tBOT every 24 hours, which is far more than this quickstart uses. If the BOT Chain faucet doesn't work for you, the [Uzo Labs faucet](https://www.uzolabs.xyz/faucet) gives 0.1 tBOT, which is enough for this quickstart. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens) if nothing arrives.
   </Step>
 
   <Step title="Create a project">
@@ -141,13 +141,15 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
     forge create src/Counter.sol:Counter --rpc-url bot_testnet --account uzo-dev --broadcast
     ```
 
-    Enter your keystore password when asked. The output ends like this:
+    Enter your keystore password when asked. The output ends like this, with your own addresses and hash:
 
     ```text
-    Deployer: 0x...
-    Deployed to: 0x...
-    Transaction hash: 0x...
+    Deployer: 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+    Deployed to: 0x8ef544af3CE913Bb5eC12ba2F34fe7FA29225c0b
+    Transaction hash: 0xccc49942d944c87f72490f4337c09957a0613ab202e5f633c6bfa1d3a6e8c26e
     ```
+
+    Deploying `Counter` and calling it once cost about 0.004 tBOT when we tested on 2026-10-02.
 
     Copy the `Deployed to` address and save it in a shell variable so the next steps can use it:
 
@@ -163,10 +165,20 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
     forge verify-contract $COUNTER src/Counter.sol:Counter \
       --chain 968 \
       --verifier blockscout \
-      --verifier-url https://scan.bohr.life/api/
+      --verifier-url https://scan.bohr.life/api/ \
+      --watch
     ```
 
-    Foundry submits the source and waits for the result. Verification usually finishes in a few seconds.
+    `--watch` makes Foundry wait for the result. Verification usually finishes in a few seconds. The output ends like this:
+
+    ```text
+    Contract verification status:
+    Response: `OK`
+    Details: `Pass - Verified`
+    Contract successfully verified
+    ```
+
+    If Foundry says the contract `is already verified`, that's fine. BOTScan verifies a contract automatically when its bytecode matches one that's already verified, which often happens with the default `Counter`.
   </Step>
 
   <Step title="Call the contract">
