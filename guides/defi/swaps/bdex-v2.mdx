@@ -113,7 +113,7 @@ const { request } = await publicClient.simulateContract({
 });
 ```
 
-{/* untested: swapExactETHForTokens was not sent on testnet; the V3 guide shows a tested native swap */}
+On testnet on 2026-10-02, this swap with `amountIn = parseEther("1")` quoted 16.177665 USDT and [succeeded](https://scan.bohr.life/tx/0x50b2aa16c47acfbba2e7c02c3ed8f6d9843a7170c0e162aa0414dff10359d99b). There's no approval step, because you send tBOT as `value` instead of spending a token.
 
 ## Troubleshooting
 

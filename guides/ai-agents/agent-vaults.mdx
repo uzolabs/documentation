@@ -361,8 +361,6 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
   </Step>
 
   <Step title="Deploy the vault">
-    {/* untested: not deployed on the live testnet because the test wallet was low on tBOT; this flow ran on a local anvil fork of testnet on 2026-10-02 */}
-
     The constructor takes the owner, the operator, the token and the daily limit in token units. `1000000` is 1 USDT.
 
     ```bash
@@ -462,23 +460,23 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
 
 ## Verify it worked
 
-This run used a vault with a 0.01 USDT daily limit, on a local fork of testnet. It paid 0.006 USDT, tried the same payment again, tried an address that wasn't allowed, then tried again after the owner paused the vault:
+This run used [a vault on testnet](https://scan.bohr.life/address/0xc810bc6b79778bA578149a46D7c69B22F80E99b5) with a 0.01 USDT daily limit, on 2026-10-02. It paid 0.006 USDT, tried the same payment again, tried an address that wasn't allowed, then tried again after the owner paused the vault:
 
 ```text Output
 Left today: 0.01 USDT. Recipient allowed: true. Paused: false
-Paid 0.006 USDT, success: https://scan.bohr.life/tx/0x002a4738b169799ddc24b39354ecd25da515a21e686ad663ce8bdc997fb943e8
+Paid 0.006 USDT, success: https://scan.bohr.life/tx/0x1568519d2173e85ad5abf74e1c2f0b8ee304f11ce501f980c832af55977a8dcc
 
 Left today: 0.004 USDT. Recipient allowed: true. Paused: false
 Vault refused: DailyLimitExceeded [ 6000n, 4000n ]
 
 Left today: 0.004 USDT. Recipient allowed: false. Paused: false
-Vault refused: RecipientNotAllowed [ '0x90F79bf6EB2c4f870365E785982E1f101E93b906' ]
+Vault refused: RecipientNotAllowed [ '0x5997eb4687c8d8d58b04e2aef6A505c52DA12e0a' ]
 
 Left today: 0.004 USDT. Recipient allowed: true. Paused: true
 Vault refused: EnforcedPause []
 ```
 
-The transaction hash above is from the fork, so it isn't on BOTScan. On testnet, your link opens the payment, and the vault's **Logs** tab shows a `Paid` event.
+The three refusals cost nothing: each failed in simulation, so no transaction was sent. Open your payment link on BOTScan, and the vault's **Logs** tab shows a `Paid` event.
 
 <Tip>
 To try the vault without spending tBOT, run it against a local fork with `anvil --fork-url https://rpc.bohr.life`. Point `--rpc-url` and the viem transport at `http://127.0.0.1:8545`, and use `cast rpc anvil_impersonateAccount` to move USDT from a funded testnet address.
@@ -490,14 +488,14 @@ To try the vault without spending tBOT, run it against a local fork with `anvil 
 # Stop the agent at once
 cast send YOUR_VAULT_ADDRESS "pause()" --rpc-url bot_testnet --account uzo-dev
 
-# Take USDT back to the owner. Works while paused.
+# Take USDT back to the owner. Works while paused. The amount can't exceed the vault's balance.
 cast send YOUR_VAULT_ADDRESS "withdraw(address,uint256)" 0x75edC9335175Fc0552D51D48439F229c10420fe3 20000 \
   --rpc-url bot_testnet --account uzo-dev
 
 # Replace a leaked or retired agent key
 cast send YOUR_VAULT_ADDRESS "setOperator(address)" NEW_AGENT_ADDRESS --rpc-url bot_testnet --account uzo-dev
 
-# Change the daily limit to 5 USDT
+# Change the daily limit to 5 USDT. What was already spent today still counts.
 cast send YOUR_VAULT_ADDRESS "setDailyLimit(uint256)" 5000000 --rpc-url bot_testnet --account uzo-dev
 
 # Let the agent run again

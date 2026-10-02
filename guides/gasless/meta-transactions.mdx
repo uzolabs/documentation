@@ -88,14 +88,14 @@ The forwarder checks the signature, the user's nonce and the deadline, then call
   </Step>
 
   <Step title="Deploy both">
-    {/* untested: these two deploys weren't run on chain because the test wallet was low on tBOT; the contracts compile and pass forge tests */}
-
     ```bash
     forge create src/Forwarder.sol:Forwarder --rpc-url bot_testnet --account uzo-dev --broadcast
     forge create src/Notes.sol:Notes --rpc-url bot_testnet --account uzo-dev --broadcast --constructor-args YOUR_FORWARDER_ADDRESS
     ```
 
     Save both addresses. To verify them, see [Verify with Foundry](/guides/deploy/verify/foundry).
+
+    On 2026-10-02 these deployed a [forwarder](https://scan.bohr.life/address/0xf80783566Fc888562a3743de66EEbc5A13e43771) and [Notes](https://scan.bohr.life/address/0xcD611A5A077F6992a81CeDCCA8AaDA022AFd86C6) on testnet. Running the next step's script against them, with `setNote` in place of `sign`, [stored the note](https://scan.bohr.life/tx/0x7a4817ed0c4f3f8a4e824fae61971f3ff743ebbe3c5bdd18452362c1abbd4286) under the signing user's address, not the relayer's.
   </Step>
 
   <Step title="Sign and relay a request">

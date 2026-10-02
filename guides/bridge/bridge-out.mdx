@@ -1,15 +1,16 @@
 ---
 title: "Bridge USDT out"
-description: "Send USDT from BOT Chain to another network by approving the bridge and calling deposit. Mainnet only."
+description: "Send USDT from BOT Chain to another network by approving the bridge and calling deposit. Rehearse on testnet, then send on mainnet."
 icon: "log-out"
 ---
 
-This guide shows you how to send USDT from BOT Chain to Ethereum or BNB Smart Chain from a script: check the live limits, approve the bridge router, and call `deposit`.
+This guide shows you how to send USDT from BOT Chain to another network from a script: check the live limits, approve the bridge router, and call `deposit`. You rehearse on testnet first, then run the same script on mainnet.
 
 <Warning>
-  **This guide uses mainnet and moves real USDT.** A transfer can't be cancelled once the deposit lands.
+  **The mainnet run moves real USDT.** A transfer can't be cancelled once the deposit lands.
 
-  - Send a small test amount first, just above the minimum, and confirm it arrives before you send more.
+  - Run the whole guide on testnet before you touch mainnet.
+  - On mainnet, send a small amount first, just above the minimum, and confirm it arrives before you send more.
   - Check the recipient address is one you control **on the destination chain**. The bridge doesn't check it for you.
   - Read the limits and fee on the day you send. They live in the contracts and can change.
   - For Tron, use the official app at [bridge.botchain.ai](https://bridge.botchain.ai/). How the router expects a Tron address to be encoded isn't documented, so this script doesn't support it.
@@ -17,47 +18,47 @@ This guide shows you how to send USDT from BOT Chain to Ethereum or BNB Smart Ch
 
 ## What you'll build
 
-A viem script that sends 11 USDT from BOT Chain mainnet to your address on BNB Smart Chain. 11 USDT is just above the 10 USDT minimum read on 2026-10-02. The fee is 1 USDT at that size, so about 10 USDT arrives.
+A viem script that sends 11 USDT from BOT Chain to your own address. By default it bridges from BOT Chain testnet to BSC testnet. With `NETWORK=mainnet` it bridges from BOT Chain mainnet to BNB Smart Chain.
+
+11 USDT is just above the 10 USDT minimum read on 2026-10-02 on both networks. The fee is 1 USDT at that size, so 10 USDT arrives.
 
 ## Prerequisites
 
-- The `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot).
-- A **mainnet** wallet holding the USDT you want to send plus a little BOT for gas. Use a separate wallet from your testnet one.
-- Your recipient address on the destination chain.
+- The `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot), with a testnet key in `.env`.
+- At least 11 testnet USDT and a little tBOT for gas. Testnet USDT can't be minted by the public, so swap tBOT for it on [BDEX V2](/guides/defi/swaps/bdex-v2).
+- For the mainnet run, a separate **mainnet** wallet holding the USDT you want to send plus a little BOT for gas.
 - You've read [Limits and fees](/guides/bridge/limits-and-fees) and the [Bridge overview](/guides/bridge/overview).
 
 ## Steps
 
 <Steps>
-  <Step title="Set up a mainnet .env file">
-    Create a separate env file so you never send mainnet transactions by accident:
+  <Step title="Add the recipient to .env">
+    Add these lines to your testnet `.env`. On testnet you can send to your own address, since the same key controls it on BSC testnet.
 
-    ```bash .env.mainnet
-    BOT_PRIVATE_KEY=0xyour_mainnet_private_key
+    ```bash .env
     RECIPIENT=0xyour_address_on_the_destination_chain
     AMOUNT=11
     ```
-
-    Add `.env.mainnet` to `.gitignore`. Never commit or share it.
   </Step>
 
   <Step title="Write the script">
-    {/* untested: mainnet with real funds; typechecked against @uzolabs/sdk 0.2.0 and viem 2.57.2 only */}
-
     ```ts bridge-out.ts
     import { createPublicClient, createWalletClient, erc20Abi, formatUnits, getAddress, http, parseAbi, parseUnits } from "viem";
     import { privateKeyToAccount } from "viem/accounts";
-    import { botChain } from "@uzolabs/sdk/chains";
+    import { botChain, botChainTestnet } from "@uzolabs/sdk/chains";
     import { botBridgeAbi, getAddresses, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";
 
-    // MAINNET. This moves real USDT. Read the warnings on this page before you run it.
+    // Testnet by default. NETWORK=mainnet moves real USDT: read the warnings on this page first.
+    const isMainnet = process.env.NETWORK === "mainnet";
+    const chain = isMainnet ? botChain : botChainTestnet;
     const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
-    const publicClient = createPublicClient({ chain: botChain, transport: http() });
-    const walletClient = createWalletClient({ account, chain: botChain, transport: http() });
-    const { usdt, bridgeRouter } = getAddresses(botChain.id);
-    const explorer = botChain.blockExplorers.default.url;
+    const publicClient = createPublicClient({ chain, transport: http() });
+    const walletClient = createWalletClient({ account, chain, transport: http() });
+    const { usdt, bridgeRouter } = getAddresses(chain.id);
+    const explorer = chain.blockExplorers.default.url;
 
-    const destinationChainId = 56n; // BNB Smart Chain. Ethereum is 1.
+    // BNB Smart Chain on mainnet, BSC testnet on testnet. For Ethereum use 1n, or 11155111n (Sepolia) on testnet.
+    const destinationChainId = isMainnet ? 56n : 97n;
     const recipient = getAddress(process.env.RECIPIENT as string); // Your address on the destination chain
     const amount = parseUnits(process.env.AMOUNT ?? "11", 6); // USDT on BOT Chain has 6 decimals
 
@@ -106,23 +107,51 @@ A viem script that sends 11 USDT from BOT Chain mainnet to your address on BNB S
     - **The approval** is for exactly `amount`. The router pulls the full amount from your wallet during `deposit`. Avoid unlimited approvals.
     - **`deposit(destinationChainId, resourceId, recipient, amount)`** takes the amount in BOT Chain units (6 decimals) for every destination, including BNB Smart Chain. The function is payable, but you send no BOT with it for USDT.
     - **`simulateContract`** runs the call first, so a revert costs nothing.
+    - **`NETWORK`** picks the chain, addresses and destination together, so a testnet run can never reach a mainnet contract.
   </Step>
 
-  <Step title="Run it">
+  <Step title="Run it on testnet">
+    ```bash
+    npx tsx --env-file=.env bridge-out.ts
+    ```
+  </Step>
+
+  <Step title="Run it on mainnet">
+    Only after the testnet run has arrived. Create a separate env file so you never send mainnet transactions by accident:
+
+    ```bash .env.mainnet
+    BOT_PRIVATE_KEY=0xyour_mainnet_private_key
+    RECIPIENT=0xyour_address_on_the_destination_chain
+    AMOUNT=11
+    NETWORK=mainnet
+    ```
+
+    Add `.env.mainnet` to `.gitignore`. Never commit or share it. Then run:
+
     ```bash
     npx tsx --env-file=.env.mainnet bridge-out.ts
     ```
+
+    {/* untested: mainnet run with real funds; the same script ran on testnet on 2026-10-02 */}
   </Step>
 </Steps>
 
 ## Verify it worked
 
-The script prints the estimate and two BOTScan links. Then:
+Output from a testnet run on 2026-10-02:
 
-1. Copy the deposit transaction hash and follow it with [Track a bridge transfer](/guides/bridge/tracking-transfers). Use `botChain` in that script.
-2. When the status is `delivered`, check the recipient on [BscScan](https://bscscan.com). The amount shows with 18 decimals there.
+```text Output
+Sending 11 USDT, fee about 1, arrives about 10
+Approved: https://scan.bohr.life/tx/0xef5a42ee5e4aa6de4cc8fac9bec367005d651f06778dd7d93d22262c81a8d866
+Deposit success: https://scan.bohr.life/tx/0xd3a1267282d34778bf47a875538964aac3aaea549018c6f2293a67c0fdc9513e
+```
 
-One testnet transfer observed on 2026-10-01 was confirmed 54 seconds after the deposit. Mainnet timing isn't documented.
+Then:
+
+1. Copy the deposit transaction hash and follow it with [Track a bridge transfer](/guides/bridge/tracking-transfers). Use `botChain` in that script for a mainnet transfer.
+2. When the status is `delivered`, check the recipient's USDT balance on [BscScan testnet](https://testnet.bscscan.com) or [BscScan](https://bscscan.com). The amount shows with 18 decimals there.
+
+In the run above, the tracking script reported `delivered` within a minute, and the recipient's balance on BSC testnet went up by `10000000000000000000`, which is 10 USDT with 18 decimals. In an earlier run the same day, the gateway on BSC testnet released the USDT 38 seconds after the deposit block. Mainnet timing isn't documented.
 
 ## Troubleshooting
 
@@ -131,7 +160,7 @@ One testnet transfer observed on 2026-10-01 was confirmed 54 seconds after the d
     Your `AMOUNT` is outside the live limits. Read them with the script in [Limits and fees](/guides/bridge/limits-and-fees).
   </Accordion>
   <Accordion title="The simulation reverts">
-    Check the approval succeeded, your USDT balance covers the amount, and the destination chain ID is in the supported list for mainnet.
+    Check the approval succeeded, your USDT balance covers the amount, and the destination chain ID is supported on the network you're using. Testnet supports 97, 11155111 and 3448148188. Mainnet supports 56, 1 and 728126428.
   </Accordion>
   <Accordion title="The transfer stays pending">
     See [Track a bridge transfer](/guides/bridge/tracking-transfers#troubleshooting). If it doesn't move, contact BOT Chain with the deposit hash.

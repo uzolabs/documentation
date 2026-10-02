@@ -246,23 +246,24 @@ It uses Node's built-in `http` module and viem, so there's nothing else to insta
 
 ## Verify it worked
 
-{/* untested: run against a local anvil fork of testnet, not the live testnet, because the test wallet was low on tBOT */}
-
-Against a local fork of testnet on 2026-10-02, the client printed:
+On testnet on 2026-10-02, the client printed:
 
 ```text Output
-200 { txHash: '0x0ffaf7ad...', status: 'success' }
+200 {
+  txHash: '0x8c88c8647399eb90093ff1af2ff7a49af000a4c7128587465e732cc6247cf93c',
+  status: 'success'
+}
 ```
 
 and `entryCount()` went up by one. Open your own hash on [BOTScan](https://scan.bohr.life): the sender is the relayer, the target is the forwarder, and the guest book entry's author is the new wallet.
 
-Then check the guards. In the same fork test:
+Then check the guards. In the same testnet run:
 
 | Request | Response |
 | --- | --- |
 | `to` set to another contract | 403 `This relayer doesn't pay for that contract` |
 | `data` for a different function | 403 `This relayer doesn't pay for that function` |
-| A bad signature, repeated from one IP | 400 `The signature doesn't match the request` until that IP had made 10 requests in the hour, then 429 `Too many requests` |
+| A bad signature, repeated from one IP | 400 `The signature doesn't match the request` until that IP had made 10 requests in the hour, counting the successful one, then 429 `Too many requests` |
 
 Requests refused by the allowlists don't count toward the rate limit. Requests that reach the limit check do, even if they fail later.
 

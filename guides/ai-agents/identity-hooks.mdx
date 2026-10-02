@@ -218,8 +218,6 @@ To use a real registry, attestation service or reputation system, you write a sm
   </Step>
 
   <Step title="Connect it to your vault">
-    {/* untested: not deployed on the live testnet because the test wallet was low on tBOT; the contracts pass the forge tests above */}
-
     Deploy the trust list, add a recipient, then point the vault at it from the owner wallet:
 
     ```bash
@@ -247,7 +245,17 @@ All four tests pass:
 Suite result: ok. 4 passed; 0 failed; 0 skipped
 ```
 
-On testnet, run `vault-pay.ts` from [Agent vaults](/guides/ai-agents/agent-vaults) to a recipient that isn't trusted. It prints `Vault refused: RecipientNotTrusted` with the address.
+On testnet, run `vault-pay.ts` from [Agent vaults](/guides/ai-agents/agent-vaults). On 2026-10-02, with [a trust list on testnet](https://scan.bohr.life/address/0x3fc606fCfc62bBBeE906F649Fd018CCd4A0aB952) connected to the vault, a payment to an allowed but untrusted recipient was refused. After the owner called `setTrusted`, the same payment went through:
+
+```text Output
+Left today: 4.994 USDT. Recipient allowed: true. Paused: false
+Vault refused: RecipientNotTrusted [ '0xb3fc392E1ca00BdcEC120DE60F967432D0834415' ]
+
+Left today: 4.994 USDT. Recipient allowed: true. Paused: false
+Paid 0.001 USDT, success: https://scan.bohr.life/tx/0x738b4abb6530ef3081a5a922864d3850139686bf43aea5c40874ad630b88055f
+```
+
+`ScoreAdapter` was tested with `forge test` only, because it needs a score registry to point at.
 
 ## Choose a source carefully
 

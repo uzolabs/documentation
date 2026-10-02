@@ -20,7 +20,7 @@ When you call `deposit`, the bridge router on BOT Chain:
 
 After the destination chain releases the USDT, the router emits `ExecutionConfirmed(localNonce)` and `executionConfirmed(nonce)` returns `true`. If the transfer is refunded instead, the router emits `Refunded` and the record's `refunded` flag becomes `true`.
 
-BOT Chain doesn't document these status fields. This page is based on the router's ABI and on transfers observed on testnet on 2026-10-01: a 1,000 USDT deposit to Sepolia was confirmed 54 seconds after the deposit block.
+BOT Chain doesn't document these status fields. This page is based on the router's ABI and on testnet transfers. On 2026-10-01, a 1,000 USDT deposit to Sepolia was confirmed 54 seconds after the deposit block. On 2026-10-02, two 11 USDT deposits to BSC testnet were both delivered, one of them released on BSC testnet 38 seconds after the deposit block.
 
 ## Steps
 
@@ -73,9 +73,11 @@ BOT Chain doesn't document these status fields. This page is based on the router
 
 ## Verify it worked
 
+Output for the deposit made in [Bridge USDT out](/guides/bridge/bridge-out) on testnet on 2026-10-02. It printed `pending` on the first two runs and `delivered` on the third:
+
 ```text Output
-Transfer 1072: 1000 USDT to 0xa8A284ccf2c589a184b498e4D655bd292434dB1E on chain 11155111
-Recipient gets 999 USDT after a 1 USDT fee
+Transfer 1074: 11 USDT to 0xEc526474F4F9De027942d5f7118A9613266B0C4c on chain 97
+Recipient gets 10 USDT after a 1 USDT fee
 Status: delivered
 ```
 

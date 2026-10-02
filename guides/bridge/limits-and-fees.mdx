@@ -101,7 +101,7 @@ export function bridgeFee(amount: bigint, feeBps: bigint, minFeeUsdt: bigint): b
 }
 ```
 
-This matches real testnet transfers: a 1,000 USDT deposit delivered 999, and a 500 USDT deposit delivered 499, because 0.1% of 500 is below the 1 USDT minimum. BOT Chain's [fee docs](https://dev-docs.botchain.ai/docs/Bridge/fees/) describe the same rule for bridging out and say bridging in is free of bridge fees.
+This matches real testnet transfers: a 1,000 USDT deposit delivered 999, a 500 USDT deposit delivered 499, and an 11 USDT deposit delivered 10, because 0.1% of 500 or 11 is below the 1 USDT minimum. BOT Chain's [fee docs](https://dev-docs.botchain.ai/docs/Bridge/fees/) describe the same rule for bridging out and say bridging in is free of bridge fees.
 
 ## Check before every transfer
 
