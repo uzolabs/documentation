@@ -4,4 +4,178 @@ description: "Read data from BOT Chain contracts in React with useReadContract, 
 icon: "book-open-text"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you read token balances from BOT Chain contracts in React, first one call at a time with `useReadContract`, then many calls at once with `useReadContracts`.
+
+<TestnetOnly />
+
+## What you'll build
+
+Two components:
+
+- `UsdtBalance` shows the connected wallet's USDT balance.
+- `TokenBalances` shows the symbol and balance of USDT and WBOT in a single RPC request.
+
+## Prerequisites
+
+- A React app with wagmi set up. See [Set up wagmi](/guides/frontend/wagmi-setup).
+- The `ConnectWallet` component from [Connect a wallet](/guides/frontend/connect-wallet).
+
+## Steps
+
+<Steps>
+  <Step title="Read one value with useReadContract">
+    ```tsx src/UsdtBalance.tsx
+    import { erc20Abi, formatUnits } from "viem";
+    import { useConnection, useReadContract } from "wagmi";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const { usdt } = getAddresses(botChainTestnet.id);
+
+    export function UsdtBalance() {
+      const { address } = useConnection();
+      const { data, isPending, error } = useReadContract({
+        address: usdt,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: address ? [address] : undefined,
+        chainId: botChainTestnet.id,
+        query: { enabled: Boolean(address) },
+      });
+
+      if (!address) return <p>Connect a wallet first.</p>;
+      if (isPending) return <p>Loading...</p>;
+      if (error) return <p>{error.shortMessage ?? error.message}</p>;
+      return <p>{formatUnits(data, 6)} USDT</p>;
+    }
+    ```
+
+    - `erc20Abi` ships with viem, so you don't need to paste an ABI for standard tokens.
+    - `getAddresses` returns the token and DEX addresses for a chain. You can also copy them from [Contract addresses](/reference/contract-addresses).
+    - `query.enabled` stops the read until a wallet is connected. `args` stays `undefined` until then.
+    - `chainId` pins the read to testnet, even if the wallet is on another network.
+    - USDT uses 6 decimals, so `formatUnits(data, 6)`. See [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+  </Step>
+
+  <Step title="Batch reads with useReadContracts">
+    ```tsx src/TokenBalances.tsx
+    import { erc20Abi, formatUnits } from "viem";
+    import { useConnection, useReadContracts } from "wagmi";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const { usdt, wbot } = getAddresses(botChainTestnet.id);
+
+    export function TokenBalances() {
+      const { address } = useConnection();
+      const owner = address ?? "0x0000000000000000000000000000000000000000";
+      const { data, isPending } = useReadContracts({
+        allowFailure: true,
+        contracts: [
+          { address: usdt, abi: erc20Abi, functionName: "symbol", chainId: botChainTestnet.id },
+          { address: usdt, abi: erc20Abi, functionName: "decimals", chainId: botChainTestnet.id },
+          { address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: botChainTestnet.id },
+          { address: wbot, abi: erc20Abi, functionName: "symbol", chainId: botChainTestnet.id },
+          { address: wbot, abi: erc20Abi, functionName: "decimals", chainId: botChainTestnet.id },
+          { address: wbot, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: botChainTestnet.id },
+        ],
+        query: { enabled: Boolean(address) },
+      });
+
+      if (!address) return <p>Connect a wallet first.</p>;
+      if (isPending || !data) return <p>Loading...</p>;
+
+      const [usdtSymbol, usdtDecimals, usdtBalance, wbotSymbol, wbotDecimals, wbotBalance] = data;
+      const rows = [
+        [usdtSymbol, usdtDecimals, usdtBalance],
+        [wbotSymbol, wbotDecimals, wbotBalance],
+      ] as const;
+
+      return (
+        <ul>
+          {rows.map(([symbol, decimals, balance], i) =>
+            symbol.status === "success" && decimals.status === "success" && balance.status === "success" ? (
+              <li key={i}>
+                {formatUnits(balance.result, decimals.result)} {symbol.result}
+              </li>
+            ) : (
+              <li key={i}>Read failed</li>
+            ),
+          )}
+        </ul>
+      );
+    }
+    ```
+
+    The BOT Chain chain objects include a Multicall3 address, so wagmi sends these six calls as one `eth_call` to Multicall3. On testnet that contract is at `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`, not the usual Multicall3 address. See [Known limitations](/get-started/bot-chain/known-limitations#standard-multicall3-address-missing-on-testnet).
+
+    With `allowFailure: true`, each result has a `status`. One failed call doesn't fail the others, so check `status === "success"` before you use `result`.
+  </Step>
+
+  <Step title="Render them">
+    ```tsx src/App.tsx
+    import { ConnectWallet } from "./ConnectWallet";
+    import { TokenBalances } from "./TokenBalances";
+    import { UsdtBalance } from "./UsdtBalance";
+
+    export function App() {
+      return (
+        <>
+          <ConnectWallet />
+          <UsdtBalance />
+          <TokenBalances />
+        </>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Run `npm run dev` and connect a wallet. You should see your USDT balance, then a list like this, with your own numbers:
+
+```text Output
+0.021366 USDT
+0 WBOT
+```
+
+In the browser's network tab, the batched reads show up as a single request to `https://rpc.bohr.life`.
+
+{/* untested: the reads were run in a browser with a fixed address instead of a connected wallet; the connected-wallet path was typechecked only */}
+
+## Keep values fresh
+
+Reads are cached by TanStack Query and don't refresh on their own. Pick one:
+
+- Refetch on an interval: `query: { refetchInterval: 5_000 }`.
+- Refetch after a transaction confirms: call the `refetch` function returned by the hook.
+
+BOT Chain's public RPC has no WebSocket endpoint, so there are no push subscriptions. Polling over HTTP is the normal approach.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The balance is a huge number">
+    You formatted with 18 decimals, or didn't format at all. USDT has 6. Read `decimals` from the contract, as `TokenBalances` does, when you don't know a token.
+  </Accordion>
+  <Accordion title="The read returns an error about the contract function returning no data">
+    The address has no contract on the chain you read from. Check `chainId` and the address. Testnet and mainnet addresses differ.
+  </Accordion>
+  <Accordion title="Multicall fails on testnet with a custom chain definition">
+    If you defined the chain yourself with `defineChain`, add `contracts.multicall3.address` with the testnet address above. wagmi batches through the address on the chain object, so it needs this entry.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Send transactions" icon="send" href="/guides/frontend/send-transactions">
+    Write to a contract and wait for the receipt.
+  </Card>
+  <Card title="Batch reads with Multicall3" icon="layers" href="/guides/data/multicall">
+    Do the same batching from a script with viem.
+  </Card>
+</CardGroup>

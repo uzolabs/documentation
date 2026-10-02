@@ -5,4 +5,195 @@ description: "Query addresses, transactions and contracts from BOTScan's public 
 icon: "search"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+In this guide you write a small TypeScript client for BOTScan's API that pages through an address's transactions, reads and decodes event logs, and loads a verified contract's ABI.
+
+BOTScan needs no API key. For the full list of endpoints and parameters, see the [Explorer API reference](/reference/explorer-api). This guide shows how to use them well from code.
+
+## When to use the explorer, and when to use the RPC
+
+| You need | Use |
+| --- | --- |
+| Current state: balances, contract reads | The RPC, with [Multicall3](/guides/data/multicall) for many reads |
+| History: an address's transactions, past events | The explorer API |
+| A contract's ABI or source | The explorer API |
+| Data you must not trust a third party for | The RPC, or your own node |
+
+The explorer is an indexer run by a third party. Treat its answers as convenient, not authoritative, and check anything that moves money against the chain.
+
+## What you'll build
+
+`botscan.ts`, a script with four parts:
+
+1. A fetch helper that retries when BOTScan is busy.
+2. Paged reads from the REST API (v2).
+3. Event logs from the Etherscan-style API, decoded with viem.
+4. A verified contract's ABI, loaded through the Uzo SDK and used to call the contract.
+
+## Prerequisites
+
+- Node.js 22 or later.
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-explorer
+    cd bot-explorer
+    npm init -y
+    npm pkg set type=module
+    npm install viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Write the script">
+    ```ts botscan.ts
+    import { createPublicClient, erc20Abi, formatUnits, http, parseEventLogs, type Hex } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+    import { createExplorerClient } from "@uzolabs/sdk/explorer";
+
+    const BOTSCAN = botChainTestnet.blockExplorers.default.url; // https://scan.bohr.life
+    const { usdt } = getAddresses(botChainTestnet.id);
+    const wallet = "0xEc526474F4F9De027942d5f7118A9613266B0C4c";
+
+    // Fetch JSON from BOTScan. Retries on rate limits and server errors, waiting longer each time.
+    async function botscan<T>(path: string, attempts = 4): Promise<T> {
+      for (let attempt = 1; ; attempt++) {
+        const response = await fetch(`${BOTSCAN}${path}`);
+        if (response.ok) return (await response.json()) as T;
+        if (attempt >= attempts || (response.status !== 429 && response.status < 500)) {
+          throw new Error(`BOTScan answered ${response.status} for ${path}`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+      }
+    }
+
+    // 1. Page through an address's transactions with the REST API.
+    type TxPage = { items: { hash: string; method: string | null; status: string }[]; total_pages: number };
+    for (let page = 1; page <= 2; page++) {
+      const { items, total_pages } = await botscan<TxPage>(`/api/v2/addresses/${wallet}/transactions?page=${page}&page_size=3`);
+      console.log(`Page ${page} of ${total_pages}`);
+      for (const tx of items) console.log(`  ${tx.hash.slice(0, 10)} ${tx.method ?? "transfer"} ${tx.status}`);
+    }
+
+    // 2. Read event logs with the Etherscan-style API, then decode them with viem.
+    type RawLog = { address: Hex; topics: (Hex | null)[]; data: Hex; blockNumber: Hex; transactionHash: Hex; transactionIndex: Hex; logIndex: Hex };
+    const { result } = await botscan<{ result: RawLog[] }>(
+      `/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=${usdt}` +
+        `&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef` +
+        `&topic1=0x000000000000000000000000${wallet.slice(2).toLowerCase()}&topic0_1_opr=and&page=1&offset=5`,
+    );
+    const transfers = parseEventLogs({
+      abi: erc20Abi,
+      eventName: "Transfer",
+      // BOTScan pads topics with null and leaves out blockHash, so tidy each log first.
+      logs: result.map((log) => ({ ...log, topics: log.topics.filter((t) => t !== null) as [Hex, ...Hex[]], blockHash: null, removed: false })),
+    });
+    console.log(`USDT sent by ${wallet.slice(0, 8)}:`);
+    for (const t of transfers) console.log(`  block ${t.blockNumber}: ${formatUnits(t.args.value, 6)} USDT to ${t.args.to}`);
+
+    // 3. Fetch a verified contract's ABI, then call it with viem.
+    const explorer = createExplorerClient({ chainId: botChainTestnet.id });
+    const contract = await explorer.getContract(usdt);
+    console.log(`${contract.name}: verified ${contract.isVerified}, ${contract.abi.length} ABI entries`);
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const supply = await client.readContract({ address: usdt, abi: contract.abi, functionName: "totalSupply" });
+    console.log(`totalSupply: ${formatUnits(supply as bigint, 6)} USDT`);
+    ```
+
+    Replace `wallet` with the address you want to look up.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx botscan.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Output from a run on testnet on 2026-10-02:
+
+```text Output
+Page 1 of 10
+  0x6fc2df27 transfer ok
+  0xe87c0b97 transfer ok
+  0x504a43b3 transfer ok
+Page 2 of 10
+  0xf740087a transfer ok
+  0x0076b16d transfer ok
+  0xec531164 transfer ok
+USDT sent by 0xEc5264:
+  block 25399612: 0.02 USDT to 0xD3EC267707BA234583645E75CE283Cf679dd94Fa
+  block 25400138: 0.001 USDT to 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+  block 25400168: 0.001 USDT to 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+  block 25400277: 0.001 USDT to 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+  block 25427643: 0.001 USDT to 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+  block 25428548: 0.001 USDT to 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+USDT: verified true, 34 ABI entries
+totalSupply: 100010140000000000299061.199 USDT
+```
+
+Your numbers will differ. The testnet USDT supply is large because anyone can mint it.
+
+## How each part works
+
+### Retries
+
+BOTScan doesn't publish rate limits. The `botscan` helper retries on `429` and `5xx` responses, waiting 1, 2, then 4 seconds. Other errors, such as `404`, fail straight away because retrying won't help. For anything that runs often, also cache responses: a confirmed transaction never changes.
+
+### Pagination
+
+REST list endpoints take `page` and `page_size`, and return `total_pages` so you know when to stop. Loop until `page` reaches `total_pages`, or until you've found what you need.
+
+### Event logs
+
+The Etherscan-style `getLogs` returns raw logs. `parseEventLogs` from viem decodes them with an ABI, so you get typed `args` instead of hex topics.
+
+Three details matter:
+
+- **Filtering by more than one topic needs an operator.** When you pass both `topic0` and `topic1`, add `topic0_1_opr=and` (or `or`). Without it, BOTScan answers `Required query parameters missing: topic0_1_opr` and `result` is `null`. The same applies to other pairs, such as `topic0_2_opr`.
+- **Don't rely on `offset` to limit results.** On 2026-10-02 the request above returned 6 logs with `offset=5` and also with `offset=2`. Limit the range with `fromBlock` and `toBlock`, and slice the results in your code.
+- **The raw logs aren't quite RPC logs.** BOTScan pads `topics` with `null` and leaves out `blockHash`, so the script removes the `null` entries and fills in the missing fields before decoding.
+
+`topic1` is the indexed `from` address, padded to 32 bytes. Use `topic2` to filter by `to` instead.
+
+### Contract ABIs
+
+`createExplorerClient` from `@uzolabs/sdk/explorer` wraps BOTScan's contract endpoints. `getContract` returns the contract's name, ABI, verified flag and, for proxies, the implementation addresses. With the ABI, viem can call any function by name.
+
+Only use ABIs loaded at runtime for reading or display. For code that sends transactions, keep the ABI in your source so a change on the explorer can't change what you sign.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Required query parameters missing: topic0_1_opr">
+    You filtered by two topics without saying how to combine them. Add `&topic0_1_opr=and`.
+  </Accordion>
+  <Accordion title="result is null or an empty array">
+    Check `message` in the response. If it says no records were found, check the address, the topics and the block range. Topic addresses must be lowercase and padded to 32 bytes.
+  </Accordion>
+  <Accordion title="BOTScan answered 429">
+    You sent too many requests. Raise `attempts`, add a delay between pages, or cache responses.
+  </Accordion>
+  <Accordion title="getContract returns an empty ABI">
+    The contract isn't verified on BOTScan. Verify it first. See [Verify contracts](/guides/deploy/verify/overview).
+  </Accordion>
+  <Accordion title="Mainnet requests return different data">
+    The script uses `botChainTestnet`. For mainnet, import `botChain` from `@uzolabs/sdk/chains` and use it in place of `botChainTestnet`. Both the explorer URL and the addresses follow the chain.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Events without getLogs" icon="radio-tower" href="/guides/frontend/events-without-getlogs">
+    Show contract events in a frontend.
+  </Card>
+  <Card title="Index chain data" icon="database" href="/guides/data/indexing">
+    Options for larger data needs.
+  </Card>
+</CardGroup>

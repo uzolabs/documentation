@@ -5,4 +5,110 @@ description: "Verify a deployed contract on BOTScan using Hardhat's Blockscout v
 icon: "hard-hat"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you publish the source of a contract you deployed with Hardhat to BOTScan, using one command.
+
+<TestnetOnly />
+
+## What you'll build
+
+A verified `Counter` contract on BOTScan testnet, with its source on the **Code** tab.
+
+## Prerequisites
+
+- A Hardhat 3 project with the `chainDescriptors` block from [Set up Hardhat](/guides/environment/hardhat). `@nomicfoundation/hardhat-toolbox-viem` includes the verify plugin.
+- A contract deployed from that project. See [Deploy with Hardhat](/guides/deploy/deploy-with-hardhat).
+
+## Steps
+
+<Steps>
+  <Step title="Check the chain descriptor">
+    Hardhat finds BOTScan through `chainDescriptors` in your config. For testnet it must contain:
+
+    ```ts hardhat.config.ts
+    chainDescriptors: {
+      968: {
+        name: "BOT Chain Testnet",
+        blockExplorers: {
+          blockscout: {
+            name: "BOTScan Testnet",
+            url: "https://scan.bohr.life",
+            apiUrl: "https://scan.bohr.life/api",
+          },
+        },
+      },
+    },
+    ```
+
+    This is a fragment. The full config is in [Set up Hardhat](/guides/environment/hardhat).
+  </Step>
+
+  <Step title="Run verify">
+    Pass the deployed address. Use the `blockscout` subtask so Hardhat doesn't ask for an Etherscan key.
+
+    ```bash
+    npx hardhat verify blockscout --network botTestnet 0xYOUR_CONTRACT
+    ```
+
+    You'll see:
+
+    ```text Output
+    📤 Submitted source code for verification on BOTScan Testnet:
+
+      contracts/Counter.sol:Counter
+      Address: 0x24E48d0fcf9B5500EE3DD77f96d095Db090a9F58
+
+    ⏳ Waiting for verification result...
+
+    ✅ Contract verified successfully on BOTScan Testnet!
+
+      contracts/Counter.sol:Counter
+      Explorer: https://scan.bohr.life/address/0x24E48d0fcf9B5500EE3DD77f96d095Db090a9F58#code
+    ```
+  </Step>
+
+  <Step title="Pass constructor arguments, if any">
+    If your contract has a constructor with arguments, list them after the address in the same order:
+
+    {/* untested: the tested contract had no constructor arguments */}
+
+    ```bash
+    npx hardhat verify blockscout --network botTestnet 0xYOUR_GREETER "Hello"
+    ```
+
+    For complex arguments, see the Hardhat docs on [verifying contracts](https://hardhat.org/docs/guides/smart-contract-verification).
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Open the **Explorer** link from the output. The **Code** tab shows a verified badge, your source and the compiler settings. The **Read contract** tab lets you call `count`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Hardhat asks for an Etherscan API key">
+    You ran `npx hardhat verify` without `blockscout`, so Hardhat tried Etherscan too. Add the `blockscout` subtask.
+  </Accordion>
+  <Accordion title="No block explorer configured for chain 968">
+    The `chainDescriptors` entry is missing or uses a different chain ID. Add the block from step 1.
+  </Accordion>
+  <Accordion title="The bytecode doesn't match">
+    The local build differs from what you deployed. Don't change the source or compiler settings between deploying and verifying. If you did, redeploy and verify again.
+  </Accordion>
+  <Accordion title="has already been verified on BOTScan Testnet">
+    The contract is verified, either by an earlier run or because BOTScan matched your bytecode to a contract verified before. Nothing else to do. Hardhat suggests `--force` only for partially verified contracts.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify in the BOTScan UI" icon="mouse-pointer-click" href="/guides/deploy/verify/botscan-ui">
+    Verify by hand when the CLI isn't an option.
+  </Card>
+  <Card title="Explorer API" icon="search" href="/guides/data/explorer-api">
+    Read verified contract data from BOTScan's API.
+  </Card>
+</CardGroup>

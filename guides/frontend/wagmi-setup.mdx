@@ -4,4 +4,153 @@ description: "Configure wagmi and viem with custom BOT Chain mainnet and testnet
 icon: "settings"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you add wagmi to a React app and configure it for BOT Chain testnet and mainnet, so the rest of the frontend guides can read and write contracts.
+
+<TestnetOnly />
+
+## What you'll build
+
+A React app that shows the current BOT Chain block number, updated live, with wagmi ready for wallet and contract hooks.
+
+## Prerequisites
+
+- Node.js 22 or later.
+- Basic React knowledge.
+
+This guide uses [Vite](https://vite.dev). Any React setup works; only the entry file changes.
+
+## Steps
+
+<Steps>
+  <Step title="Create the app and install packages">
+    ```bash
+    npm create vite@latest bot-app -- --template react-ts
+    cd bot-app
+    npm install wagmi viem @tanstack/react-query @uzolabs/sdk
+    ```
+
+    Tested with `wagmi` 3.7.7, `viem` 2.57.2, `@tanstack/react-query` 5.104.0, `react` 19.3.0 and `@uzolabs/sdk` 0.2.0.
+
+    `@uzolabs/sdk` provides the BOT Chain chain objects. If you'd rather not add it, define the chains yourself with viem's `defineChain`, as shown in [Build your first dApp](/get-started/first-dapp).
+  </Step>
+
+  <Step title="Create the wagmi config">
+    ```ts src/wagmi.ts
+    import { createConfig, http } from "wagmi";
+    import { injected } from "wagmi/connectors";
+    import { botChain, botChainTestnet } from "@uzolabs/sdk/chains";
+
+    export const config = createConfig({
+      chains: [botChainTestnet, botChain],
+      connectors: [injected()],
+      transports: {
+        [botChainTestnet.id]: http(),
+        [botChain.id]: http(),
+      },
+    });
+
+    declare module "wagmi" {
+      interface Register {
+        config: typeof config;
+      }
+    }
+    ```
+
+    - The first chain in `chains` is the default, so testnet comes first while you build.
+    - `http()` with no URL uses the chain's public RPC: `https://rpc.bohr.life` for testnet and `https://rpc.botchain.ai` for mainnet.
+    - `injected()` connects to browser wallets such as MetaMask.
+    - The `Register` block gives every hook full types for your chains.
+
+    The chain objects also include BOTScan as the block explorer and the Multicall3 address, which wagmi uses to batch reads.
+  </Step>
+
+  <Step title="Add the providers">
+    wagmi uses TanStack Query for caching, so both providers wrap your app.
+
+    ```tsx src/providers.tsx
+    import type { ReactNode } from "react";
+    import { WagmiProvider } from "wagmi";
+    import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+    import { config } from "./wagmi";
+
+    const queryClient = new QueryClient();
+
+    export function Providers({ children }: { children: ReactNode }) {
+      return (
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </WagmiProvider>
+      );
+    }
+    ```
+  </Step>
+
+  <Step title="Use them in the entry file">
+    ```tsx src/main.tsx
+    import { StrictMode } from "react";
+    import { createRoot } from "react-dom/client";
+    import { Providers } from "./providers";
+    import { App } from "./App";
+
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <Providers>
+          <App />
+        </Providers>
+      </StrictMode>,
+    );
+    ```
+  </Step>
+
+  <Step title="Show the block number">
+    ```tsx src/App.tsx
+    import { useBlockNumber, useChainId } from "wagmi";
+
+    export function App() {
+      const chainId = useChainId();
+      const { data: blockNumber } = useBlockNumber({ watch: true });
+
+      return (
+        <p>
+          Chain {chainId}, block {blockNumber?.toString() ?? "..."}
+        </p>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```bash
+npm run dev
+```
+
+Open the URL Vite prints. You should see `Chain 968, block` followed by a number that goes up every few seconds. There is no WebSocket on the public RPC, so `watch: true` polls over HTTP.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Type error: chainId is not assignable">
+    The `declare module "wagmi"` block is missing, or the file isn't included in your `tsconfig.json`. Add it to `src/wagmi.ts`.
+  </Accordion>
+  <Accordion title="WagmiProviderNotFoundError">
+    A component uses a wagmi hook outside `<Providers>`. Make sure `<App />` is inside it in `main.tsx`.
+  </Accordion>
+  <Accordion title="The block number never loads">
+    Open the browser's network tab. If calls to the RPC fail, try again: the public RPC sometimes drops requests. For production, use your own RPC URL in `http("https://...")`.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Connect a wallet" icon="plug" href="/guides/frontend/connect-wallet">
+    Connect, detect the wrong network and switch.
+  </Card>
+  <Card title="Read contract state" icon="book-open-text" href="/guides/frontend/read-contract-state">
+    Read balances and batch reads.
+  </Card>
+</CardGroup>

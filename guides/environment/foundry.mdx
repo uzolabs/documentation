@@ -5,4 +5,129 @@ description: "Configure Foundry for BOT Chain with RPC endpoints, the Cancun EVM
 icon: "hammer"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you configure a Foundry project for BOT Chain so `forge` and `cast` know both networks by name, compile for the right EVM version and sign with an encrypted key.
+
+<TestnetOnly />
+
+## What you'll build
+
+A Foundry project with:
+
+- `bot_testnet` and `bot_mainnet` RPC aliases you can pass to any command.
+- `evm_version = "cancun"`, so your bytecode runs on BOT Chain.
+- A keystore wallet called `uzo-dev`, so no private key sits in a file or your shell history.
+
+## Prerequisites
+
+- Foundry installed. If you followed the [quickstart](/get-started/quickstart) you already have it. Otherwise run `curl -L https://foundry.paradigm.xyz | bash`, then `foundryup`. These docs were tested with Foundry 1.8.3.
+- Some tBOT for the wallet you'll create. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+## Steps
+
+<Steps>
+  <Step title="Create a project">
+    ```bash
+    forge init hello-foundry
+    cd hello-foundry
+    ```
+
+    Skip this step if you already have a project. The settings below go in its existing `foundry.toml`.
+  </Step>
+
+  <Step title="Configure foundry.toml">
+    Replace the contents of `foundry.toml` with:
+
+    ```toml foundry.toml
+    [profile.default]
+    src = "src"
+    out = "out"
+    libs = ["lib"]
+    solc_version = "0.8.28"
+    evm_version = "cancun"
+    optimizer = true
+    optimizer_runs = 200
+
+    [rpc_endpoints]
+    bot_testnet = "https://rpc.bohr.life"
+    bot_mainnet = "https://rpc.botchain.ai"
+    ```
+
+    - `evm_version = "cancun"` matters most. Newer compilers default to a later EVM version that BOT Chain doesn't support. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+    - `[rpc_endpoints]` lets you write `--rpc-url bot_testnet` instead of the full URL.
+  </Step>
+
+  <Step title="Create a keystore wallet">
+    Create a new key and save it encrypted under the name `uzo-dev`. Cast asks you for a password.
+
+    ```bash
+    cast wallet new uzo-dev
+    ```
+
+    To use a key you already have instead, import it. Cast prompts for the key, so it never appears in your shell history:
+
+    {/* untested: the import prompt is interactive */}
+
+    ```bash
+    cast wallet import uzo-dev --interactive
+    ```
+
+    Keystores live in `~/.foundry/keystores/`. List them and print the address:
+
+    ```bash
+    cast wallet list
+    cast wallet address --account uzo-dev
+    ```
+
+    From now on, add `--account uzo-dev` to any command that sends a transaction.
+  </Step>
+
+  <Step title="Fund the wallet">
+    Claim tBOT for the address `cast wallet address` printed. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Check that both aliases reach the right chain:
+
+```bash
+cast chain-id --rpc-url bot_testnet
+cast chain-id --rpc-url bot_mainnet
+```
+
+You should see `968` and then `677`. Then check your balance and build:
+
+```bash
+cast balance --ether $(cast wallet address --account uzo-dev) --rpc-url bot_testnet
+forge build
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="error: Unknown RPC alias or a URL parse error">
+    Run the command from the folder that contains `foundry.toml`. Aliases are read from the project config, so they don't work in other folders.
+  </Accordion>
+  <Accordion title="transaction underpriced">
+    Foundry reads the 20 gwei minimum tip from the node, so this is rare. If you set `--priority-gas-price` or `--gas-price` yourself, use at least `20gwei`. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Accordion>
+  <Accordion title="invalid opcode when calling a deployed contract">
+    The contract was compiled for a newer EVM version. Check `evm_version = "cancun"`, then run `forge clean` and `forge build`.
+  </Accordion>
+  <Accordion title="Keystore not found">
+    `--account` only looks in `~/.foundry/keystores/`. Run `cast wallet list` to check the name.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Deploy with Foundry" icon="rocket" href="/guides/deploy/deploy-with-foundry">
+    Use `forge create` or a deploy script.
+  </Card>
+  <Card title="Verify with Foundry" icon="badge-check" href="/guides/deploy/verify/foundry">
+    Publish your source on BOTScan.
+  </Card>
+</CardGroup>

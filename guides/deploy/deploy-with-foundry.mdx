@@ -4,4 +4,140 @@ description: "Deploy a contract to BOT Chain testnet with forge create or a forg
 icon: "rocket"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you deploy a contract with constructor arguments to BOT Chain testnet in two ways: a one-line `forge create`, and a repeatable `forge script`.
+
+<TestnetOnly />
+
+## What you'll build
+
+A `Greeter` contract on testnet, deployed and verified on BOTScan in one command.
+
+## Prerequisites
+
+- A Foundry project configured for BOT Chain with the `uzo-dev` keystore. Follow [Set up Foundry](/guides/environment/foundry) first.
+- At least 0.01 tBOT in `uzo-dev`.
+
+## Steps
+
+<Steps>
+  <Step title="Add the contract">
+    ```solidity src/Greeter.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    contract Greeter {
+        string public greeting;
+
+        constructor(string memory initialGreeting) {
+            greeting = initialGreeting;
+        }
+
+        function setGreeting(string calldata newGreeting) external {
+            greeting = newGreeting;
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Option 1: deploy with forge create">
+    `forge create` deploys one contract. Put `--constructor-args` last, because it takes every value after it.
+
+    ```bash
+    forge create src/Greeter.sol:Greeter --rpc-url bot_testnet --account uzo-dev --broadcast --constructor-args "Hello from forge create"
+    ```
+
+    Cast asks for your keystore password, then prints:
+
+    ```text Output
+    Deployer: 0xEc526474F4F9De027942d5f7118A9613266B0C4c
+    Deployed to: 0x700b3cF69dF8fFba69d95aaB93B5E4B91b0b7070
+    Transaction hash: 0x504a43b31709aeeb8b731d395ddd4cd2f696d37da56e4a038dff6ae521f2e5b4
+    ```
+
+    Without `--broadcast`, `forge create` only simulates the deploy.
+  </Step>
+
+  <Step title="Option 2: deploy with a script">
+    A script is Solidity code that runs your deploy steps. Use it when you deploy more than one contract or need setup calls after the deploy.
+
+    ```solidity script/DeployGreeter.s.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {Script, console} from "forge-std/Script.sol";
+    import {Greeter} from "../src/Greeter.sol";
+
+    contract DeployGreeter is Script {
+        function run() external returns (Greeter greeter) {
+            vm.startBroadcast();
+            greeter = new Greeter("Hello from Uzo docs (forge script)");
+            vm.stopBroadcast();
+
+            console.log("Greeter deployed at", address(greeter));
+        }
+    }
+    ```
+
+    Run it, and verify on BOTScan in the same command:
+
+    ```bash
+    forge script script/DeployGreeter.s.sol --rpc-url bot_testnet --account uzo-dev --broadcast --verify --verifier blockscout --verifier-url https://scan.bohr.life/api/
+    ```
+
+    Forge simulates first, sends the transaction, waits for it, then submits the source. The output ends with `All (1) contracts were verified!`. Forge records the run in `broadcast/DeployGreeter.s.sol/968/run-latest.json`.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Read the greeting back from the chain:
+
+```bash
+cast call 0xYOUR_GREETER "greeting()(string)" --rpc-url bot_testnet
+```
+
+You should see the string you deployed with. Open `https://scan.bohr.life/address/0xYOUR_GREETER` to see the contract on BOTScan.
+
+## Deploy to mainnet
+
+<Warning>
+  Mainnet deploys cost real BOT and can't be undone. Use a separate keystore for mainnet and run the script without `--broadcast` first to check the simulation.
+</Warning>
+
+Swap the RPC alias and the verifier URL:
+
+{/* untested: mainnet deploys were not run for these docs */}
+
+```bash
+forge script script/DeployGreeter.s.sol --rpc-url bot_mainnet --account YOUR_MAINNET_ACCOUNT --broadcast --verify --verifier blockscout --verifier-url https://scan.botchain.ai/api/
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="forge create prints the transaction but nothing is deployed">
+    You left out `--broadcast`, so Forge only simulated the deploy. Add it and run again.
+  </Accordion>
+  <Accordion title="Forge reads other flags as constructor arguments">
+    `--constructor-args` takes every value that follows it, so a flag placed after it becomes an argument. Move `--constructor-args` to the end of the command.
+  </Accordion>
+  <Accordion title="The script deploys but verification fails">
+    Check that the verifier URL ends in `/api/`, with the trailing slash. To retry only the verification, use `forge verify-contract`; see [Verify with Foundry](/guides/deploy/verify/foundry).
+  </Accordion>
+  <Accordion title="transaction underpriced">
+    If you pass `--priority-gas-price` or `--with-gas-price`, use at least `20gwei`. Otherwise leave them out and Forge reads the right value from the node.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify with Foundry" icon="badge-check" href="/guides/deploy/verify/foundry">
+    Verify a contract that is already deployed.
+  </Card>
+  <Card title="Set up wagmi" icon="settings" href="/guides/frontend/wagmi-setup">
+    Call your contract from a web app.
+  </Card>
+</CardGroup>

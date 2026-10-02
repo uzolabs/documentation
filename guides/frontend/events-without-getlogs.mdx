@@ -5,4 +5,246 @@ description: "Patterns for tracking on-chain activity when eth_getLogs is unavai
 icon: "radio-tower"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This guide shows you how to show on-chain activity in your app without relying on `eth_getLogs`, which BOT Chain documents as disabled on its public RPC.
+
+<TestnetOnly />
+
+## The situation
+
+BOT Chain's docs say `eth_getLogs` is disabled on the public endpoints. In our tests on 2026-10-01 it did answer bounded ranges: a 50,000-block range read in 5,000-block chunks took about 8 seconds. A query from block 0 to the latest block timed out. Because the method is documented as disabled, don't make it the only way your app gets data. See [Known limitations](/get-started/bot-chain/known-limitations#event-queries) for the details and the chunked query code.
+
+Choose a pattern by what you need:
+
+| You need | Use |
+| --- | --- |
+| The current state, such as a list or a balance | [Read state](#read-state-instead-of-events) |
+| The result of a transaction you sent | [Read the receipt](#read-the-receipt) |
+| The last few actions in a contract you write | [A ring buffer](#keep-recent-activity-in-a-ring-buffer) |
+| All NFTs an address owns | [ERC721Enumerable](#enumerate-nfts) |
+| History for any contract | [The BOTScan API](#use-the-botscan-api) |
+| Full control and no limits | [Your own node](#run-your-own-node) |
+
+## Read state instead of events
+
+Most apps use events to rebuild a list that the contract already stores. If the contract has a view function for it, read that instead. This guest book stores every entry and returns a page of them:
+
+```tsx src/LatestEntries.tsx
+import { parseAbi } from "viem";
+import { useReadContract } from "wagmi";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+const GUEST_BOOK = "0x7962412A92E5553E66C794c3a352422DEB7BAc27";
+const guestBookAbi = parseAbi([
+  "struct Entry { address author; uint64 timestamp; string message; }",
+  "function entryCount() view returns (uint256)",
+  "function getEntries(uint256 offset, uint256 limit) view returns (Entry[])",
+]);
+
+export function LatestEntries() {
+  const count = useReadContract({
+    address: GUEST_BOOK,
+    abi: guestBookAbi,
+    functionName: "entryCount",
+    chainId: botChainTestnet.id,
+    query: { refetchInterval: 5_000 },
+  });
+
+  const total = count.data ?? 0n;
+  const offset = total > 10n ? total - 10n : 0n;
+
+  const entries = useReadContract({
+    address: GUEST_BOOK,
+    abi: guestBookAbi,
+    functionName: "getEntries",
+    args: [offset, 10n],
+    chainId: botChainTestnet.id,
+    query: { enabled: count.isSuccess },
+  });
+
+  return (
+    <ul>
+      {[...(entries.data ?? [])].reverse().map((entry, i) => (
+        <li key={i}>
+          {entry.author.slice(0, 8)}: {entry.message}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+The count is polled every 5 seconds. When it changes, the entries query gets new arguments and refetches, so new entries appear without any event subscription. The list shows the newest 10, newest first.
+
+## Read the receipt
+
+When your app sends the transaction, you don't need to search for its events. They are in the receipt.
+
+```ts read-receipt.ts
+import { createPublicClient, http, parseAbi, parseEventLogs } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+
+const guestBookAbi = parseAbi(["event Signed(uint256 indexed id, address indexed author, string message)"]);
+
+// The hash of a transaction you sent, for example from useWriteContract.
+const hash = process.env.TX_HASH as `0x${string}`;
+if (!hash) throw new Error("Set TX_HASH to a transaction hash");
+
+const receipt = await client.waitForTransactionReceipt({ hash });
+const events = parseEventLogs({ abi: guestBookAbi, logs: receipt.logs, eventName: "Signed" });
+
+for (const event of events) {
+  console.log(`Entry ${event.args.id} by ${event.args.author}: ${event.args.message}`);
+}
+```
+
+```bash
+TX_HASH=0x4ff1d3dae591af512ecdbfc6c5f7126437b7e552bb659731aad71f9ae627da8c npx tsx read-receipt.ts
+```
+
+```text Output
+Entry 1 by 0xa2fa3D8d...: Signed for free via the Uzo docs
+```
+
+In React, `useWaitForTransactionReceipt` returns the same receipt. Pass `receipt.data.logs` to `parseEventLogs`. See [Send transactions](/guides/frontend/send-transactions).
+
+## Keep recent activity in a ring buffer
+
+If you write the contract, store the last few actions in a fixed-size array. Reads stay cheap and writes cost the same no matter how much history there is.
+
+```solidity src/RecentActivity.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+/// @notice Keeps the last 32 actions in storage so apps can read recent activity without logs.
+contract RecentActivity {
+    struct Action {
+        address account;
+        uint64 timestamp;
+        uint256 amount;
+    }
+
+    uint256 public constant SIZE = 32;
+
+    Action[SIZE] private _ring;
+    uint256 public totalActions;
+
+    event Recorded(address indexed account, uint256 amount);
+
+    function record(uint256 amount) external {
+        // casting to uint64 is safe because block.timestamp will not pass 2^64 seconds for billions of years
+        // forge-lint: disable-next-line(unsafe-typecast)
+        _ring[totalActions % SIZE] = Action(msg.sender, uint64(block.timestamp), amount);
+        totalActions += 1;
+        emit Recorded(msg.sender, amount);
+    }
+
+    /// @notice The newest `n` actions, newest first. `n` is capped at SIZE and at totalActions.
+    function lastActions(uint256 n) external view returns (Action[] memory actions) {
+        if (n > SIZE) n = SIZE;
+        if (n > totalActions) n = totalActions;
+        actions = new Action[](n);
+        for (uint256 i = 0; i < n; i++) {
+            actions[i] = _ring[(totalActions - 1 - i) % SIZE];
+        }
+    }
+}
+```
+
+- `record` overwrites the oldest slot once the buffer is full.
+- `lastActions(10)` returns the 10 newest actions. Call it with `useReadContract` and poll `totalActions` to know when to refetch.
+- Keep emitting the event too. Indexers and the explorer still use it.
+
+{/* untested: tested with forge test against a local chain, not deployed to testnet */}
+
+## Enumerate NFTs
+
+OpenZeppelin's `ERC721Enumerable` adds `totalSupply`, `tokenByIndex` and `tokenOfOwnerByIndex`. With them you can list an owner's tokens from state:
+
+```ts list-nfts.ts
+import { createPublicClient, http, parseAbi } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const nft = process.env.NFT_ADDRESS as `0x${string}`;
+const owner = process.env.OWNER_ADDRESS as `0x${string}`;
+
+const abi = parseAbi([
+  "function balanceOf(address owner) view returns (uint256)",
+  "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+]);
+
+const balance = await client.readContract({ address: nft, abi, functionName: "balanceOf", args: [owner] });
+const ids = await client.multicall({
+  contracts: Array.from({ length: Number(balance) }, (_, i) => ({
+    address: nft,
+    abi,
+    functionName: "tokenOfOwnerByIndex",
+    args: [owner, BigInt(i)],
+  })),
+  allowFailure: false,
+});
+console.log(ids);
+```
+
+{/* untested: no ERC721Enumerable contract was deployed on testnet for these docs */}
+
+Enumerable costs more gas on every transfer. Use it when your app needs the list on-chain.
+
+## Use the BOTScan API
+
+BOTScan indexes every log and serves them through its public API, with no API key. For a verified contract the logs come back decoded:
+
+```ts explorer-logs.ts
+const API = "https://scan.bohr.life/api/v2";
+const guestBook = "0x7962412A92E5553E66C794c3a352422DEB7BAc27";
+
+const response = await fetch(`${API}/addresses/${guestBook}/logs`);
+if (!response.ok) throw new Error(`BOTScan answered ${response.status}`);
+const logs = await response.json();
+
+for (const log of logs.items) {
+  const args = Object.fromEntries(log.decoded?.parameters.map((p: { name: string; value: string }) => [p.name, p.value]) ?? []);
+  console.log(log.block_number, log.decoded?.method_call.split("(")[0], args);
+}
+```
+
+The response is paginated. See [Explorer API](/reference/explorer-api) for pagination and the Etherscan-style `getLogs` endpoint, and [Use the BOTScan API](/guides/data/explorer-api) for a full walkthrough.
+
+<Note>
+  The explorer is a third-party index with no published rate limits. Cache responses on your server rather than calling it from every browser.
+</Note>
+
+## Run your own node
+
+A node you run has no public endpoint limits, so `eth_getLogs` works over any range you allow. BOT Chain's node documentation links to a deployment repository that returned 404 when we checked on 2026-10-01. See [Known limitations](/get-started/bot-chain/known-limitations#errors-in-bot-chains-docs) and ask BOT Chain for current node instructions.
+
+For indexing at scale, see [Index chain data](/guides/data/indexing).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="getLogs works locally but fails in production">
+    That's expected from a method documented as disabled. Keep ranges small, retry on errors, and fall back to the BOTScan API.
+  </Accordion>
+  <Accordion title="The BOTScan logs have decoded: null">
+    The contract isn't verified, so BOTScan can't decode the logs. Verify it, or decode `topics` and `data` yourself with viem's `decodeEventLog`. See [Verify contracts](/guides/deploy/verify/overview).
+  </Accordion>
+  <Accordion title="The list doesn't update after a transaction">
+    The read is cached. Lower `refetchInterval`, or call `refetch` after the receipt arrives.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Use the BOTScan API" icon="search" href="/guides/data/explorer-api">
+    Query transactions, logs and balances.
+  </Card>
+  <Card title="Index chain data" icon="database" href="/guides/data/indexing">
+    Build your own index.
+  </Card>
+</CardGroup>

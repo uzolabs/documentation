@@ -4,4 +4,209 @@ description: "Cap what an agent can spend per UTC day and restrict which address
 icon: "gauge"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This page explains how the agent vault caps daily spending and limits who the agent can pay, how to test both, and how to read the limit from your app.
+
+<TestnetOnly />
+
+## What you'll build
+
+- An understanding of the two checks in `AgentVault.pay`: the daily limit and the recipient allowlist.
+- Foundry tests that move time forward to prove the limit resets at 00:00 UTC.
+- `vault-status.ts`, a script that shows the limit, what's spent and when it resets.
+
+## Prerequisites
+
+- The `AgentVault` contract and tests from [Agent vaults](/guides/ai-agents/agent-vaults).
+- A deployed vault, for the last step.
+
+## Steps
+
+<Steps>
+  <Step title="Choose the limit in token units">
+    The vault stores the limit in the token's smallest unit. USDT on BOT Chain has 6 decimals, so 1 USDT is `1000000`. Converting by hand is error prone, so let a tool do it:
+
+    ```bash
+    cast format-units 5000000 6
+    cast parse-units 5 6
+    ```
+
+    The first prints `5`, the second prints `5000000`. In TypeScript, use `parseUnits("5", 6)` and `formatUnits(value, 6)` from viem. For more on decimals, see [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+  </Step>
+
+  <Step title="Understand the daily window">
+    The vault counts spending per UTC day. `today()` divides the block timestamp by 86,400 seconds, so the number changes at 00:00 UTC.
+
+    ```solidity src/AgentVault.sol
+    function today() public view returns (uint256) {
+        return block.timestamp / 1 days;
+    }
+
+    function _spend(uint256 amount) private {
+        if (amount == 0) revert ZeroAmount();
+        uint256 day = today();
+        if (_spentDay != day) {
+            _spentDay = day;
+            _spent = 0;
+        }
+        uint256 remaining = _spent >= dailyLimit ? 0 : dailyLimit - _spent;
+        if (amount > remaining) revert DailyLimitExceeded(amount, remaining);
+        _spent += amount;
+    }
+    ```
+
+    It keeps only two numbers: the day it last spent on, and how much it spent that day. When a payment arrives on a new day, the counter starts again from 0. There's no job that resets it at midnight.
+
+    `remaining` is computed with a check instead of plain subtraction. If the owner lowers the limit below what's already spent today, `remaining` is 0 instead of the call reverting with an underflow.
+
+    <Note>
+    A calendar day is simple and cheap, but it allows up to twice the limit in a short span: the full limit at 23:59 UTC and again at 00:00 UTC. If that matters, set the limit to half of what you're willing to lose in one burst, or use a rolling 24 hour window, which needs more storage per payment.
+    </Note>
+  </Step>
+
+  <Step title="Understand the allowlist">
+    The allowlist is a mapping the owner edits. `pay` checks it before it touches the limit, so a payment to an unknown address fails even if it's tiny.
+
+    ```solidity src/AgentVault.sol
+    mapping(address => bool) public isRecipientAllowed;
+
+    function setRecipientAllowed(address account, bool allowed) external onlyOwner {
+        if (account == address(0)) revert ZeroAddress();
+        isRecipientAllowed[account] = allowed;
+        emit RecipientAllowed(account, allowed);
+    }
+    ```
+
+    The allowlist is the stronger of the two checks. A daily limit caps how much a bad decision costs. An allowlist means the money can only go to places you chose. Prompt injection usually works by getting the agent to pay the attacker, and the allowlist blocks that outright.
+
+    Every change emits `RecipientAllowed`, so you can rebuild the current list from the vault's logs on BOTScan.
+  </Step>
+
+  <Step title="Test the limit across midnight">
+    Foundry's `vm.warp` sets the block timestamp, so you can test the reset without waiting a day. These tests from the agent vault suite cover the limit and the allowlist:
+
+    ```solidity test/AgentVault.t.sol
+    function test_RevertWhen_OverDailyLimit() public {
+        vm.startPrank(agent);
+        vault.pay(shop, 8e6);
+        vm.expectRevert(abi.encodeWithSelector(AgentVault.DailyLimitExceeded.selector, 3e6, 2e6));
+        vault.pay(shop, 3e6);
+        vm.stopPrank();
+    }
+
+    function test_LimitResetsAtUtcMidnight() public {
+        vm.warp(1_790_000_000);
+        vm.prank(agent);
+        vault.pay(shop, 10e6);
+        assertEq(vault.remainingToday(), 0);
+
+        vm.warp((block.timestamp / 1 days + 1) * 1 days); // 00:00 UTC the next day
+        assertEq(vault.remainingToday(), 10e6);
+        vm.prank(agent);
+        vault.pay(shop, 10e6);
+    }
+
+    function test_RevertWhen_RecipientNotAllowed() public {
+        vm.prank(agent);
+        vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotAllowed.selector, stranger));
+        vault.pay(stranger, 1e6);
+    }
+    ```
+
+    The vault in these tests has a 10 USDT limit. Run them:
+
+    ```bash
+    forge test --match-contract AgentVaultTest --match-test "Limit|Recipient"
+    ```
+  </Step>
+
+  <Step title="Read the limit from your app">
+    Your agent's tools should check `remainingToday()` before they try to pay, so the model gets a clear answer instead of a failed transaction. Add `VAULT` to your `bot-defi` `.env`, then save:
+
+    ```ts vault-status.ts
+    import { createPublicClient, formatUnits, getAddress, http, parseAbi } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const VAULT = getAddress(process.env.VAULT as string);
+    const vaultAbi = parseAbi([
+      "function dailyLimit() view returns (uint256)",
+      "function spentToday() view returns (uint256)",
+      "function remainingToday() view returns (uint256)",
+    ]);
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const vault = { address: VAULT, abi: vaultAbi } as const;
+
+    const [limit, spent, remaining, block] = await Promise.all([
+      client.readContract({ ...vault, functionName: "dailyLimit" }),
+      client.readContract({ ...vault, functionName: "spentToday" }),
+      client.readContract({ ...vault, functionName: "remainingToday" }),
+      client.getBlock(),
+    ]);
+
+    // The vault's day ends at the next multiple of 86400 seconds, which is 00:00 UTC.
+    const resetsAt = (block.timestamp / 86400n + 1n) * 86400n;
+
+    console.log(`Limit: ${formatUnits(limit, 6)} USDT per UTC day`);
+    console.log(`Spent today: ${formatUnits(spent, 6)} USDT`);
+    console.log(`Left today: ${formatUnits(remaining, 6)} USDT`);
+    console.log(`Resets at: ${new Date(Number(resetsAt) * 1000).toISOString()}`);
+    ```
+
+    ```bash
+    npx tsx --env-file=.env vault-status.ts
+    ```
+
+    The reset time comes from the latest block's timestamp, not your computer's clock, because that's what the contract uses.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+The four tests pass:
+
+```text Output
+[PASS] test_LimitResetsAtUtcMidnight() (gas: 226594)
+[PASS] test_PayWithinLimit() (gas: 127517)
+[PASS] test_RevertWhen_OverDailyLimit() (gas: 155510)
+[PASS] test_RevertWhen_RecipientNotAllowed() (gas: 48503)
+Suite result: ok. 4 passed; 0 failed; 0 skipped
+```
+
+For a vault with a 0.01 USDT limit that has paid 0.006 USDT today, `vault-status.ts` prints:
+
+```text Output
+Limit: 0.01 USDT per UTC day
+Spent today: 0.006 USDT
+Left today: 0.004 USDT
+Resets at: 2026-10-03T00:00:00.000Z
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The limit didn't reset at midnight in my time zone">
+    The vault uses UTC. Midnight where you are is a different moment unless you're on UTC. The `Resets at` line shows the exact time.
+  </Accordion>
+  <Accordion title="remainingToday is 0 but nothing was spent">
+    Check `dailyLimit()`. A limit of `0` blocks every payment, and a limit set without decimals, like `5` instead of `5000000`, allows only 0.000005 USDT.
+  </Accordion>
+  <Accordion title="vm.warp moved time but remainingToday didn't change">
+    The new timestamp is still on the same UTC day. Warp to the start of the next day with `(block.timestamp / 1 days + 1) * 1 days`, as `test_LimitResetsAtUtcMidnight` does.
+  </Accordion>
+  <Accordion title="The agent needs to pay a new address">
+    Only the owner can add it, with `setRecipientAllowed`. That's the point: the agent can ask, but a person decides. See [Human approval](/guides/ai-agents/human-approval) for asking in the flow instead.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tool calling" icon="wrench" href="/guides/ai-agents/tool-calling">
+    Give a model tools that respect these limits.
+  </Card>
+  <Card title="Identity hooks" icon="id-card" href="/guides/ai-agents/identity-hooks">
+    Add a trust check on recipients.
+  </Card>
+</CardGroup>

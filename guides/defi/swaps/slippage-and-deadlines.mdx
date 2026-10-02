@@ -4,4 +4,89 @@ description: "Protect swaps with a minimum output amount and a deadline, and cho
 icon: "timer"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+This page shows you how to set the two values that protect every swap: the minimum amount you'll accept, and the time after which the swap must not run.
+
+## Slippage
+
+Slippage is the difference between the price you were quoted and the price you get. It happens because other trades can move the pool between your quote and your transaction. Your own trade also moves the price, more so in a thin pool.
+
+You can't stop the price moving, but you can set a floor. Every BDEX swap function takes a minimum output (`amountOutMin` on V2, `amountOutMinimum` on V3). If the swap would return less, it reverts and you only lose the gas.
+
+Compute the minimum from a fresh quote, in basis points, using `bigint`:
+
+```ts slippage.ts
+const slippageBps = 50n; // 0.5%
+
+export function minimumOut(quoted: bigint, bps: bigint = slippageBps): bigint {
+  return (quoted * (10_000n - bps)) / 10_000n;
+}
+
+// A quote of 0.016208 USDT (16208 base units) gives a minimum of 16126.
+console.log(minimumOut(16_208n));
+```
+
+```text Output
+16126n
+```
+
+### Choose a value
+
+| Situation | Suggested slippage |
+| --- | --- |
+| Deep pools, stable prices | 0.1% to 0.5% |
+| Most swaps | 0.5% |
+| Thin or volatile pools | 1% to 3%, after checking the quote looks sane |
+
+These are common starting points, not rules. Never set the minimum to zero. A zero minimum accepts any price, so a bot that sees your pending transaction can move the pool, let your swap fill at a terrible price and move it back. This is called a sandwich attack.
+
+<Warning>
+  High slippage doesn't fix a bad quote. If a swap only succeeds with 10% or more, the pool is too thin for your size. Swap less, or use another pool.
+</Warning>
+
+### Let users choose
+
+In a UI, show the minimum received next to the quote, default to 0.5%, and warn above about 3%. Quote again right before you send, not when the page loaded.
+
+## Deadlines
+
+The deadline is a Unix timestamp in seconds. If the transaction is mined after it, the router reverts: `BotDexV2Router: EXPIRED` on V2 and `Transaction too old` on V3.
+
+Without a deadline, a transaction stuck in the mempool could run hours later at a price that no longer suits you. Your minimum output still protects you, but a deadline also keeps old, forgotten swaps from running at all.
+
+```ts deadline.ts
+// 20 minutes from now. Build it right before sending, not when the page loads.
+export const deadlineIn = (minutes: number) => BigInt(Math.floor(Date.now() / 1000) + minutes * 60);
+```
+
+### Choose a value
+
+- **Scripts and bots:** 1 to 5 minutes. They send right away, so a short deadline is safe.
+- **Wallet UIs:** 10 to 20 minutes, to give the user time to review and sign.
+
+The router compares your deadline with the block's timestamp, not your computer's clock. If your clock is far off, you may see `EXPIRED` on transactions you just sent.
+
+## Both together
+
+The guides in this section use 0.5% slippage and a 20-minute deadline. See them applied in [Swap on BDEX V2](/guides/defi/swaps/bdex-v2) and [Swap on BDEX V3](/guides/defi/swaps/bdex-v3). The same two values protect adding and removing liquidity, where they guard both token amounts. See [Provide V2 liquidity](/guides/defi/liquidity/v2).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Swaps keep failing on the minimum">
+    Check that you quote right before sending, and that the quote and the swap use the same path or fee tier. If the pool is thin, swap a smaller amount.
+  </Accordion>
+  <Accordion title="The minimum is wildly wrong">
+    Check the decimals. A minimum computed from a quote in USDT base units must stay in USDT base units. See [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Swap on BDEX V2" icon="repeat" href="/guides/defi/swaps/bdex-v2">
+    Apply both values to a V2 swap.
+  </Card>
+  <Card title="Swap on BDEX V3" icon="repeat-2" href="/guides/defi/swaps/bdex-v3">
+    Compare fee tiers and swap.
+  </Card>
+</CardGroup>

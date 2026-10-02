@@ -5,4 +5,157 @@ description: "Combine many contract reads into one RPC call with Multicall3 and 
 icon: "layers"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+In this guide you read token balances, token metadata and a native balance in a single RPC request, using Multicall3 and viem.
+
+## How it works
+
+Multicall3 is a contract that takes a list of calls, runs each one, and returns all the results together. viem wraps it: you pass an array of reads to `multicall`, and viem sends them as one `eth_call` to Multicall3's `aggregate3` function.
+
+Fewer requests mean faster pages and less chance of hitting RPC rate limits.
+
+BOT Chain's Multicall3 is at the same address on both networks:
+
+| Network | Address |
+| --- | --- |
+| Mainnet | `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265` |
+| Testnet | `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265` |
+
+<Warning>
+The standard Multicall3 address, `0xcA11bde05977b3631167028862bE2a173976CA11`, exists on mainnet but **not on testnet**. Tools that assume it will fail on testnet. See [Known limitations](/get-started/bot-chain/known-limitations#standard-multicall3-address-missing-on-testnet).
+</Warning>
+
+## What you'll build
+
+A script that reads five values in one request, including one call that fails on purpose, and handles each result on its own.
+
+## Prerequisites
+
+- Node.js 22 or later.
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-multicall
+    cd bot-multicall
+    npm init -y
+    npm pkg set type=module
+    npm install viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+
+    The chain objects in `@uzolabs/sdk/chains` already set `contracts.multicall3` to BOT Chain's address, so viem knows where to send the batch.
+  </Step>
+
+  <Step title="Write the script">
+    ```ts multicall.ts
+    import { createPublicClient, erc20Abi, formatEther, formatUnits, http, parseAbi } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { usdt, wbot } = getAddresses(botChainTestnet.id);
+    const multicall3 = botChainTestnet.contracts.multicall3.address;
+    const holder = "0xEc526474F4F9De027942d5f7118A9613266B0C4c";
+
+    // Multicall3 can also read native balances, so tBOT fits in the same batch.
+    const multicall3Abi = parseAbi(["function getEthBalance(address addr) view returns (uint256)"]);
+
+    const results = await client.multicall({
+      contracts: [
+        { address: usdt, abi: erc20Abi, functionName: "symbol" },
+        { address: usdt, abi: erc20Abi, functionName: "decimals" },
+        { address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [holder] },
+        { address: wbot, abi: erc20Abi, functionName: "balanceOf", args: [holder] },
+        { address: multicall3, abi: multicall3Abi, functionName: "getEthBalance", args: [holder] },
+        // This one fails on purpose: the holder is a wallet, not a token.
+        { address: holder, abi: erc20Abi, functionName: "decimals" },
+      ],
+    });
+
+    const [symbol, decimals, usdtBalance, wbotBalance, tbotBalance, broken] = results;
+    if (symbol.status === "success" && decimals.status === "success" && usdtBalance.status === "success") {
+      console.log(`${symbol.result}: ${formatUnits(usdtBalance.result, decimals.result)}`);
+    }
+    if (wbotBalance.status === "success") console.log(`WBOT: ${formatEther(wbotBalance.result)}`);
+    if (tbotBalance.status === "success") console.log(`tBOT: ${formatEther(tbotBalance.result)}`);
+    console.log(`Last call: ${broken.status}`);
+
+    const blockNumber = await client.getBlockNumber();
+    console.log(`Sent through ${multicall3} at block ${blockNumber}`);
+    ```
+
+    Replace `holder` with your own address.
+
+    Each item in `results` has a `status`. A failed call returns `status: "failure"` and an `error`, and the other calls still succeed. Checking `status` also narrows the type of `result`, so TypeScript knows `usdtBalance.result` is a `bigint`.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx multicall.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Output from a run on testnet on 2026-10-02:
+
+```text Output
+USDT: 0.020366
+WBOT: 0
+tBOT: 0.000313799982351838
+Last call: failure
+Sent through 0x47FA21f684bBAD707A53a0f9BE59F1422F46C265 at block 25429267
+```
+
+To confirm the batch is one request, log what the transport sends:
+
+```ts multicall.ts
+const client = createPublicClient({
+  chain: botChainTestnet,
+  transport: http(undefined, { onFetchRequest: async (request) => console.log(await request.clone().text()) }),
+});
+```
+
+The six reads appear as a single `eth_call` whose data starts with `0x82ad56cb`, the selector of `aggregate3`.
+
+## Options
+
+| Option | Default | Use it to |
+| --- | --- | --- |
+| `allowFailure` | `true` | Set `false` to throw on the first failed call and get plain values back instead of `{ status, result }` objects. |
+| `batchSize` | `1024` | Split very large batches into several requests. The size is in bytes of calldata. |
+| `blockNumber` | latest | Read every call at the same past block. |
+| `multicallAddress` | from the chain | Point at Multicall3 when your chain object doesn't define it. |
+
+To batch reads automatically without calling `multicall` yourself, create the client with `batch: { multicall: true }`. viem then groups `readContract` calls made in the same tick into one Multicall3 request.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Chain does not support contract multicall3">
+    Your chain object has no `contracts.multicall3`. Use `botChainTestnet` from `@uzolabs/sdk/chains`, add the address to your own `defineChain`, or pass `multicallAddress`. If the client has no chain at all, the error reads `client chain not configured. multicallAddress is required.`
+  </Accordion>
+  <Accordion title="Every call fails on testnet">
+    You're probably using the standard address `0xcA11...CA11`, which has no code on testnet. Use `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`.
+  </Accordion>
+  <Accordion title="One call fails and I don't know why">
+    Log `result.error.message` for that item. Common causes are a wrong address, an address with no contract, or a function the contract doesn't have.
+  </Accordion>
+  <Accordion title="The RPC rejects the request as too large">
+    Lower `batchSize`, or split your list into several `multicall` calls.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Read contract state" icon="book-open-text" href="/guides/frontend/read-contract-state">
+    Batch reads in React with wagmi.
+  </Card>
+  <Card title="Use the BOTScan API" icon="search" href="/guides/data/explorer-api">
+    Query history the RPC can't give you.
+  </Card>
+</CardGroup>

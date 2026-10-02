@@ -5,4 +5,142 @@ description: "Quote a price with getAmountsOut, approve the router and swap toke
 icon: "repeat"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you swap WBOT for USDT on BDEX V2 testnet: you get a quote, set a minimum output, approve the router and send the swap.
+
+<TestnetOnly />
+
+## What you'll build
+
+A viem script that swaps 0.001 WBOT for USDT through the BDEX V2 Router02 at `0xD6425a02f0845B8D99e349C34D2E7A576E177345` on testnet.
+
+## Prerequisites
+
+- The `bot-defi` project and `.env` file from [Wrap BOT](/guides/defi/tokens/wrap-bot).
+- At least 0.001 WBOT and a little tBOT for gas. Run the wrap script first if you have no WBOT.
+
+## Steps
+
+<Steps>
+  <Step title="Write the script">
+    ```ts swap-v2.ts
+    import { createPublicClient, createWalletClient, erc20Abi, formatUnits, http, parseEther } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { bdexV2Router02Abi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+    const { wbot, usdt, bdexV2Router02: router } = getAddresses(botChainTestnet.id);
+    const explorer = botChainTestnet.blockExplorers.default.url;
+
+    const amountIn = parseEther("0.001"); // 0.001 WBOT
+    const path = [wbot, usdt] as const;
+    const slippageBps = 50n; // 0.5%
+
+    // 1. Quote. The last item is the USDT you would get (6 decimals).
+    const amounts = await publicClient.readContract({ address: router, abi: bdexV2Router02Abi, functionName: "getAmountsOut", args: [amountIn, [...path]] });
+    const quoted = amounts[amounts.length - 1];
+    const amountOutMin = (quoted * (10_000n - slippageBps)) / 10_000n;
+    console.log(`Quote: ${formatUnits(quoted, 6)} USDT, minimum ${formatUnits(amountOutMin, 6)} USDT`);
+
+    // 2. Approve the router for exactly amountIn, if needed.
+    const allowance = await publicClient.readContract({ address: wbot, abi: erc20Abi, functionName: "allowance", args: [account.address, router] });
+    if (allowance < amountIn) {
+      const approveHash = await walletClient.writeContract({ address: wbot, abi: erc20Abi, functionName: "approve", args: [router, amountIn] });
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      console.log(`Approved: ${explorer}/tx/${approveHash}`);
+    }
+
+    // 3. Simulate, then send the swap with a 20 minute deadline.
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+    const { request } = await publicClient.simulateContract({
+      account,
+      address: router,
+      abi: bdexV2Router02Abi,
+      functionName: "swapExactTokensForTokens",
+      args: [amountIn, amountOutMin, [...path], account.address, deadline],
+    });
+    const hash = await walletClient.writeContract(request);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`Swap ${receipt.status}: ${explorer}/tx/${hash}`);
+
+    const usdtBalance = await publicClient.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
+    console.log(`USDT balance: ${formatUnits(usdtBalance, 6)}`);
+    ```
+  </Step>
+
+  <Step title="Understand each part">
+    - **`getAmountsOut(amountIn, path)`** returns one amount per token in the path. For a direct pair that's `[amountIn, amountOut]`. The 0.30% pool fee is already taken out.
+    - **`path`** lists the tokens to swap through. For tokens without a direct pool, route through WBOT, for example `[tokenA, wbot, usdt]`.
+    - **`amountOutMin`** is the quote minus 0.5%. If the price moves further, the swap reverts.
+    - **The approval** is for the exact amount. Unlimited approvals save a transaction but leave the router able to move all your WBOT.
+    - **`deadline`** is a Unix timestamp in seconds. After it, the router refuses the swap.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env swap-v2.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+Quote: 0.016208 USDT, minimum 0.016126 USDT
+Approved: https://scan.bohr.life/tx/0xf229d9fa0e49657712e7620939c68772dc22449362150c4d8d3216173bdd212b
+Swap success: https://scan.bohr.life/tx/0x89f475b75e5d6ef569956600a58825ae0f6427ed14a19e6e15cec3485608e7a6
+USDT balance: 0.016208
+```
+
+Your quote depends on the pool's reserves at the time. Open the swap link on BOTScan: the token transfers show WBOT leaving your wallet and USDT arriving.
+
+## Swap native tBOT directly
+
+To skip wrapping, use `swapExactETHForTokens`. It takes no `amountIn` argument: send the tBOT as `value`, and start the path with WBOT.
+
+```ts swap-v2-native.ts
+const { request } = await publicClient.simulateContract({
+  account,
+  address: router,
+  abi: bdexV2Router02Abi,
+  functionName: "swapExactETHForTokens",
+  args: [amountOutMin, [wbot, usdt], account.address, deadline],
+  value: amountIn,
+});
+```
+
+{/* untested: swapExactETHForTokens was not sent on testnet; the V3 guide shows a tested native swap */}
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="BotDexV2Router: INSUFFICIENT_OUTPUT_AMOUNT">
+    The price moved more than your slippage between the quote and the swap, or your quote is stale. Quote again right before you swap. Raise the slippage only if the pool is very thin.
+  </Accordion>
+  <Accordion title="BotDexV2Router: EXPIRED">
+    The deadline passed before the transaction was mined. Build the deadline right before sending.
+  </Accordion>
+  <Accordion title="TransferHelper::transferFrom: transferFrom failed">
+    The router couldn't pull your input token. The approval is missing or too small, or your balance is too low.
+  </Accordion>
+  <Accordion title="The quote reverts">
+    There's no V2 pair for the tokens in the path, or the pair is empty, which reverts with `BotDexV2Library: INSUFFICIENT_LIQUIDITY`. Check with the factory's `getPair`, or list pairs with the [BDEX API](/reference/bdex-api).
+  </Accordion>
+</AccordionGroup>
+
+The error strings come from the router's verified source on BOTScan.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Swap on BDEX V3" icon="repeat-2" href="/guides/defi/swaps/bdex-v3">
+    Compare V3 fee tiers for a better price.
+  </Card>
+  <Card title="Provide V2 liquidity" icon="droplet" href="/guides/defi/liquidity/v2">
+    Earn swap fees by adding to a pool.
+  </Card>
+</CardGroup>

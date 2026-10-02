@@ -4,4 +4,128 @@ description: "Convert native BOT to the WBOT token and back so you can use it in
 icon: "package"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you wrap native tBOT into WBOT, an ERC-20 token, and unwrap it again, using a viem script on testnet.
+
+<TestnetOnly />
+
+## Why wrap
+
+BOT is the native coin, so it has no ERC-20 functions such as `approve` and `transferFrom`. DeFi contracts like BDEX pools work with ERC-20 tokens. WBOT is BOT inside an ERC-20 contract: you deposit BOT and get the same amount of WBOT, and you can withdraw it 1:1 at any time.
+
+WBOT has 18 decimals and lives at `0xD5452816194a3784dBa983426cCe7c122F4abd30` on both mainnet and testnet.
+
+<Tip>
+  You don't always need to wrap by hand. Routers can wrap for you: BDEX V2 has `ETH` functions such as `swapExactETHForTokens`, and the V3 SwapRouter wraps the `value` you send. See [Swaps on BDEX](/guides/defi/swaps/overview).
+</Tip>
+
+## Prerequisites
+
+- Node.js 22 or later.
+- At least 0.003 tBOT in your testnet wallet. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-defi
+    cd bot-defi
+    npm init -y
+    npm pkg set type=module
+    npm install viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Add your testnet key">
+    ```bash .env
+    BOT_PRIVATE_KEY=0xYourTestnetPrivateKey
+    ```
+
+    <Warning>
+      Only put a **testnet** key in `.env`, and add `.env` to `.gitignore` before your first commit.
+    </Warning>
+  </Step>
+
+  <Step title="Write the script">
+    ```ts wrap-bot.ts
+    import { createPublicClient, createWalletClient, formatEther, http, parseEther } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses, wbotAbi } from "@uzolabs/sdk/contracts";
+
+    const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+    const { wbot } = getAddresses(botChainTestnet.id);
+
+    async function showBalances(label: string) {
+      const native = await publicClient.getBalance({ address: account.address });
+      const wrapped = await publicClient.readContract({ address: wbot, abi: wbotAbi, functionName: "balanceOf", args: [account.address] });
+      console.log(`${label}: ${formatEther(native)} tBOT, ${formatEther(wrapped)} WBOT`);
+    }
+
+    await showBalances("Before");
+
+    // Wrap: send tBOT to deposit() and receive the same amount of WBOT.
+    const wrapHash = await walletClient.writeContract({ address: wbot, abi: wbotAbi, functionName: "deposit", value: parseEther("0.002") });
+    await publicClient.waitForTransactionReceipt({ hash: wrapHash });
+    console.log(`Wrapped: ${botChainTestnet.blockExplorers.default.url}/tx/${wrapHash}`);
+
+    // Unwrap: burn WBOT with withdraw() and get tBOT back.
+    const unwrapHash = await walletClient.writeContract({ address: wbot, abi: wbotAbi, functionName: "withdraw", args: [parseEther("0.001")] });
+    await publicClient.waitForTransactionReceipt({ hash: unwrapHash });
+    console.log(`Unwrapped: ${botChainTestnet.blockExplorers.default.url}/tx/${unwrapHash}`);
+
+    await showBalances("After");
+    ```
+
+    - `deposit()` is payable. The `value` you send becomes WBOT.
+    - `withdraw(amount)` burns WBOT and sends you the same amount of tBOT.
+    - `wbotAbi` comes from `@uzolabs/sdk/contracts`. Any standard WETH9-style ABI works too.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env wrap-bot.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+Before: 0.027462059999868928 tBOT, 0 WBOT
+Wrapped: https://scan.bohr.life/tx/0x4af187f94e334812d62db9e808fe50f1e08283b4e3b77aeb648027622605a2e0
+Unwrapped: https://scan.bohr.life/tx/0xf73c4e64740cec0a2dd994257871f0491b194fb4afb0ab4a65ed8c4c51c45d4a
+After: 0.024862179999868928 tBOT, 0.001 WBOT
+```
+
+You wrapped 0.002 and unwrapped 0.001, so you keep 0.001 WBOT. Your tBOT went down by 0.002 plus gas for the two transactions.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="insufficient funds for gas">
+    You need tBOT for both the deposit and gas. Lower the amount or top up from the faucet.
+  </Accordion>
+  <Accordion title="withdraw reverts">
+    You tried to unwrap more WBOT than you hold. Check the WBOT balance first.
+  </Accordion>
+  <Accordion title="WBOT doesn't show in my wallet">
+    Import it as a custom token with the address above, symbol WBOT and 18 decimals.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Swap on BDEX V2" icon="repeat" href="/guides/defi/swaps/bdex-v2">
+    Swap your WBOT for USDT.
+  </Card>
+  <Card title="USDT and decimals" icon="dollar-sign" href="/guides/defi/tokens/usdt-and-decimals">
+    Avoid the most common amount bug.
+  </Card>
+</CardGroup>

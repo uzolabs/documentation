@@ -5,4 +5,99 @@ description: "Deploy contracts to BOT Chain from your browser by connecting Remi
 icon: "globe"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you write, compile and deploy a contract to BOT Chain testnet using only your browser. Remix does the compiling and MetaMask signs the transaction.
+
+<TestnetOnly />
+
+{/* untested: Remix is a browser UI and was not clicked through for these docs; check menu names against the current Remix release */}
+
+## What you'll build
+
+A `Counter` contract deployed to BOT Chain testnet from [Remix](https://remix.ethereum.org), which you can call from the Remix panel.
+
+## Prerequisites
+
+- MetaMask (or another browser wallet) with BOT Chain testnet added. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+- Some tBOT in that wallet. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+## Steps
+
+<Steps>
+  <Step title="Create the contract">
+    Open [remix.ethereum.org](https://remix.ethereum.org). In the **File explorer**, create a file named `Counter.sol` in the `contracts` folder and paste:
+
+    ```solidity Counter.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    contract Counter {
+        uint256 public count;
+
+        event Incremented(address indexed by, uint256 newCount);
+
+        function increment() external {
+            count += 1;
+            emit Incremented(msg.sender, count);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Compile for Cancun">
+    Open the **Solidity compiler** tab.
+
+    1. Pick compiler version `0.8.28` or later.
+    2. Open **Advanced configurations** and set **EVM version** to `cancun`.
+    3. Click **Compile Counter.sol**.
+
+    The Cancun setting stops the compiler from using opcodes BOT Chain doesn't support. See [Supported EIPs](/get-started/bot-chain/supported-eips).
+  </Step>
+
+  <Step title="Connect MetaMask">
+    Open the **Deploy & run transactions** tab. Set **Environment** to **Injected Provider - MetaMask** (the exact label depends on your wallet). Approve the connection in MetaMask.
+
+    Check that MetaMask is on **BOT Chain Testnet**. Remix shows the chain ID under the environment, and it should say `968`.
+  </Step>
+
+  <Step title="Deploy">
+    Select `Counter` in the **Contract** list and click **Deploy**. MetaMask opens. Check the network and fee, then confirm.
+
+    BOT Chain needs a priority fee of at least 20 gwei. MetaMask reads this from the node, so the default fee works. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Step>
+</Steps>
+
+## Verify it worked
+
+1. Under **Deployed Contracts**, expand `Counter`.
+2. Click **count**. It returns `0`.
+3. Click **increment** and confirm in MetaMask.
+4. Click **count** again. It returns `1`.
+
+Copy the contract address from Remix and open `https://scan.bohr.life/address/YOUR_ADDRESS` to see it on BOTScan. To publish the source, follow [Verify in the BOTScan UI](/guides/deploy/verify/botscan-ui) and use the same compiler version, optimizer setting and EVM version you used in Remix.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Remix shows the wrong chain ID">
+    MetaMask is on another network. Switch to BOT Chain Testnet in MetaMask; Remix updates on its own.
+  </Accordion>
+  <Accordion title="The transaction fails with invalid opcode">
+    The EVM version is not set to `cancun`. Set it in **Advanced configurations**, compile again and redeploy.
+  </Accordion>
+  <Accordion title="insufficient funds">
+    Your wallet has no tBOT on testnet. Claim some from a faucet; see [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify in the BOTScan UI" icon="mouse-pointer-click" href="/guides/deploy/verify/botscan-ui">
+    Publish your source code by hand.
+  </Card>
+  <Card title="Choose a toolchain" icon="wrench" href="/guides/environment/choose-a-toolchain">
+    Move to Hardhat or Foundry when your project grows.
+  </Card>
+</CardGroup>

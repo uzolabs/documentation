@@ -4,4 +4,50 @@ description: "Why you should verify contracts on BOTScan, how its Blockscout ver
 icon: "badge-check"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+This page explains what verifying a contract on BOTScan does and helps you pick the right way to do it.
+
+## Why verify
+
+When you deploy, the chain only stores bytecode. Verifying uploads your Solidity source and compiler settings to BOTScan. BOTScan compiles them and checks that the result matches the bytecode on chain. Once it matches:
+
+- Anyone can read your source on the contract's **Code** tab.
+- BOTScan shows **Read contract** and **Write contract** forms built from your ABI.
+- Transactions and events are decoded into function names and values.
+- Users, auditors and integrators can check what your contract does before they trust it.
+
+## How BOTScan verification works
+
+BOTScan runs [Blockscout](https://www.blockscout.com), an open-source explorer. That matters for your tools:
+
+- Use the **Blockscout** verifier in Hardhat and Foundry, not the Etherscan one.
+- No API key is needed.
+- The verification endpoints are:
+
+| Network | Explorer | Verifier API URL |
+| --- | --- | --- |
+| Testnet (968) | https://scan.bohr.life | `https://scan.bohr.life/api/` |
+| Mainnet (677) | https://scan.botchain.ai | `https://scan.botchain.ai/api/` |
+
+Blockscout can also match a new contract against one it has already verified with the same bytecode. If you deploy a contract that someone else has verified before, BOTScan may show it as verified straight away, and your tool reports that it is already verified.
+
+## Choose a method
+
+| You deployed with | Use |
+| --- | --- |
+| Hardhat or Hardhat Ignition | [Verify with Hardhat](/guides/deploy/verify/hardhat) |
+| Foundry (`forge create` or `forge script`) | [Verify with Foundry](/guides/deploy/verify/foundry) |
+| Remix, or a tool with no Blockscout support | [Verify in the BOTScan UI](/guides/deploy/verify/botscan-ui) |
+
+With Foundry you can verify during the deploy by adding `--verify` to `forge script`. See [Deploy with Foundry](/guides/deploy/deploy-with-foundry).
+
+## What must match
+
+Verification fails if any of these differ from the deploy:
+
+- Compiler version, down to the patch number.
+- Optimizer on or off, and the number of runs.
+- EVM version (`cancun` on BOT Chain).
+- Constructor arguments, ABI-encoded.
+- The exact source, including imported files and the license comment.
+
+Command-line tools read these from your build output, which is why they are the most reliable method.

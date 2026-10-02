@@ -4,4 +4,119 @@ description: "USDT on BOT Chain uses 6 decimals, not 18. Learn to convert amount
 icon: "dollar-sign"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This page shows you how to convert USDT amounts on BOT Chain correctly. USDT uses 6 decimals, and treating it like an 18-decimal token is one of the most common bugs in token code.
+
+<TestnetOnly />
+
+## How decimals work
+
+Tokens store amounts as whole numbers called base units. The `decimals` value says where the decimal point goes when you show the amount to a person.
+
+| Token | Decimals | 1 token in base units |
+| --- | --- | --- |
+| BOT (native) and WBOT | 18 | `1000000000000000000` |
+| USDT on BOT Chain | 6 | `1000000` |
+
+The USDT addresses are in [Contract addresses](/reference/contract-addresses): `0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C` on mainnet and `0x75edC9335175Fc0552D51D48439F229c10420fe3` on testnet.
+
+<Warning>
+  Testnet also has another token named "USDT" with 18 decimals. Always identify tokens by address, never by symbol.
+</Warning>
+
+## Prerequisites
+
+- Node.js 22 or later.
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-defi
+    cd bot-defi
+    npm init -y
+    npm pkg set type=module
+    npm install viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Convert amounts">
+    ```ts usdt-decimals.ts
+    import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { usdt } = getAddresses(botChainTestnet.id);
+
+    // Read decimals from the contract instead of assuming 18.
+    const decimals = await client.readContract({ address: usdt, abi: erc20Abi, functionName: "decimals" });
+    console.log(`USDT decimals: ${decimals}`);
+
+    // Human amount to base units, for contract calls.
+    const amount = parseUnits("12.5", decimals);
+    console.log(`12.5 USDT = ${amount} base units`);
+
+    // Base units to a human amount, for display.
+    const balance = await client.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: ["0xEc526474F4F9De027942d5f7118A9613266B0C4c"] });
+    console.log(`Balance: ${formatUnits(balance, decimals)} USDT (${balance} base units)`);
+
+    // The bug: treating USDT like an 18-decimal token.
+    console.log(`Wrong: parseUnits("12.5", 18) = ${parseUnits("12.5", 18)}, which is ${formatUnits(parseUnits("12.5", 18), decimals)} USDT`);
+    ```
+
+    - `parseUnits(text, decimals)` turns what a user typed into base units. Use it before every contract call.
+    - `formatUnits(value, decimals)` turns base units into text. Use it before you show a value.
+    - Both work with `bigint`, so you don't lose precision.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx usdt-decimals.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+USDT decimals: 6
+12.5 USDT = 12500000 base units
+Balance: 0.021366 USDT (21366 base units)
+Wrong: parseUnits("12.5", 18) = 12500000000000000000, which is 12500000000000 USDT
+```
+
+The last line shows the bug: an 18-decimal conversion asks for a trillion times more USDT than you meant. The transaction would fail for lack of balance, or worse, succeed against a large allowance.
+
+## Common mistakes
+
+- **Hardcoding 18.** `parseEther` and `formatEther` assume 18 decimals. Never use them for USDT.
+- **Using JavaScript numbers.** `Number(balance) / 1e6` loses precision for large values. Keep amounts as `bigint` and format at the end.
+- **Mixing tokens in math.** A V2 quote for WBOT to USDT returns USDT base units (6 decimals) for an input in WBOT base units (18 decimals). Format each side with its own decimals.
+- **Assuming USDT has the same decimals everywhere.** USDT on BNB Smart Chain has 18 decimals. Ethereum and Tron use 6. Convert when you bridge. See [Bridge overview](/guides/bridge/overview).
+- **Trusting the symbol.** Anyone can deploy a token called USDT. Check the address.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A balance shows as 0.000000000000021366">
+    You formatted a 6-decimal value with 18 decimals. Read `decimals` from the token and pass it to `formatUnits`.
+  </Accordion>
+  <Accordion title="A transfer fails with an insufficient balance error">
+    Check the amount you passed. If it came from `parseEther`, it's 10^12 times too large for USDT.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Wrap BOT" icon="package" href="/guides/defi/tokens/wrap-bot">
+    Turn native BOT into the WBOT token.
+  </Card>
+  <Card title="Swap on BDEX V2" icon="repeat" href="/guides/defi/swaps/bdex-v2">
+    Swap WBOT for USDT.
+  </Card>
+</CardGroup>

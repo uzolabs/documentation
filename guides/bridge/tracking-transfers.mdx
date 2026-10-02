@@ -5,4 +5,119 @@ description: "Follow a bridge transfer from the source transaction to arrival, a
 icon: "map-pin"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This guide shows you how to follow a USDT transfer out of BOT Chain: find its ID in the deposit transaction, check whether it was delivered or refunded, and confirm arrival on the other chain.
+
+<TestnetOnly />
+
+## How a transfer is recorded
+
+When you call `deposit`, the bridge router on BOT Chain:
+
+1. Emits `DepositEvent` with a `depositNonce`. This number is the transfer's ID on the router.
+2. Stores a record under that nonce in `refundDatas(nonce)`.
+
+After the destination chain releases the USDT, the router emits `ExecutionConfirmed(localNonce)` and `executionConfirmed(nonce)` returns `true`. If the transfer is refunded instead, the router emits `Refunded` and the record's `refunded` flag becomes `true`.
+
+BOT Chain doesn't document these status fields. This page is based on the router's ABI and on transfers observed on testnet on 2026-10-01: a 1,000 USDT deposit to Sepolia was confirmed 54 seconds after the deposit block.
+
+## Steps
+
+<Steps>
+  <Step title="Set up the project">
+    Use the `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot). This script only reads.
+  </Step>
+
+  <Step title="Write the script">
+    ```ts track-transfer.ts
+    import { createPublicClient, formatUnits, http, parseEventLogs } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { botBridgeAbi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { bridgeRouter } = getAddresses(botChainTestnet.id);
+
+    // The hash of your deposit transaction on BOT Chain.
+    const hash = process.env.TX_HASH as `0x${string}`;
+    if (!hash) throw new Error("Set TX_HASH to a bridge deposit transaction hash");
+
+    // 1. Find the DepositEvent the router emitted. Its depositNonce identifies the transfer.
+    const receipt = await client.getTransactionReceipt({ hash });
+    const [deposit] = parseEventLogs({ abi: botBridgeAbi, logs: receipt.logs, eventName: "DepositEvent" })
+      .filter((log) => log.address.toLowerCase() === bridgeRouter.toLowerCase());
+    if (!deposit) throw new Error("No bridge DepositEvent in this transaction");
+    const { depositNonce, amount, receiveAmount, recipient, destinationChainId } = deposit.args;
+    console.log(`Transfer ${depositNonce}: ${formatUnits(amount, 6)} USDT to ${recipient} on chain ${destinationChainId}`);
+    console.log(`Recipient gets ${formatUnits(receiveAmount, 6)} USDT after a ${formatUnits(amount - receiveAmount, 6)} USDT fee`);
+
+    // 2. Check its status on the router.
+    const [confirmed, refund] = await Promise.all([
+      client.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "executionConfirmed", args: [depositNonce] }),
+      client.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "refundDatas", args: [depositNonce] }),
+    ]);
+    const refunded = refund[3];
+    console.log(`Status: ${refunded ? "refunded" : confirmed ? "delivered" : "pending"}`);
+    ```
+
+    - The filter keeps only events from the router. The bridge contract emits a separate `Deposit` event with its own per-destination nonce, which you don't need here.
+    - `refundDatas` returns a tuple. Item 3 is `refunded`.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    TX_HASH=0xff8a776305bce6c73b6dfd448a07ac61e5791fc17efec9cf00a64fae9c8c83c8 npx tsx track-transfer.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+Transfer 1072: 1000 USDT to 0xa8A284ccf2c589a184b498e4D655bd292434dB1E on chain 11155111
+Recipient gets 999 USDT after a 1 USDT fee
+Status: delivered
+```
+
+To check mainnet transfers, use `botChain` instead of `botChainTestnet`.
+
+## Confirm arrival on the destination
+
+"Delivered" means the router recorded the release. To see the USDT itself, open the recipient's address on the destination explorer and look for an incoming USDT transfer from the gateway listed in [Contract addresses](/reference/contract-addresses#bridge-gateways-on-other-chains):
+
+- Ethereum: [Etherscan](https://etherscan.io), or [Sepolia Etherscan](https://sepolia.etherscan.io) on testnet
+- BNB Smart Chain: [BscScan](https://bscscan.com), or [BscScan testnet](https://testnet.bscscan.com)
+- Tron: [Tronscan](https://tronscan.org), or [Nile Tronscan](https://nile.tronscan.org)
+
+On BNB Smart Chain the amount shows with 18 decimals.
+
+## What a refund means
+
+A refund returns the USDT to the sender on BOT Chain when a transfer isn't delivered. On testnet, transfer 389 was refunded: the sender deposited 202 USDT and got 201 back, so the bridge fee wasn't returned.
+
+Refunds are triggered by the bridge operator. In the router's ABI, `adminRefund` needs an operator role, so you can't start one yourself. If a transfer stays pending for much longer than usual, contact BOT Chain with the deposit transaction hash.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No bridge DepositEvent in this transaction">
+    Check the hash is the `deposit` transaction, not the `approve` before it, and that you're on the right network.
+  </Accordion>
+  <Accordion title="The status stays pending">
+    The validators and relayer may be waiting for the destination side, or the destination may lack liquidity. Wait and check again, then contact BOT Chain with the hash.
+  </Accordion>
+  <Accordion title="Delivered, but the recipient's balance didn't change">
+    Check the recipient address and the destination chain in the script's first line, then look for the gateway transfer on that chain's explorer. On BNB Smart Chain, check you formatted with 18 decimals.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Bridge USDT out" icon="log-out" href="/guides/bridge/bridge-out">
+    Send a transfer.
+  </Card>
+  <Card title="Bridge overview" icon="waypoints" href="/guides/bridge/overview">
+    How lock and release works.
+  </Card>
+</CardGroup>

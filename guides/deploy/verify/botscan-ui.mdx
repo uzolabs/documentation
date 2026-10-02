@@ -5,4 +5,93 @@ description: "Verify a contract by hand through the BOTScan website when command
 icon: "mouse-pointer-click"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you verify a contract through the BOTScan website. Use it for contracts deployed from Remix or another tool without Blockscout support.
+
+<TestnetOnly />
+
+{/* untested: the web form was not submitted for these docs; the method list was read from BOTScan's verification config API */}
+
+## What you'll build
+
+A verified contract on BOTScan, with its source on the **Code** tab.
+
+## Prerequisites
+
+- The deployed contract address.
+- The exact source and the settings you compiled with: compiler version, optimizer on or off, optimizer runs and EVM version.
+- The constructor arguments, if the contract has any.
+
+## Pick a verification method
+
+BOTScan testnet offers these methods for Solidity:
+
+| Method | Use it when |
+| --- | --- |
+| **Flattened source code** | Your contract is in one file, or you can flatten it. Easiest by hand. |
+| **Standard JSON input** | You have the compiler's standard JSON input file. Most reliable for contracts with imports. |
+| **Multi-part files** | You want to upload each source file separately. |
+
+Vyper methods are also listed. You can check the current list at `https://scan.bohr.life/api/v2/smart-contracts/verification/config`.
+
+## Steps
+
+<Steps>
+  <Step title="Prepare the source">
+    For a single file with no imports, use it as it is.
+
+    For a contract with imports, flatten it into one file. In Foundry:
+
+    ```bash
+    forge flatten src/Greeter.sol > Greeter.flat.sol
+    ```
+
+    In Remix, right-click the file and choose **Flatten**. Hardhat can produce a standard JSON input instead; it is in the build info file under `artifacts/build-info/`.
+  </Step>
+
+  <Step title="Open the verification form">
+    Go to your contract on BOTScan, for example `https://scan.bohr.life/address/0xYOUR_CONTRACT`. Open the **Contract** tab and choose **Verify & publish**.
+  </Step>
+
+  <Step title="Fill in the form">
+    1. Choose **Solidity (Flattened source code)** or **Solidity (Standard JSON input)**.
+    2. Pick the exact compiler version, for example `v0.8.28+commit.7893614a`.
+    3. Set **EVM version** to `cancun`.
+    4. Match the **Optimization** setting and runs to your build.
+    5. Paste the source or upload the JSON file.
+    6. Enter the contract name, for example `Greeter`.
+    7. If there are constructor arguments, paste them ABI-encoded without the `0x` prefix, or let BOTScan detect them.
+
+    Submit the form. Verification usually takes a few seconds.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+The **Code** tab shows a verified badge and your source. **Read contract** and **Write contract** now show forms for each function.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The bytecode doesn't match">
+    One of the settings differs from the deploy. Check them in this order: compiler version, optimizer and runs, EVM version, constructor arguments. In Remix, the settings are on the **Solidity compiler** tab under **Advanced configurations**.
+  </Accordion>
+  <Accordion title="The contract already shows as verified">
+    BOTScan can match new contracts to identical bytecode it has verified before. Nothing else to do.
+  </Accordion>
+  <Accordion title="Encoding constructor arguments">
+    Use `cast abi-encode`, for example `cast abi-encode "constructor(string)" "Hello"`, and remove the `0x` prefix. You can also copy them from the end of the deploy transaction's input data on BOTScan.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify with Foundry" icon="hammer" href="/guides/deploy/verify/foundry">
+    Verify from the command line next time.
+  </Card>
+  <Card title="Verify with Hardhat" icon="hard-hat" href="/guides/deploy/verify/hardhat">
+    One command for Hardhat projects.
+  </Card>
+</CardGroup>

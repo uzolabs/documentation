@@ -4,4 +4,247 @@ description: "Let users sign requests that a relayer submits, using OpenZeppelin
 icon: "pen-line"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you make a contract accept gasless calls, then sign a request from a wallet with 0 tBOT and relay it so another wallet pays the gas.
+
+<TestnetOnly />
+
+## How it works
+
+[ERC-2771](https://eips.ethereum.org/EIPS/eip-2771) splits a call into two parts:
+
+- **The user** signs a `ForwardRequest` as [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data: "call this function on this contract for me".
+- **A relayer** sends that request to a **forwarder** contract in a transaction it pays for.
+
+The forwarder checks the signature, the user's nonce and the deadline, then calls your contract with the user's address appended to the calldata. Your contract extends OpenZeppelin's `ERC2771Context`, whose `_msgSender()` returns that address when the caller is the trusted forwarder. Each nonce works once, so a signed request can't be replayed.
+
+## What you'll build
+
+- A forwarder and a small `Notes` contract that records who set each note.
+- A viem script that creates a new wallet with no tBOT, signs a request, and relays it from your funded wallet.
+
+## Prerequisites
+
+- A Foundry project from [Set up Foundry](/guides/environment/foundry), with the `uzo-dev` keystore and some tBOT.
+- The `bot-defi` project and `.env` file from [Wrap BOT](/guides/defi/tokens/wrap-bot), for the script.
+
+## Steps
+
+<Steps>
+  <Step title="Install OpenZeppelin">
+    In your Foundry project:
+
+    ```bash
+    forge install OpenZeppelin/openzeppelin-contracts
+    ```
+
+    Add `@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/` to `remappings` in `foundry.toml` if it isn't there.
+  </Step>
+
+  <Step title="Write the forwarder">
+    Use OpenZeppelin's forwarder unchanged. The name becomes part of the EIP-712 domain that wallets show when signing.
+
+    ```solidity src/Forwarder.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {ERC2771Forwarder} from "@openzeppelin/contracts/metatx/ERC2771Forwarder.sol";
+
+    contract Forwarder is ERC2771Forwarder {
+        constructor() ERC2771Forwarder("MyForwarder") {}
+    }
+    ```
+  </Step>
+
+  <Step title="Make your contract trust it">
+    Extend `ERC2771Context`, pass the forwarder's address to its constructor, and use `_msgSender()` wherever you'd use `msg.sender`.
+
+    ```solidity src/Notes.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+
+    contract Notes is ERC2771Context {
+        mapping(address => string) public noteOf;
+
+        event NoteSet(address indexed author, string note);
+
+        constructor(address trustedForwarder) ERC2771Context(trustedForwarder) {}
+
+        function setNote(string calldata note) external {
+            // _msgSender() is the user who signed, even when the relayer sent the transaction.
+            address author = _msgSender();
+            noteOf[author] = note;
+            emit NoteSet(author, note);
+        }
+    }
+    ```
+
+    <Warning>
+      Any `msg.sender` left in your contract sees the forwarder, not the user. Check every one, including those in inherited contracts such as `Ownable`, which already use `_msgSender()` in OpenZeppelin 5.
+    </Warning>
+  </Step>
+
+  <Step title="Deploy both">
+    {/* untested: these two deploys weren't run on chain because the test wallet was low on tBOT; the contracts compile and pass forge tests */}
+
+    ```bash
+    forge create src/Forwarder.sol:Forwarder --rpc-url bot_testnet --account uzo-dev --broadcast
+    forge create src/Notes.sol:Notes --rpc-url bot_testnet --account uzo-dev --broadcast --constructor-args YOUR_FORWARDER_ADDRESS
+    ```
+
+    Save both addresses. To verify them, see [Verify with Foundry](/guides/deploy/verify/foundry).
+  </Step>
+
+  <Step title="Sign and relay a request">
+    This script plays both roles. A brand new wallet signs, and the wallet in your `.env` relays. It uses a forwarder and guest book deployed on testnet by the [gasless app template](/templates/gasless-app/index). To use your own contracts, change the two addresses and the function.
+
+    ```ts meta-tx.ts
+    import { createPublicClient, createWalletClient, encodeFunctionData, http, parseAbi } from "viem";
+    import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const FORWARDER = "0x9bAb837f41759c737Cb2cC00Ec5D88d5fAcF74C1";
+    const GUEST_BOOK = "0x7962412A92E5553E66C794c3a352422DEB7BAc27";
+
+    const forwarderAbi = parseAbi([
+      "struct ForwardRequestData { address from; address to; uint256 value; uint256 gas; uint48 deadline; bytes data; bytes signature; }",
+      "function execute(ForwardRequestData request) payable",
+      "function verify(ForwardRequestData request) view returns (bool)",
+      "function nonces(address owner) view returns (uint256)",
+      "function eip712Domain() view returns (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)",
+    ]);
+    const guestBookAbi = parseAbi([
+      "function sign(string message) returns (uint256 id)",
+      "function entryCount() view returns (uint256)",
+    ]);
+    const forwardRequestTypes = {
+      ForwardRequest: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "gas", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint48" },
+        { name: "data", type: "bytes" },
+      ],
+    } as const;
+
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+
+    // The user: a brand new key with no tBOT at all. It only signs.
+    const user = privateKeyToAccount(generatePrivateKey());
+    // The relayer: a funded key that pays the gas.
+    const relayer = createWalletClient({
+      account: privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`),
+      chain: botChainTestnet,
+      transport: http(),
+    });
+
+    // 1. User side: build and sign the request.
+    const [[, name, version, chainId, verifyingContract], nonce] = await Promise.all([
+      publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "eip712Domain" }),
+      publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "nonces", args: [user.address] }),
+    ]);
+    const message = {
+      from: user.address,
+      to: GUEST_BOOK,
+      value: 0n,
+      gas: 150_000n,
+      nonce,
+      deadline: Math.floor(Date.now() / 1000) + 10 * 60,
+      data: encodeFunctionData({ abi: guestBookAbi, functionName: "sign", args: ["Signed for free via the Uzo docs"] }),
+    } as const;
+    const signature = await user.signTypedData({
+      domain: { name, version, chainId: Number(chainId), verifyingContract },
+      types: forwardRequestTypes,
+      primaryType: "ForwardRequest",
+      message,
+    });
+    console.log(`User ${user.address} signed (balance: ${await publicClient.getBalance({ address: user.address })} wei)`);
+
+    // 2. Relayer side: check, simulate, send.
+    const { nonce: _nonce, ...rest } = message;
+    const request = { ...rest, signature };
+    const valid = await publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "verify", args: [request] });
+    if (!valid) throw new Error("Signature does not match the request");
+
+    const { request: tx } = await publicClient.simulateContract({
+      account: relayer.account,
+      address: FORWARDER,
+      abi: forwarderAbi,
+      functionName: "execute",
+      args: [request],
+    });
+    const hash = await relayer.writeContract(tx);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`Relayed ${receipt.status}: ${botChainTestnet.blockExplorers.default.url}/tx/${hash}`);
+    console.log(`Gas used: ${receipt.gasUsed}`);
+    console.log(`Entries now: ${await publicClient.readContract({ address: GUEST_BOOK, abi: guestBookAbi, functionName: "entryCount" })}`);
+    ```
+  </Step>
+
+  <Step title="Understand each part">
+    - **The domain** comes from the forwarder's `eip712Domain()`, so the name, version, chain ID and address always match what the forwarder checks.
+    - **The nonce** comes from `nonces(user)`. It's part of the signed message but not of `ForwardRequestData`, because the forwarder looks it up itself. That's why the script removes it before calling `verify` and `execute`.
+    - **`gas`** is the gas the forwarder passes to your contract. If it's too low, the inner call fails.
+    - **`deadline`** is a Unix time in seconds. After it, the request is rejected.
+    - **`verify`** checks the signature, nonce, deadline and that the target trusts this forwarder, without spending gas.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env meta-tx.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+On testnet on 2026-10-01:
+
+```text Output
+User 0xa2fa3D8dB7da952f54b7d222EB95188216c53328 signed (balance: 0 wei)
+Relayed success: https://scan.bohr.life/tx/0x4ff1d3dae591af512ecdbfc6c5f7126437b7e552bb659731aad71f9ae627da8c
+Gas used: 136073
+Entries now: 2
+```
+
+Open the transaction on BOTScan. It was sent by your relayer wallet, to the forwarder. The new guest book entry's author is the user address, which still holds 0 tBOT. Read it with `getEntries`, as in [Events without getLogs](/guides/frontend/events-without-getlogs).
+
+## Sign in a browser wallet
+
+In a web app, the user signs with their own wallet instead of a generated key. With wagmi, use `signTypedData` with the same domain, types and message. The wallet shows the request fields and asks for a signature, not a transaction. Then post the request to your relayer. The [gasless app template](/templates/gasless-app/index) does this end to end.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ERC2771ForwarderInvalidSigner">
+    The signature doesn't match the request. Check you signed with the forwarder's own domain, used the current nonce, and sent exactly the fields you signed. A request that already ran fails this way too, because its nonce is used.
+  </Accordion>
+  <Accordion title="ERC2771ForwarderExpiredRequest">
+    The deadline passed. Sign again.
+  </Accordion>
+  <Accordion title="ERC2771UntrustfulTarget">
+    Your contract doesn't trust this forwarder. Deploy it with the forwarder's address in the constructor.
+  </Accordion>
+  <Accordion title="FailedCall">
+    The forwarder's call to your contract reverted. Call your function directly with the same arguments to see why, or raise `gas`.
+  </Accordion>
+  <Accordion title="The contract records the forwarder as the sender">
+    The function uses `msg.sender`. Change it to `_msgSender()`.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run a relayer" icon="server" href="/guides/gasless/run-a-relayer">
+    Accept signed requests over HTTP, safely.
+  </Card>
+  <Card title="Gasless app template" icon="layout-template" href="/templates/gasless-app/index">
+    Contracts, relayer and web app.
+  </Card>
+</CardGroup>

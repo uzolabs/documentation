@@ -4,4 +4,50 @@ description: "Compare Hardhat, Foundry and Remix for BOT Chain development and p
 icon: "wrench"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+This page helps you pick a tool for writing, testing and deploying contracts on BOT Chain. All three tools below work with BOT Chain, because it is an EVM chain with a standard JSON-RPC.
+
+## The short answer
+
+- **New to Solidity?** Start with [Remix](/guides/environment/remix). It runs in your browser and needs no install.
+- **Building a web app in TypeScript?** Use [Hardhat](/guides/environment/hardhat). Your contracts, tests and frontend share one language and one `package.json`.
+- **Want fast tests written in Solidity?** Use [Foundry](/guides/environment/foundry). It is the quickest to install and run, and the [quickstart](/get-started/quickstart) uses it.
+
+You can switch later. A contract written in one tool compiles in the others.
+
+## Compare the tools
+
+| | Remix | Hardhat 3 | Foundry |
+| --- | --- | --- | --- |
+| Where it runs | Browser | Node.js | Native binary |
+| Tests written in | Solidity or JavaScript (plugins) | TypeScript or Solidity | Solidity |
+| Deploys with | Your browser wallet | Hardhat Ignition | `forge create` or `forge script` |
+| Verifies on BOTScan | [Web form](/guides/deploy/verify/botscan-ui) | `hardhat verify blockscout` | `forge verify-contract --verifier blockscout` |
+| Keeps keys in | Your wallet extension | Hardhat keystore or env vars | Encrypted Foundry keystore |
+| Best for | Learning, quick experiments | Full-stack TypeScript apps | Contract-heavy projects, fuzzing |
+
+## Things that apply to every tool
+
+BOT Chain has two quirks that every toolchain has to handle. The setup pages show the fix for each tool.
+
+<AccordionGroup>
+  <Accordion title="Compile for the Cancun EVM version">
+    Recent Solidity compilers default to newer EVM versions than BOT Chain supports. Set the EVM version to `cancun` in your compiler settings. See [Supported EIPs](/get-started/bot-chain/supported-eips) for the details.
+  </Accordion>
+  <Accordion title="The base fee is 0, but the minimum tip is 20 gwei">
+    BOT Chain blocks report a base fee of 0 and the node rejects any transaction that offers less than 20 gwei. Foundry, viem and wallets handle this on their own. Hardhat Ignition needs a small hook, shown on the [Hardhat setup](/guides/environment/hardhat) page. See [Gas and fees](/get-started/bot-chain/gas-and-fees).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Set up Hardhat" icon="hard-hat" href="/guides/environment/hardhat">
+    Hardhat 3 with both networks and BOTScan.
+  </Card>
+  <Card title="Set up Foundry" icon="hammer" href="/guides/environment/foundry">
+    RPC aliases, Cancun and keystore wallets.
+  </Card>
+  <Card title="Use Remix" icon="globe" href="/guides/environment/remix">
+    Deploy from your browser with MetaMask.
+  </Card>
+</CardGroup>

@@ -4,4 +4,125 @@ description: "Deploy a contract to BOT Chain testnet with Hardhat Ignition and f
 icon: "rocket"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you deploy a contract to BOT Chain testnet with Hardhat Ignition, then read it back from a script.
+
+<TestnetOnly />
+
+## What you'll build
+
+An Ignition module that deploys `Counter`, a record of the deployment in your project, and a script that reads the deployed contract.
+
+## Prerequisites
+
+- A Hardhat 3 project set up for BOT Chain, including the fee hook. Follow [Set up Hardhat](/guides/environment/hardhat) first.
+- `BOT_PRIVATE_KEY` set in the Hardhat keystore or your terminal, for a wallet with at least 0.01 tBOT.
+- `contracts/Counter.sol` from the setup guide.
+
+## Steps
+
+<Steps>
+  <Step title="Write an Ignition module">
+    An Ignition module describes what to deploy. Ignition works out the order and keeps a journal, so a failed deploy can resume where it stopped.
+
+    ```ts ignition/modules/Counter.ts
+    import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+
+    export default buildModule("CounterModule", (m) => {
+      const counter = m.contract("Counter");
+      return { counter };
+    });
+    ```
+
+    If your contract takes constructor arguments, pass them as an array: `m.contract("Greeter", ["Hello"])`.
+  </Step>
+
+  <Step title="Deploy to testnet">
+    ```bash
+    npx hardhat ignition deploy ignition/modules/Counter.ts --network botTestnet
+    ```
+
+    Ignition asks you to confirm the network. Type `y`. When it finishes you'll see output like:
+
+    ```text Output
+    [ CounterModule ] successfully deployed 🚀
+
+    Deployed Addresses
+
+    CounterModule#Counter - 0x24E48d0fcf9B5500EE3DD77f96d095Db090a9F58
+    ```
+
+    Your address will be different. Ignition also saves it in `ignition/deployments/chain-968/deployed_addresses.json`.
+  </Step>
+
+  <Step title="Read the contract from a script">
+    ```ts scripts/read-counter.ts
+    import { network } from "hardhat";
+
+    const counterAddress = process.env.COUNTER_ADDRESS;
+    if (!counterAddress) throw new Error("Set COUNTER_ADDRESS to your Counter address");
+
+    const { viem } = await network.getOrCreate();
+    const counter = await viem.getContractAt("Counter", counterAddress as `0x${string}`);
+    console.log(`count is ${await counter.read.count()}`);
+    ```
+
+    ```bash
+    COUNTER_ADDRESS=0xYOUR_COUNTER npx hardhat run scripts/read-counter.ts --network botTestnet
+    ```
+
+    You should see `count is 0`.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+- Run `npx hardhat ignition status chain-968`. It prints `Deployment chain-968 (chainId: 968) was successful` and the address.
+- Open `https://scan.bohr.life/address/YOUR_ADDRESS`. BOTScan shows the contract and the deploy transaction.
+
+Next, [verify the source](/guides/deploy/verify/hardhat) so others can read it on BOTScan.
+
+## Deploy to mainnet
+
+<Warning>
+  Mainnet deploys cost real BOT and can't be undone. Test on testnet first and use a separate key for mainnet.
+</Warning>
+
+Use the same module with the mainnet network:
+
+{/* untested: mainnet deploys were not run for these docs */}
+
+```bash
+npx hardhat ignition deploy ignition/modules/Counter.ts --network botMainnet
+```
+
+Ignition stores mainnet deployments in `ignition/deployments/chain-677`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="transaction underpriced: effective gas tip 0, minimum needed 20000000000">
+    Ignition sent a fee of 0 because BOT Chain's base fee is 0. Add the fee hook from [Set up Hardhat](/guides/environment/hardhat), then deploy again.
+  </Accordion>
+  <Accordion title="Ignition says a previous run failed or a transaction is pending">
+    Ignition resumes from its journal. If the earlier run failed before anything was sent (for example, an RPC error), delete `ignition/deployments/chain-968` and deploy again. Don't delete it if a contract was deployed, or Ignition will deploy a second copy.
+  </Accordion>
+  <Accordion title="insufficient funds for gas">
+    Your wallet needs tBOT. Check the address with the script in [Set up Hardhat](/guides/environment/hardhat) and claim from a faucet.
+  </Accordion>
+  <Accordion title="An RPC call returns 502">
+    The public RPC sometimes drops a request. Run the same deploy command again; Ignition picks up where it stopped.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify with Hardhat" icon="badge-check" href="/guides/deploy/verify/hardhat">
+    Publish your source on BOTScan.
+  </Card>
+  <Card title="Set up wagmi" icon="settings" href="/guides/frontend/wagmi-setup">
+    Call your contract from a web app.
+  </Card>
+</CardGroup>

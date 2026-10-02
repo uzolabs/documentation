@@ -5,4 +5,149 @@ description: "Add and remove liquidity in a BDEX V2 pool and understand the LP t
 icon: "droplet"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you add USDT and tBOT to the BDEX V2 WBOT/USDT pool on testnet, check what your LP tokens are worth, and remove the liquidity again.
+
+<TestnetOnly />
+
+## How V2 liquidity works
+
+A V2 pool holds two tokens. When you add liquidity, you deposit both at the pool's current ratio and receive LP tokens. The pair contract is itself the LP token. Your LP balance divided by the total supply is your share of the reserves. Every swap pays 0.30% into the reserves, so your share grows with trading volume.
+
+The price can move while you're in the pool. When it does, you get back a different mix of the two tokens than you put in, which can be worth less than simply holding them. This is called impermanent loss.
+
+## What you'll build
+
+A viem script that reads the pool's reserves, adds 0.02 USDT plus the matching amount of tBOT, prints the value of your LP tokens, then removes all of it.
+
+## Prerequisites
+
+- The `bot-defi` project and `.env` file from [Wrap BOT](/guides/defi/tokens/wrap-bot).
+- At least 0.02 testnet USDT. Swap tBOT for it with [Swap on BDEX V2](/guides/defi/swaps/bdex-v2).
+- Enough tBOT for the matching amount plus gas for four transactions. On 2026-10-01 the tBOT side was about 0.0012.
+
+## Steps
+
+<Steps>
+  <Step title="Write the script">
+    ```ts liquidity-v2.ts
+    import { createPublicClient, createWalletClient, erc20Abi, formatEther, formatUnits, http, parseAbi, parseUnits } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { bdexV2FactoryAbi, bdexV2Router02Abi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+    const { wbot, usdt, bdexV2Factory, bdexV2Router02: router } = getAddresses(botChainTestnet.id);
+    const explorer = botChainTestnet.blockExplorers.default.url;
+    const pairAbi = parseAbi([
+      "function token0() view returns (address)",
+      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)",
+    ]);
+
+    const usdtAmount = parseUnits("0.02", 6); // 0.02 USDT
+    const slippageBps = 50n; // 0.5%
+    const minOf = (x: bigint) => (x * (10_000n - slippageBps)) / 10_000n;
+    const deadline = () => BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+
+    async function send(label: string, pending: Promise<`0x${string}`>) {
+      const hash = await pending;
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      console.log(`${label} ${receipt.status}: ${explorer}/tx/${hash}`);
+    }
+
+    // 1. Read the pair reserves and work out how much tBOT matches 0.02 USDT.
+    const pair = await publicClient.readContract({ address: bdexV2Factory, abi: bdexV2FactoryAbi, functionName: "getPair", args: [wbot, usdt] });
+    const token0 = await publicClient.readContract({ address: pair, abi: pairAbi, functionName: "token0" });
+    const [r0, r1] = await publicClient.readContract({ address: pair, abi: pairAbi, functionName: "getReserves" });
+    const [usdtReserve, wbotReserve] = token0.toLowerCase() === usdt.toLowerCase() ? [r0, r1] : [r1, r0];
+    const botAmount = await publicClient.readContract({ address: router, abi: bdexV2Router02Abi, functionName: "quote", args: [usdtAmount, usdtReserve, wbotReserve] });
+    console.log(`Pair ${pair}: adding ${formatUnits(usdtAmount, 6)} USDT + ${formatEther(botAmount)} tBOT`);
+
+    // 2. Approve USDT, then add liquidity. The tBOT side goes in as value.
+    await send("Approve USDT", walletClient.writeContract({ address: usdt, abi: erc20Abi, functionName: "approve", args: [router, usdtAmount] }));
+    const { request: addRequest } = await publicClient.simulateContract({
+      account,
+      address: router,
+      abi: bdexV2Router02Abi,
+      functionName: "addLiquidityETH",
+      args: [usdt, usdtAmount, minOf(usdtAmount), minOf(botAmount), account.address, deadline()],
+      value: botAmount,
+    });
+    await send("Add liquidity", walletClient.writeContract(addRequest));
+
+    // 3. The pair contract is also the LP token. Approve it and remove everything.
+    const lpBalance = await publicClient.readContract({ address: pair, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
+    const lpSupply = await publicClient.readContract({ address: pair, abi: erc20Abi, functionName: "totalSupply" });
+    const [n0, n1] = await publicClient.readContract({ address: pair, abi: pairAbi, functionName: "getReserves" });
+    const [usdtNow, wbotNow] = token0.toLowerCase() === usdt.toLowerCase() ? [n0, n1] : [n1, n0];
+    const usdtOut = (lpBalance * usdtNow) / lpSupply;
+    const botOut = (lpBalance * wbotNow) / lpSupply;
+    console.log(`LP tokens: ${formatEther(lpBalance)}, worth about ${formatUnits(usdtOut, 6)} USDT + ${formatEther(botOut)} tBOT`);
+
+    await send("Approve LP", walletClient.writeContract({ address: pair, abi: erc20Abi, functionName: "approve", args: [router, lpBalance] }));
+    const { request: removeRequest } = await publicClient.simulateContract({
+      account,
+      address: router,
+      abi: bdexV2Router02Abi,
+      functionName: "removeLiquidityETH",
+      args: [usdt, lpBalance, minOf(usdtOut), minOf(botOut), account.address, deadline()],
+    });
+    await send("Remove liquidity", walletClient.writeContract(removeRequest));
+    ```
+  </Step>
+
+  <Step title="Understand each part">
+    - **`getPair`** returns the pair address. Pairs store their tokens sorted by address, so read `token0` to know which reserve is which.
+    - **`quote(amountA, reserveA, reserveB)`** returns the matching amount of the other token at the current ratio, with no fee. Use it for liquidity, never for swap quotes.
+    - **`addLiquidityETH`** takes the token side as an argument and the tBOT side as `value`. The two minimums protect you if the ratio moves before your transaction lands. The router refunds any tBOT it doesn't use.
+    - **Your share** is `lpBalance / totalSupply` of each reserve.
+    - **`removeLiquidityETH`** burns your LP tokens and sends both tokens back, unwrapping WBOT to tBOT. Approve the pair first, because the router moves your LP tokens.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env liquidity-v2.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+Pair 0xD3EC267707BA234583645E75CE283Cf679dd94Fa: adding 0.02 USDT + 0.001230224532655686 tBOT
+Approve USDT success: https://scan.bohr.life/tx/0x2e05065203b0f4ff577ae9724f7d30b234a1aba1ad2c67c26431e293a6e49282
+Add liquidity success: https://scan.bohr.life/tx/0x4c7288cd1ad1a174d565544c9d77f2e11a19db9da94c95b982c94b04200b5d09
+LP tokens: 0.0000000000243198, worth about 0.019999 USDT + 0.001230224515138596 tBOT
+Approve LP success: https://scan.bohr.life/tx/0x16f7a9fbb4cdaef70cd32a34a43c5e73c714f2261f9aece044fba3190736d242
+Remove liquidity success: https://scan.bohr.life/tx/0x93204de3f3e9090d94176d992b97688bbb535cef18f257e43e4c8a39a3e98453
+```
+
+You get back slightly less than you put in, because the pool's math rounds down. The LP amount looks tiny because the pool pairs a 6-decimal token with an 18-decimal one. What it's worth is what matters.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="BotDexV2Router: INSUFFICIENT_A_AMOUNT or INSUFFICIENT_B_AMOUNT">
+    The pool ratio moved between your reserve read and your transaction, so one side fell below its minimum. Read the reserves again and retry.
+  </Accordion>
+  <Accordion title="TransferHelper::transferFrom: transferFrom failed">
+    The router couldn't pull your tokens. Check the approval for the right token: USDT when adding, the pair address when removing.
+  </Accordion>
+  <Accordion title="BotDexV2Router: EXPIRED">
+    The deadline passed. The script builds a fresh deadline for each call, so this only happens if a transaction waits more than 20 minutes.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Provide V3 liquidity" icon="chart-area" href="/guides/defi/liquidity/v3">
+    Concentrate liquidity in a price range.
+  </Card>
+  <Card title="BDEX API" icon="arrow-left-right" href="/reference/bdex-api">
+    List pools and their reserves.
+  </Card>
+</CardGroup>

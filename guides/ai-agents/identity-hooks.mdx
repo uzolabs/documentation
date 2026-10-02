@@ -4,4 +4,281 @@ description: "Plug any identity or reputation protocol into an agent vault throu
 icon: "id-card"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you connect an identity or reputation source to your agent vault, so the agent can only pay addresses that source trusts.
+
+<TestnetOnly />
+
+## How it works
+
+The vault doesn't know about any particular identity protocol. It asks one question through a one-function interface:
+
+```solidity src/IAgentIdentity.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+interface IAgentIdentity {
+    function isTrusted(address account) external view returns (bool);
+}
+```
+
+When the owner sets an identity contract, `pay` calls `isTrusted(to)` and reverts with `RecipientNotTrusted(to)` if the answer is `false`. When the identity is `address(0)`, the check is skipped.
+
+```solidity src/AgentVault.sol
+if (!isRecipientAllowed[to]) revert RecipientNotAllowed(to);
+if (address(identity) != address(0) && !identity.isTrusted(to)) revert RecipientNotTrusted(to);
+```
+
+The identity check adds to the allowlist. It doesn't replace it. A recipient must be on the owner's allowlist **and** trusted by the identity source.
+
+To use a real registry, attestation service or reputation system, you write a small adapter contract that implements `isTrusted` by reading from it. The vault never changes.
+
+## What you'll build
+
+- `TrustList`, the simplest source: a list one owner maintains.
+- `ScoreAdapter`, an adapter that trusts addresses whose score in an external registry meets a minimum.
+- Foundry tests that prove each one gates payments.
+
+## Prerequisites
+
+- The `AgentVault` project from [Agent vaults](/guides/ai-agents/agent-vaults).
+
+## Steps
+
+<Steps>
+  <Step title="Write a trust list">
+    ```solidity src/TrustList.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+    import {IAgentIdentity} from "./IAgentIdentity.sol";
+
+    /// @notice The simplest identity source: a list kept by one owner.
+    contract TrustList is IAgentIdentity, Ownable {
+        mapping(address => bool) public isTrusted;
+
+        event TrustChanged(address indexed account, bool trusted);
+
+        constructor(address owner_) Ownable(owner_) {}
+
+        function setTrusted(address account, bool trusted) external onlyOwner {
+            isTrusted[account] = trusted;
+            emit TrustChanged(account, trusted);
+        }
+    }
+    ```
+
+    The `public` mapping creates an `isTrusted(address)` getter, which is exactly what the interface asks for. A trust list is useful when a team or a partner, not the vault owner, decides who's trusted.
+  </Step>
+
+  <Step title="Write an adapter for a score registry">
+    Most identity and reputation systems expose something richer than yes or no. An adapter turns that into the vault's yes or no.
+
+    ```solidity src/ScoreAdapter.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {IAgentIdentity} from "./IAgentIdentity.sol";
+
+    /// @notice Stand-in for any registry that scores addresses. Replace it with the real one's interface.
+    interface IScoreRegistry {
+        function scoreOf(address account) external view returns (uint256);
+    }
+
+    /// @notice Adapts a score registry to IAgentIdentity: trusted means a score at or above the minimum.
+    contract ScoreAdapter is IAgentIdentity {
+        IScoreRegistry public immutable registry;
+        uint256 public immutable minScore;
+
+        constructor(IScoreRegistry registry_, uint256 minScore_) {
+            registry = registry_;
+            minScore = minScore_;
+        }
+
+        function isTrusted(address account) external view returns (bool) {
+            return registry.scoreOf(account) >= minScore;
+        }
+    }
+    ```
+
+    `IScoreRegistry` is a stand-in. Replace it with the interface of the system you use, and change `isTrusted` to whatever rule fits it: a minimum score, a valid attestation, a credential that hasn't expired.
+
+    Keep adapters `view` and simple. The vault calls `isTrusted` on every payment, and if it reverts, the payment reverts.
+  </Step>
+
+  <Step title="Test both">
+    ```solidity test/IdentityHooks.t.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {Test} from "forge-std/Test.sol";
+    import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+    import {AgentVault} from "../src/AgentVault.sol";
+    import {TrustList} from "../src/TrustList.sol";
+    import {ScoreAdapter, IScoreRegistry} from "../src/ScoreAdapter.sol";
+
+    contract TestUSDT is ERC20 {
+        constructor() ERC20("Tether USD", "USDT") {}
+
+        function decimals() public pure override returns (uint8) {
+            return 6;
+        }
+
+        function mint(address to, uint256 amount) external {
+            _mint(to, amount);
+        }
+    }
+
+    contract TestScores is IScoreRegistry {
+        mapping(address => uint256) public scoreOf;
+
+        function setScore(address account, uint256 score) external {
+            scoreOf[account] = score;
+        }
+    }
+
+    contract IdentityHooksTest is Test {
+        TestUSDT usdt;
+        AgentVault vault;
+        address owner = makeAddr("owner");
+        address agent = makeAddr("agent");
+        address shop = makeAddr("shop");
+
+        function setUp() public {
+            usdt = new TestUSDT();
+            vault = new AgentVault(owner, agent, address(usdt), 10e6);
+            usdt.mint(address(vault), 100e6);
+            vm.prank(owner);
+            vault.setRecipientAllowed(shop, true);
+        }
+
+        function test_TrustListGatesPayments() public {
+            TrustList list = new TrustList(owner);
+            vm.prank(owner);
+            vault.setIdentity(address(list));
+
+            vm.prank(agent);
+            vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotTrusted.selector, shop));
+            vault.pay(shop, 1e6);
+
+            vm.prank(owner);
+            list.setTrusted(shop, true);
+            vm.prank(agent);
+            vault.pay(shop, 1e6);
+            assertEq(usdt.balanceOf(shop), 1e6);
+        }
+
+        function test_ScoreAdapterUsesThreshold() public {
+            TestScores scores = new TestScores();
+            ScoreAdapter adapter = new ScoreAdapter(scores, 50);
+            vm.prank(owner);
+            vault.setIdentity(address(adapter));
+
+            scores.setScore(shop, 49);
+            vm.prank(agent);
+            vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotTrusted.selector, shop));
+            vault.pay(shop, 1e6);
+
+            scores.setScore(shop, 50);
+            vm.prank(agent);
+            vault.pay(shop, 1e6);
+        }
+
+        function test_AllowlistStillApplies() public {
+            TrustList list = new TrustList(owner);
+            address stranger = makeAddr("stranger");
+            vm.startPrank(owner);
+            vault.setIdentity(address(list));
+            list.setTrusted(stranger, true);
+            vm.stopPrank();
+
+            vm.prank(agent);
+            vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotAllowed.selector, stranger));
+            vault.pay(stranger, 1e6);
+        }
+
+        function test_OwnerCanTurnHookOff() public {
+            TrustList list = new TrustList(owner);
+            vm.startPrank(owner);
+            vault.setIdentity(address(list));
+            vault.setIdentity(address(0));
+            vm.stopPrank();
+
+            vm.prank(agent);
+            vault.pay(shop, 1e6);
+        }
+    }
+    ```
+
+    ```bash
+    forge test --match-contract IdentityHooksTest
+    ```
+  </Step>
+
+  <Step title="Connect it to your vault">
+    {/* untested: not deployed on the live testnet because the test wallet was low on tBOT; the contracts pass the forge tests above */}
+
+    Deploy the trust list, add a recipient, then point the vault at it from the owner wallet:
+
+    ```bash
+    forge create src/TrustList.sol:TrustList --rpc-url bot_testnet --account uzo-dev --broadcast \
+      --constructor-args YOUR_OWNER_ADDRESS
+    cast send YOUR_TRUST_LIST_ADDRESS "setTrusted(address,bool)" YOUR_RECIPIENT_ADDRESS true \
+      --rpc-url bot_testnet --account uzo-dev
+    cast send YOUR_VAULT_ADDRESS "setIdentity(address)" YOUR_TRUST_LIST_ADDRESS \
+      --rpc-url bot_testnet --account uzo-dev
+    ```
+
+    To turn the check off, set the identity to `0x0000000000000000000000000000000000000000`.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+All four tests pass:
+
+```text Output
+[PASS] test_AllowlistStillApplies() (gas: 557964)
+[PASS] test_OwnerCanTurnHookOff() (gas: 595745)
+[PASS] test_ScoreAdapterUsesThreshold() (gas: 802608)
+[PASS] test_TrustListGatesPayments() (gas: 676921)
+Suite result: ok. 4 passed; 0 failed; 0 skipped
+```
+
+On testnet, run `vault-pay.ts` from [Agent vaults](/guides/ai-agents/agent-vaults) to a recipient that isn't trusted. It prints `Vault refused: RecipientNotTrusted` with the address.
+
+## Choose a source carefully
+
+The identity contract can stop every payment, so treat it as part of your security setup.
+
+- **Who controls it?** Whoever can change the source decides who your agent can pay. Prefer sources whose rules and admins you understand.
+- **Can it be upgraded?** If the source sits behind a proxy, its behavior can change without your vault changing. Read it before you trust it.
+- **What if it breaks?** If `isTrusted` starts reverting, the agent can't pay anyone. The owner can switch the hook off with `setIdentity(address(0))` and still withdraw at any time.
+- **Is it on BOT Chain?** The vault can only call contracts on the same chain. A source on another chain needs a bridge or an oracle to bring its data over.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Vault refused: RecipientNotTrusted">
+    The identity source returned `false` for that address. Check with `cast call YOUR_IDENTITY_ADDRESS "isTrusted(address)(bool)" THE_ADDRESS --rpc-url bot_testnet`.
+  </Accordion>
+  <Accordion title="Vault refused: RecipientNotAllowed, but the address is trusted">
+    The allowlist is checked first and still applies. Add the address with `setRecipientAllowed`.
+  </Accordion>
+  <Accordion title="Every payment reverts after setting the identity">
+    The identity address may not be a contract that implements `isTrusted`, or the adapter's registry call is reverting. Call `isTrusted` directly with `cast call` to see the error. Set the identity to `address(0)` while you fix it.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Security checklist" icon="shield" href="/guides/ai-agents/security-checklist">
+    Review your setup before real funds.
+  </Card>
+  <Card title="Spending limits" icon="gauge" href="/guides/ai-agents/spending-limits">
+    How the daily cap works.
+  </Card>
+</CardGroup>

@@ -5,4 +5,60 @@ description: "Check your AI agent's on-chain setup against a list of common risk
 icon: "shield"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Use this checklist to review an AI agent's on-chain setup before it handles real funds. Each item links to the guide that covers it.
+
+Assume two things will happen eventually: the model will be tricked into asking for something harmful, and the agent's server will be compromised. A good setup limits the damage of both.
+
+## Keys
+
+- [ ] The agent's key is **only** the vault's operator. It isn't the owner and holds no other funds. See [Agent vaults](/guides/ai-agents/agent-vaults).
+- [ ] The owner key is on a hardware wallet or a multisig, never on the agent's server.
+- [ ] Private keys are loaded from environment variables or a secrets manager, never written in code or committed. `.env` is in `.gitignore`.
+- [ ] The agent's address holds only enough native BOT for gas, with an alert when it runs low.
+- [ ] You've written down how to rotate the agent key with `setOperator`, and tried it on testnet.
+
+## Contract limits
+
+- [ ] Funds sit in a vault contract, not in the agent's wallet.
+- [ ] The daily limit is set in token units with the right decimals. 1 USDT is `1000000`. See [Spending limits](/guides/ai-agents/spending-limits).
+- [ ] The daily limit is no more than you can afford to lose twice in quick succession, because a calendar day lets the full limit be spent just before and just after 00:00 UTC.
+- [ ] Recipients are on an allowlist the owner controls. The agent can't add to it.
+- [ ] If you use an identity hook, you know who controls the source and whether it can be upgraded. See [Identity hooks](/guides/ai-agents/identity-hooks).
+- [ ] The contract has tests for every rule, and they pass.
+- [ ] The contract has been reviewed or audited before it holds meaningful funds. The examples in these guides aren't audited.
+- [ ] The contract is verified on BOTScan so anyone can read what it does. See [Verify contracts](/guides/deploy/verify/overview).
+
+## Tools
+
+- [ ] Each tool does one narrow thing. There's no tool that sends arbitrary transactions or calls arbitrary contracts. See [Tool calling](/guides/ai-agents/tool-calling).
+- [ ] Every input is validated in code with a schema, and amounts are parsed with fixed decimals.
+- [ ] Rules such as allowed recipients and maximum amounts live in code or config, not in the system prompt.
+- [ ] Every write is simulated before it's sent.
+- [ ] Tools return errors as data and never include secrets, stack traces or raw environment values in what they return.
+- [ ] Every transaction result includes a BOTScan link.
+- [ ] The agent loop has a step limit, such as `stepCountIs(8)`.
+
+## People
+
+- [ ] Payments above a threshold wait for a person. See [Human approval](/guides/ai-agents/human-approval).
+- [ ] The approval decision comes from your code and a person, never from the model.
+- [ ] Approval requests show the exact tool name, recipient and amount, and only authorized people can answer them.
+- [ ] Someone can pause the vault quickly, and knows how. Test `pause` and `withdraw` on testnet.
+
+## Inputs the model reads
+
+- [ ] You've listed every source of text the model reads: user messages, web pages, emails, documents, tool results. Any of them can carry injected instructions.
+- [ ] The agent doesn't get payment details, such as recipient addresses, from content it fetched itself. They come from the user or from your allowlist.
+- [ ] Tool results that include outside text are treated as data in the prompt, not instructions.
+
+## Monitoring
+
+- [ ] You watch the vault's `Paid` events and get an alert for unusual payments.
+- [ ] You log every tool call with its input and result, without logging keys.
+- [ ] You review the logs regularly, not only after something goes wrong.
+
+## Before mainnet
+
+- [ ] Everything above was tested on testnet first.
+- [ ] Mainnet addresses, such as USDT, come from [Contract addresses](/reference/contract-addresses) and were checked on BOTScan.
+- [ ] You start with a small balance and a low limit, then raise them as you gain confidence.

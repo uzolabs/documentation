@@ -4,4 +4,199 @@ description: "Your options for indexing BOT Chain data today, and what the plann
 icon: "database"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import Planned from "/snippets/status-planned.mdx";
+
+In this guide you choose how to collect BOT Chain events into your own database, and build a small indexer that keeps itself up to date from the BOTScan API.
+
+## Why indexing needs a plan on BOT Chain
+
+Most indexers read events with `eth_getLogs`. BOT Chain documents that method as disabled on its public RPC endpoints. In our tests it answered for bounded block ranges, but you shouldn't build production code on a method the chain says is off. See [Known limitations](/get-started/bot-chain/known-limitations#event-queries).
+
+That rules out pointing a standard indexing framework at the public RPC. You have these options today:
+
+| Option | Good for | Limits |
+| --- | --- | --- |
+| [Avoid indexing](#avoid-indexing-if-you-can) | Current state, your own transactions | No history |
+| [Poll the BOTScan API](#build-a-polling-indexer) | Small and medium apps, one or a few contracts | Third-party service, no published rate limits |
+| [Run your own node](#run-your-own-node) | Full history, high volume, any indexing framework | You operate the node |
+| [Uzo Index](#uzo-index) | Hosted indexed events | Planned, not live |
+
+## Avoid indexing if you can
+
+Many apps don't need an indexer at all:
+
+- **Read state, not events.** If the contract stores what you need, read it directly, and batch the reads with [Multicall3](/guides/data/multicall).
+- **Read your own receipts.** Events from a transaction you sent are in its receipt. Save them when the transaction confirms.
+- **Store a short history on chain.** A ring buffer of recent activity can replace an event query for a feed.
+
+[Events without getLogs](/guides/frontend/events-without-getlogs) shows each of these with code.
+
+## Build a polling indexer
+
+This indexer reads USDT `Transfer` events from the BOTScan API, a window of blocks at a time, and appends them to a file. It saves its progress, so each run starts where the last one stopped. Run it on a schedule, or in a loop with a pause.
+
+### Prerequisites
+
+- Node.js 22 or later.
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-indexer
+    cd bot-indexer
+    npm init -y
+    npm pkg set type=module
+    npm install viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Write the indexer">
+    ```ts indexer.ts
+    import { appendFile, readFile, writeFile } from "node:fs/promises";
+    import { createPublicClient, erc20Abi, formatUnits, http, parseEventLogs, type Hex } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const BOTSCAN = botChainTestnet.blockExplorers.default.url;
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { usdt } = getAddresses(botChainTestnet.id);
+    const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    const START_BLOCK = 25_399_000n; // Where to start the first time. Use your contract's deployment block.
+    const WINDOW = 5_000n; // Blocks per request. Keep it small enough to stay under 1,000 logs.
+    const CONFIRMATIONS = 12n; // Stay this many blocks behind the head. An example value; choose your own.
+    const STATE_FILE = "state.json";
+    const OUT_FILE = "transfers.jsonl";
+
+    type RawLog = { address: Hex; topics: (Hex | null)[]; data: Hex; blockNumber: Hex; transactionHash: Hex; transactionIndex: Hex; logIndex: Hex };
+
+    async function loadNextBlock(): Promise<bigint> {
+      try {
+        return BigInt(JSON.parse(await readFile(STATE_FILE, "utf8")).nextBlock);
+      } catch {
+        return START_BLOCK;
+      }
+    }
+
+    async function fetchLogs(fromBlock: bigint, toBlock: bigint): Promise<RawLog[]> {
+      const url = `${BOTSCAN}/api?module=logs&action=getLogs&address=${usdt}&topic0=${TRANSFER}&fromBlock=${fromBlock}&toBlock=${toBlock}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`BOTScan answered ${response.status}`);
+      const body = (await response.json()) as { status: string; message: string; result: RawLog[] | null };
+      if (body.result === null) throw new Error(body.message);
+      return body.result; // An empty array means no logs in this range.
+    }
+
+    // One pass: index every confirmed block since the last run, one window at a time.
+    const head = (await client.getBlockNumber()) - CONFIRMATIONS;
+    let from = await loadNextBlock();
+    while (from <= head) {
+      const to = from + WINDOW - 1n < head ? from + WINDOW - 1n : head;
+      const raw = await fetchLogs(from, to);
+      if (raw.length >= 1000) throw new Error(`Window ${from}-${to} hit the 1,000 log cap. Lower WINDOW.`);
+
+      const logs = parseEventLogs({
+        abi: erc20Abi,
+        eventName: "Transfer",
+        logs: raw.map((log) => ({ ...log, topics: log.topics.filter((t) => t !== null) as [Hex, ...Hex[]], blockHash: null, removed: false })),
+      });
+      const lines = logs.map((log) =>
+        JSON.stringify({ block: Number(log.blockNumber), tx: log.transactionHash, from: log.args.from, to: log.args.to, value: formatUnits(log.args.value, 6) }),
+      );
+      if (lines.length > 0) await appendFile(OUT_FILE, lines.join("\n") + "\n");
+
+      // Save progress only after the data is written, so a crash repeats a window instead of skipping one.
+      await writeFile(STATE_FILE, JSON.stringify({ nextBlock: String(to + 1n) }));
+      console.log(`Blocks ${from}-${to}: ${logs.length} transfers`);
+      from = to + 1n;
+    }
+    console.log(`Up to date at block ${head}`);
+    ```
+
+    The design choices:
+
+    - **Fixed block windows.** BOTScan returns at most 1,000 logs per request, and on 2026-10-02 its `offset` parameter didn't limit results. Small block ranges keep each answer complete. If a window hits the cap, the script stops instead of silently missing logs.
+    - **A checkpoint after each window.** `state.json` holds the next block to read. It's written after the data, so a crash means a window is read twice, never skipped. Make your writes idempotent, for example by using the transaction hash and log index as a key.
+    - **Confirmations.** The indexer stays behind the newest block so it doesn't record blocks that might still change. Pick the depth that matches how much risk your app can take.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx indexer.ts
+    ```
+
+    Run it again to pick up new blocks. To keep it running, call it from a scheduler such as cron, or wrap the body in a loop with a pause between passes.
+  </Step>
+</Steps>
+
+### Verify it worked
+
+On testnet on 2026-10-02, the first run read from block 25,399,000 to the head. The output ended with:
+
+```text Output
+Blocks 25424000-25428999: 2 transfers
+Blocks 25429000-25433999: 0 transfers
+Blocks 25434000-25436291: 0 transfers
+Up to date at block 25436291
+```
+
+`transfers.jsonl` held 10 transfers, one JSON object per line:
+
+```json transfers.jsonl
+{"block":25399504,"tx":"0x89f475b75e5d6ef569956600a58825ae0f6427ed14a19e6e15cec3485608e7a6","from":"0xD3EC267707BA234583645E75CE283Cf679dd94Fa","to":"0xEc526474F4F9De027942d5f7118A9613266B0C4c","value":"0.016208"}
+```
+
+A second run started from the checkpoint and read only the new blocks:
+
+```text Output
+Blocks 25436292-25436320: 0 transfers
+Up to date at block 25436320
+```
+
+### Take it further
+
+- Write to a database instead of a file, and save the checkpoint in the same transaction as the rows.
+- Add the retry helper from [Use the BOTScan API](/guides/data/explorer-api#retries).
+- Index more than one contract by looping over addresses, with a checkpoint for each.
+- Check important records against the chain. BOTScan is a third party, so confirm anything that moves money with a receipt from the RPC.
+
+## Run your own node
+
+A node you run has no public endpoint limits, so `eth_getLogs` works over any range you allow. Any indexing framework that reads from an RPC can then point at it.
+
+BOT Chain's node documentation links to a deployment repository that returned 404 when we checked on 2026-10-01. Ask BOT Chain for current node instructions before you plan around this option. See [Known limitations](/get-started/bot-chain/known-limitations#errors-in-bot-chains-docs).
+
+## Uzo Index
+
+<Planned />
+
+Uzo Index is a planned Uzo service for indexed BOT Chain events, so apps can query history without running their own indexer or node. It isn't live, and its endpoints and pricing haven't been published. Until it is, use the polling indexer above or your own node. Follow its status on the [Uzo Index](/infrastructure/index/overview) page.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Window hit the 1,000 log cap">
+    Lower `WINDOW`, then delete `state.json` and the output file and run again, or set `nextBlock` back to the start of the failed window.
+  </Accordion>
+  <Accordion title="No logs found">
+    BOTScan answers `{"message":"No logs found","result":[],"status":"0"}` when a range is empty. The script treats that as zero transfers. If every window is empty, check the contract address and `START_BLOCK`.
+  </Accordion>
+  <Accordion title="BOTScan answered 429 or 5xx">
+    BOTScan is busy or rate limiting you. Wait and run again. The checkpoint means nothing is lost.
+  </Accordion>
+  <Accordion title="The first run takes a long time">
+    Set `START_BLOCK` to your contract's deployment block, which BOTScan shows on the contract's page, instead of an early block.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Use the BOTScan API" icon="search" href="/guides/data/explorer-api">
+    Pagination, retries and decoding.
+  </Card>
+  <Card title="Events without getLogs" icon="radio-tower" href="/guides/frontend/events-without-getlogs">
+    Patterns that avoid indexing.
+  </Card>
+</CardGroup>

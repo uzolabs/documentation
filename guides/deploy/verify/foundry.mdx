@@ -5,4 +5,102 @@ description: "Verify a deployed contract on BOTScan using forge verify-contract 
 icon: "hammer"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you verify a contract that is already deployed on BOT Chain testnet, using `forge verify-contract` and BOTScan's Blockscout verifier.
+
+<TestnetOnly />
+
+## What you'll build
+
+A verified contract on BOTScan testnet. The example uses `Counter` from the [quickstart](/get-started/quickstart) and `Greeter` from [Deploy with Foundry](/guides/deploy/deploy-with-foundry), which has a constructor argument.
+
+## Prerequisites
+
+- The Foundry project you deployed from, unchanged since the deploy. See [Set up Foundry](/guides/environment/foundry).
+- The deployed contract address.
+
+<Tip>
+  If you deploy with `forge script`, add `--verify --verifier blockscout --verifier-url https://scan.bohr.life/api/` to verify in the same command. Use this page when the contract is already on chain.
+</Tip>
+
+## Steps
+
+<Steps>
+  <Step title="Verify a contract without constructor arguments">
+    ```bash
+    forge verify-contract 0xYOUR_COUNTER src/Counter.sol:Counter --chain 968 --verifier blockscout --verifier-url https://scan.bohr.life/api/ --watch
+    ```
+
+    - `--verifier blockscout` uses BOTScan's verifier. No API key is needed.
+    - The verifier URL must end in `/api/`, with the trailing slash.
+    - `--watch` waits for the result instead of returning straight away.
+
+    The output ends with:
+
+    ```text Output
+    Contract verification status:
+    Response: `OK`
+    Details: `Pending in queue`
+    Warning: Verification is still pending...; waiting 5 seconds before trying again (4 tries remaining)
+    Contract verification status:
+    Response: `OK`
+    Details: `Pass - Verified`
+    Contract successfully verified
+    ```
+  </Step>
+
+  <Step title="Verify a contract with constructor arguments">
+    Encode the arguments with `cast abi-encode` and pass them with `--constructor-args`:
+
+    ```bash
+    forge verify-contract 0xYOUR_GREETER src/Greeter.sol:Greeter --chain 968 --verifier blockscout --verifier-url https://scan.bohr.life/api/ --constructor-args $(cast abi-encode "constructor(string)" "Hello from forge create") --watch
+    ```
+
+    The values must be exactly the ones you deployed with. Forge prints the encoded `Constructor args` before it submits, so you can compare them with the deploy transaction's input on BOTScan.
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Open `https://scan.bohr.life/address/0xYOUR_CONTRACT#code`. You should see a verified badge, your source files and the compiler settings.
+
+## Mainnet
+
+<Warning>
+  Use the mainnet explorer URL and chain ID. Verifying is free, but double-check the address so you don't publish source against the wrong contract.
+</Warning>
+
+{/* untested: mainnet verification was not run for these docs */}
+
+```bash
+forge verify-contract 0xYOUR_CONTRACT src/Counter.sol:Counter --chain 677 --verifier blockscout --verifier-url https://scan.botchain.ai/api/ --watch
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="is already verified. Skipping verification.">
+    BOTScan already has the source, either from an earlier run or because it matched your bytecode to a contract verified before. Nothing else to do.
+  </Accordion>
+  <Accordion title="The verification fails with a bytecode mismatch">
+    Your local settings differ from the deploy. Check `solc_version`, `optimizer`, `optimizer_runs` and `evm_version = "cancun"` in `foundry.toml`, and the constructor arguments.
+  </Accordion>
+  <Accordion title="A 404 or HTML error page instead of a JSON response">
+    The verifier URL is wrong. Use `https://scan.bohr.life/api/` for testnet, with `/api/` and the trailing slash.
+  </Accordion>
+  <Accordion title="Forge asks for an Etherscan API key">
+    You left out `--verifier blockscout`. Forge defaults to Etherscan.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Verify in the BOTScan UI" icon="mouse-pointer-click" href="/guides/deploy/verify/botscan-ui">
+    Verify by hand when the CLI isn't an option.
+  </Card>
+  <Card title="Set up wagmi" icon="settings" href="/guides/frontend/wagmi-setup">
+    Call your verified contract from a web app.
+  </Card>
+</CardGroup>

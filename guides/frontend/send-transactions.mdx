@@ -4,4 +4,153 @@ description: "Write to contracts with useWriteContract, wait for receipts, handl
 icon: "send"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you send a contract transaction from React, wait for it to confirm, show clear errors and link the user to the transaction on BOTScan.
+
+<TestnetOnly />
+
+{/* untested: typechecked with wagmi 3.7.7; sending needs a wallet extension and was not clicked through in a browser. The guest book's sign function was called on testnet through the meta-transaction script. */}
+
+## What you'll build
+
+A form that signs a guest book contract on testnet. It moves through four states: waiting for the wallet, sent, confirmed or reverted, and failed.
+
+The guest book is deployed at `0x7962412A92E5553E66C794c3a352422DEB7BAc27` on testnet. Its `sign(string message)` function stores your message.
+
+## Prerequisites
+
+- A React app with wagmi set up and a wallet connected. See [Set up wagmi](/guides/frontend/wagmi-setup) and [Connect a wallet](/guides/frontend/connect-wallet).
+- A little testnet BOT for gas. See [Get testnet BOT](/get-started/bot-chain/get-testnet-tokens).
+
+## Steps
+
+<Steps>
+  <Step title="Write the component">
+    ```tsx src/SignGuestBook.tsx
+    import { useState } from "react";
+    import { BaseError, UserRejectedRequestError, parseAbi } from "viem";
+    import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const GUEST_BOOK = "0x7962412A92E5553E66C794c3a352422DEB7BAc27";
+    const guestBookAbi = parseAbi(["function sign(string message)"]);
+
+    function errorMessage(error: Error) {
+      if (error instanceof BaseError) {
+        if (error.walk((e) => e instanceof UserRejectedRequestError)) return "You rejected the request.";
+        return error.shortMessage;
+      }
+      return error.message;
+    }
+
+    export function SignGuestBook() {
+      const [message, setMessage] = useState("Hello from wagmi");
+      const write = useWriteContract();
+      const receipt = useWaitForTransactionReceipt({ hash: write.data, chainId: botChainTestnet.id });
+
+      return (
+        <div>
+          <input value={message} onChange={(e) => setMessage(e.target.value)} />
+          <button
+            disabled={write.isPending || receipt.isLoading}
+            onClick={() =>
+              write.mutate({
+                address: GUEST_BOOK,
+                abi: guestBookAbi,
+                functionName: "sign",
+                args: [message],
+                chainId: botChainTestnet.id,
+              })
+            }
+          >
+            {write.isPending ? "Confirm in wallet..." : "Sign"}
+          </button>
+
+          {write.data && (
+            <p>
+              Sent:{" "}
+              <a href={`${botChainTestnet.blockExplorers?.default.url}/tx/${write.data}`} target="_blank" rel="noreferrer">
+                view on BOTScan
+              </a>
+            </p>
+          )}
+          {receipt.isLoading && <p>Waiting for confirmation...</p>}
+          {receipt.data?.status === "success" && <p>Confirmed in block {receipt.data.blockNumber.toString()}.</p>}
+          {receipt.data?.status === "reverted" && <p>The transaction reverted.</p>}
+          {write.error && <p>{errorMessage(write.error)}</p>}
+          {receipt.error && <p>{errorMessage(receipt.error)}</p>}
+        </div>
+      );
+    }
+    ```
+  </Step>
+
+  <Step title="Understand the flow">
+    - `write.mutate(...)` asks the wallet to sign and send. While the popup is open, `write.isPending` is `true`.
+    - When the wallet sends it, `write.data` is the transaction hash. That's the moment to show the BOTScan link.
+    - `useWaitForTransactionReceipt` polls the RPC until the transaction is in a block. Blocks are fast, so this usually takes a few seconds.
+    - A receipt with `status: "reverted"` means the transaction was mined but failed. The user still paid gas.
+    - Passing `chainId` makes wagmi refuse to send if the wallet is on another network, instead of sending to the wrong chain.
+  </Step>
+
+  <Step title="Render it">
+    ```tsx src/App.tsx
+    import { ConnectWallet } from "./ConnectWallet";
+    import { SignGuestBook } from "./SignGuestBook";
+
+    export function App() {
+      return (
+        <>
+          <ConnectWallet />
+          <SignGuestBook />
+        </>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+1. Click **Sign** and approve in the wallet.
+2. You see **Sent: view on BOTScan**, then **Confirmed in block** followed by a number.
+3. Open the BOTScan link. The transaction shows **Success** and the `sign` method.
+
+## Handle errors
+
+The most common errors, and what `errorMessage` shows:
+
+| Situation | What the user sees |
+| --- | --- |
+| The user rejects the popup | `You rejected the request.` |
+| The wallet is on another network | A chain mismatch message from wagmi. Show the switch button from [Connect a wallet](/guides/frontend/connect-wallet). |
+| Not enough BOT for gas | The wallet's insufficient funds message. |
+| The contract reverts during gas estimation | The revert reason, if the contract gives one. |
+
+`shortMessage` is a one-line summary that is safe to show users. Log the full error to the console for debugging.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The transaction is stuck as pending">
+    BOT Chain needs a gas price of at least 20 gwei. Most wallets read it from the RPC, but if yours set a lower price by hand, the transaction won't be picked up. Send it again with the default gas settings.
+  </Accordion>
+  <Accordion title="The receipt never arrives">
+    The public RPC sometimes drops requests. wagmi retries, but if it gives up, open the BOTScan link to check the status, and call `receipt.refetch()` to try again.
+  </Accordion>
+  <Accordion title="Simulate before sending">
+    To catch reverts before the wallet opens, call `useSimulateContract` with the same arguments and pass `simulation.data.request` to `write.mutate`. The button stays disabled until the simulation succeeds.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Work without eth_getLogs" icon="radio-tower" href="/guides/frontend/events-without-getlogs">
+    Show activity without event queries.
+  </Card>
+  <Card title="Gasless transactions" icon="fuel" href="/guides/gasless/overview">
+    Let users act without holding BOT.
+  </Card>
+</CardGroup>

@@ -4,4 +4,536 @@ description: "Hold agent funds in a contract where the owner sets the rules and 
 icon: "vault"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you deploy a vault that holds USDT for an AI agent, give the agent a key that can only pay inside the vault's rules, and send a payment from it.
+
+<TestnetOnly />
+
+## How it works
+
+The vault has two roles, and they use different keys.
+
+| Role | Who holds the key | What it can do |
+| --- | --- | --- |
+| **Owner** | You, ideally on a hardware wallet or multisig | Set the daily limit and the recipient allowlist, change the operator, pause, unpause and withdraw. |
+| **Operator** | The agent's server | Call `pay(to, amount)`. Nothing else. |
+
+Every `pay` call must pass four checks in the contract:
+
+1. The vault isn't paused.
+2. The recipient is on the allowlist.
+3. If an identity contract is set, it says the recipient is trusted. See [Identity hooks](/guides/ai-agents/identity-hooks).
+4. The amount fits in what's left of today's limit. The day resets at 00:00 UTC. See [Spending limits](/guides/ai-agents/spending-limits).
+
+If the agent's key leaks, the attacker gets the same limits the agent had. You pause the vault, withdraw the funds and set a new operator.
+
+## What you'll build
+
+- `AgentVault`, a contract built on OpenZeppelin's `Ownable`, `Pausable`, `ReentrancyGuard` and `SafeERC20`.
+- A Foundry test suite for its rules.
+- `vault-pay.ts`, a viem script that pays from the vault with the agent's key and prints the vault's reason when it refuses.
+
+<Warning>
+This contract isn't audited. Use it to learn the pattern, and get it reviewed before it holds meaningful funds.
+</Warning>
+
+## Prerequisites
+
+- A Foundry project from [Set up Foundry](/guides/environment/foundry), with the `uzo-dev` keystore and some tBOT.
+- Some testnet USDT in that wallet. Swap tBOT for it on [BDEX V2](/guides/defi/swaps/bdex-v2). Testnet USDT is `0x75edC9335175Fc0552D51D48439F229c10420fe3` and has 6 decimals.
+- The `bot-defi` project and `.env` file from [Wrap BOT](/guides/defi/tokens/wrap-bot), for the script.
+
+## Steps
+
+<Steps>
+  <Step title="Install OpenZeppelin">
+    In your Foundry project:
+
+    ```bash
+    forge install OpenZeppelin/openzeppelin-contracts
+    ```
+
+    Add `@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/` to `remappings` in `foundry.toml` if it isn't there.
+  </Step>
+
+  <Step title="Add the identity interface">
+    The vault can ask another contract whether a recipient is trusted. This interface is all it needs to know about that contract.
+
+    ```solidity src/IAgentIdentity.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    interface IAgentIdentity {
+        function isTrusted(address account) external view returns (bool);
+    }
+    ```
+  </Step>
+
+  <Step title="Write the vault">
+    ```solidity src/AgentVault.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+    import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+    import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+    import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+    import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+    import {IAgentIdentity} from "./IAgentIdentity.sol";
+
+    /// @notice Holds USDT for an AI agent. The agent key is the operator and can only call `pay`.
+    /// The owner sets the rules, can pause and can withdraw at any time. Not audited.
+    contract AgentVault is Ownable, Pausable, ReentrancyGuard {
+        using SafeERC20 for IERC20;
+
+        IERC20 public immutable usdt;
+        address public operator;
+        /// @notice Most USDT (6 decimals) the operator can send per UTC day.
+        uint256 public dailyLimit;
+        /// @notice Optional. When set, `pay` also requires `isTrusted(to)`.
+        IAgentIdentity public identity;
+
+        mapping(address => bool) public isRecipientAllowed;
+
+        uint256 private _spentDay;
+        uint256 private _spent;
+
+        event Paid(address indexed to, uint256 amount);
+        event OperatorChanged(address indexed operator);
+        event DailyLimitChanged(uint256 limit);
+        event RecipientAllowed(address indexed account, bool allowed);
+        event IdentityChanged(address indexed identity);
+
+        error NotOperator();
+        error ZeroAddress();
+        error ZeroAmount();
+        error RecipientNotAllowed(address to);
+        error RecipientNotTrusted(address to);
+        error DailyLimitExceeded(uint256 amount, uint256 remaining);
+
+        modifier onlyOperator() {
+            if (msg.sender != operator) revert NotOperator();
+            _;
+        }
+
+        constructor(address owner_, address operator_, address usdt_, uint256 dailyLimit_) Ownable(owner_) {
+            if (operator_ == address(0) || usdt_ == address(0)) revert ZeroAddress();
+            operator = operator_;
+            usdt = IERC20(usdt_);
+            dailyLimit = dailyLimit_;
+        }
+
+        // Operator
+
+        function pay(address to, uint256 amount) external nonReentrant onlyOperator whenNotPaused {
+            if (!isRecipientAllowed[to]) revert RecipientNotAllowed(to);
+            if (address(identity) != address(0) && !identity.isTrusted(to)) revert RecipientNotTrusted(to);
+            _spend(amount);
+            usdt.safeTransfer(to, amount);
+            emit Paid(to, amount);
+        }
+
+        // Owner
+
+        function setOperator(address newOperator) external onlyOwner {
+            if (newOperator == address(0)) revert ZeroAddress();
+            operator = newOperator;
+            emit OperatorChanged(newOperator);
+        }
+
+        function setDailyLimit(uint256 newLimit) external onlyOwner {
+            dailyLimit = newLimit;
+            emit DailyLimitChanged(newLimit);
+        }
+
+        function setRecipientAllowed(address account, bool allowed) external onlyOwner {
+            if (account == address(0)) revert ZeroAddress();
+            isRecipientAllowed[account] = allowed;
+            emit RecipientAllowed(account, allowed);
+        }
+
+        /// @notice Set to address(0) to turn the identity check off.
+        function setIdentity(address newIdentity) external onlyOwner {
+            identity = IAgentIdentity(newIdentity);
+            emit IdentityChanged(newIdentity);
+        }
+
+        function pause() external onlyOwner {
+            _pause();
+        }
+
+        function unpause() external onlyOwner {
+            _unpause();
+        }
+
+        /// @notice Sends tokens back to the owner. Works while paused.
+        function withdraw(address token, uint256 amount) external onlyOwner {
+            IERC20(token).safeTransfer(owner(), amount);
+        }
+
+        // Views
+
+        /// @notice The UTC day number: whole days since 1 January 1970.
+        function today() public view returns (uint256) {
+            return block.timestamp / 1 days;
+        }
+
+        function spentToday() public view returns (uint256) {
+            return _spentDay == today() ? _spent : 0;
+        }
+
+        function remainingToday() public view returns (uint256) {
+            uint256 spent = spentToday();
+            return spent >= dailyLimit ? 0 : dailyLimit - spent;
+        }
+
+        // Internal
+
+        function _spend(uint256 amount) private {
+            if (amount == 0) revert ZeroAmount();
+            uint256 day = today();
+            if (_spentDay != day) {
+                _spentDay = day;
+                _spent = 0;
+            }
+            uint256 remaining = _spent >= dailyLimit ? 0 : dailyLimit - _spent;
+            if (amount > remaining) revert DailyLimitExceeded(amount, remaining);
+            _spent += amount;
+        }
+    }
+    ```
+
+    A few choices worth knowing:
+
+    - `pay` is the only function the operator can call. It runs every check before it moves any tokens.
+    - Errors carry data. `DailyLimitExceeded(amount, remaining)` tells the agent exactly how much it can still send, so your tool can pass that back to the model.
+    - `withdraw` has no `whenNotPaused`, so the owner can always get funds out.
+    - `usdt` is `immutable`. To hold a different token, deploy another vault.
+  </Step>
+
+  <Step title="Test the rules">
+    Save this test file, then run it.
+
+    <Accordion title="test/AgentVault.t.sol">
+      ```solidity test/AgentVault.t.sol
+      // SPDX-License-Identifier: MIT
+      pragma solidity ^0.8.28;
+
+      import {Test} from "forge-std/Test.sol";
+      import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+      import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+      import {AgentVault} from "../src/AgentVault.sol";
+      import {IAgentIdentity} from "../src/IAgentIdentity.sol";
+
+      contract MockUSDT is ERC20 {
+          constructor() ERC20("Tether USD", "USDT") {}
+
+          function decimals() public pure override returns (uint8) {
+              return 6;
+          }
+
+          function mint(address to, uint256 amount) external {
+              _mint(to, amount);
+          }
+      }
+
+      contract MockIdentity is IAgentIdentity {
+          mapping(address => bool) public isTrusted;
+
+          function setTrusted(address account, bool trusted) external {
+              isTrusted[account] = trusted;
+          }
+      }
+
+      contract AgentVaultTest is Test {
+          MockUSDT usdt;
+          AgentVault vault;
+          address owner = makeAddr("owner");
+          address agent = makeAddr("agent");
+          address shop = makeAddr("shop");
+          address stranger = makeAddr("stranger");
+
+          function setUp() public {
+              usdt = new MockUSDT();
+              vault = new AgentVault(owner, agent, address(usdt), 10e6); // 10 USDT per day
+              usdt.mint(address(vault), 100e6);
+              vm.prank(owner);
+              vault.setRecipientAllowed(shop, true);
+          }
+
+          function test_PayWithinLimit() public {
+              vm.prank(agent);
+              vault.pay(shop, 4e6);
+              assertEq(usdt.balanceOf(shop), 4e6);
+              assertEq(vault.remainingToday(), 6e6);
+          }
+
+          function test_RevertWhen_OverDailyLimit() public {
+              vm.startPrank(agent);
+              vault.pay(shop, 8e6);
+              vm.expectRevert(abi.encodeWithSelector(AgentVault.DailyLimitExceeded.selector, 3e6, 2e6));
+              vault.pay(shop, 3e6);
+              vm.stopPrank();
+          }
+
+          function test_LimitResetsAtUtcMidnight() public {
+              vm.warp(1_790_000_000);
+              vm.prank(agent);
+              vault.pay(shop, 10e6);
+              assertEq(vault.remainingToday(), 0);
+
+              vm.warp((block.timestamp / 1 days + 1) * 1 days); // 00:00 UTC the next day
+              assertEq(vault.remainingToday(), 10e6);
+              vm.prank(agent);
+              vault.pay(shop, 10e6);
+          }
+
+          function test_RevertWhen_RecipientNotAllowed() public {
+              vm.prank(agent);
+              vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotAllowed.selector, stranger));
+              vault.pay(stranger, 1e6);
+          }
+
+          function test_RevertWhen_CallerIsNotOperator() public {
+              vm.prank(stranger);
+              vm.expectRevert(AgentVault.NotOperator.selector);
+              vault.pay(shop, 1e6);
+          }
+
+          function test_PauseStopsAgentButNotOwner() public {
+              vm.prank(owner);
+              vault.pause();
+
+              vm.prank(agent);
+              vm.expectRevert(Pausable.EnforcedPause.selector);
+              vault.pay(shop, 1e6);
+
+              vm.prank(owner);
+              vault.withdraw(address(usdt), 100e6);
+              assertEq(usdt.balanceOf(owner), 100e6);
+          }
+
+          function test_IdentityHook() public {
+              MockIdentity identity = new MockIdentity();
+              vm.prank(owner);
+              vault.setIdentity(address(identity));
+
+              vm.prank(agent);
+              vm.expectRevert(abi.encodeWithSelector(AgentVault.RecipientNotTrusted.selector, shop));
+              vault.pay(shop, 1e6);
+
+              identity.setTrusted(shop, true);
+              vm.prank(agent);
+              vault.pay(shop, 1e6);
+              assertEq(usdt.balanceOf(shop), 1e6);
+          }
+      }
+      ```
+    </Accordion>
+
+    ```bash
+    forge test --match-contract AgentVaultTest
+    ```
+
+    All seven tests should pass:
+
+    ```text Output
+    [PASS] test_IdentityHook() (gas: 476568)
+    [PASS] test_LimitResetsAtUtcMidnight() (gas: 226594)
+    [PASS] test_PauseStopsAgentButNotOwner() (gas: 137768)
+    [PASS] test_PayWithinLimit() (gas: 127517)
+    [PASS] test_RevertWhen_CallerIsNotOperator() (gas: 43154)
+    [PASS] test_RevertWhen_OverDailyLimit() (gas: 155510)
+    [PASS] test_RevertWhen_RecipientNotAllowed() (gas: 48503)
+    ```
+  </Step>
+
+  <Step title="Create the agent's key">
+    The agent needs its own key, separate from yours. Create one and import it into a keystore:
+
+    ```bash
+    cast wallet new
+    cast wallet import uzo-agent --interactive
+    ```
+
+    Paste the new private key when asked. Note the agent's address. Never reuse your owner key as the operator.
+  </Step>
+
+  <Step title="Deploy the vault">
+    {/* untested: not deployed on the live testnet because the test wallet was low on tBOT; this flow ran on a local anvil fork of testnet on 2026-10-02 */}
+
+    The constructor takes the owner, the operator, the token and the daily limit in token units. `1000000` is 1 USDT.
+
+    ```bash
+    forge create src/AgentVault.sol:AgentVault \
+      --rpc-url bot_testnet --account uzo-dev --broadcast \
+      --constructor-args YOUR_OWNER_ADDRESS YOUR_AGENT_ADDRESS 0x75edC9335175Fc0552D51D48439F229c10420fe3 1000000
+    ```
+
+    Save the `Deployed to` address. To verify the contract, see [Verify with Foundry](/guides/deploy/verify/foundry).
+  </Step>
+
+  <Step title="Fund the vault and allow a recipient">
+    Run these from the owner wallet. The first sends 0.02 USDT to the vault. The second lets the agent pay one address. The third gives the agent a little tBOT for gas.
+
+    ```bash
+    cast send 0x75edC9335175Fc0552D51D48439F229c10420fe3 "transfer(address,uint256)" YOUR_VAULT_ADDRESS 20000 \
+      --rpc-url bot_testnet --account uzo-dev
+    cast send YOUR_VAULT_ADDRESS "setRecipientAllowed(address,bool)" YOUR_RECIPIENT_ADDRESS true \
+      --rpc-url bot_testnet --account uzo-dev
+    cast send YOUR_AGENT_ADDRESS --value 0.01ether \
+      --rpc-url bot_testnet --account uzo-dev
+    ```
+
+    Check what's left to spend today:
+
+    ```bash
+    cast call YOUR_VAULT_ADDRESS "remainingToday()(uint256)" --rpc-url bot_testnet
+    ```
+  </Step>
+
+  <Step title="Pay from the agent">
+    In your `bot-defi` project, add these to `.env`:
+
+    ```bash .env
+    AGENT_PRIVATE_KEY=0xTheAgentPrivateKey
+    VAULT=YOUR_VAULT_ADDRESS
+    RECIPIENT=YOUR_RECIPIENT_ADDRESS
+    ```
+
+    ```ts vault-pay.ts
+    import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, formatUnits, getAddress, http, parseAbi, parseUnits } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const VAULT = getAddress(process.env.VAULT as string);
+    const to = getAddress(process.env.RECIPIENT as string);
+    const amount = parseUnits(process.env.AMOUNT ?? "1", 6); // USDT has 6 decimals
+
+    const vaultAbi = parseAbi([
+      "function pay(address to, uint256 amount)",
+      "function remainingToday() view returns (uint256)",
+      "function isRecipientAllowed(address account) view returns (bool)",
+      "function paused() view returns (bool)",
+      "error NotOperator()",
+      "error ZeroAmount()",
+      "error RecipientNotAllowed(address to)",
+      "error RecipientNotTrusted(address to)",
+      "error DailyLimitExceeded(uint256 amount, uint256 remaining)",
+      "error EnforcedPause()",
+    ]);
+
+    // The agent's key. It is the vault's operator, not its owner.
+    const account = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+
+    const [remaining, allowed, paused] = await Promise.all([
+      publicClient.readContract({ address: VAULT, abi: vaultAbi, functionName: "remainingToday" }),
+      publicClient.readContract({ address: VAULT, abi: vaultAbi, functionName: "isRecipientAllowed", args: [to] }),
+      publicClient.readContract({ address: VAULT, abi: vaultAbi, functionName: "paused" }),
+    ]);
+    console.log(`Left today: ${formatUnits(remaining, 6)} USDT. Recipient allowed: ${allowed}. Paused: ${paused}`);
+
+    try {
+      const { request } = await publicClient.simulateContract({ account, address: VAULT, abi: vaultAbi, functionName: "pay", args: [to, amount] });
+      const hash = await walletClient.writeContract(request);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      console.log(`Paid ${formatUnits(amount, 6)} USDT, ${receipt.status}: ${botChainTestnet.blockExplorers.default.url}/tx/${hash}`);
+    } catch (error) {
+      // The vault refused. Show its reason, for example DailyLimitExceeded.
+      const revert = error instanceof BaseError ? error.walk((e) => e instanceof ContractFunctionRevertedError) : null;
+      if (revert instanceof ContractFunctionRevertedError) {
+        console.log(`Vault refused: ${revert.data?.errorName}`, revert.data?.args ?? []);
+      } else {
+        throw error;
+      }
+    }
+    ```
+
+    The script reads the vault's state first, then simulates `pay`. If the vault would refuse, the simulation fails, nothing is sent, and you see the contract's error name and arguments.
+
+    ```bash
+    AMOUNT=0.006 npx tsx --env-file=.env vault-pay.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+This run used a vault with a 0.01 USDT daily limit, on a local fork of testnet. It paid 0.006 USDT, tried the same payment again, tried an address that wasn't allowed, then tried again after the owner paused the vault:
+
+```text Output
+Left today: 0.01 USDT. Recipient allowed: true. Paused: false
+Paid 0.006 USDT, success: https://scan.bohr.life/tx/0x002a4738b169799ddc24b39354ecd25da515a21e686ad663ce8bdc997fb943e8
+
+Left today: 0.004 USDT. Recipient allowed: true. Paused: false
+Vault refused: DailyLimitExceeded [ 6000n, 4000n ]
+
+Left today: 0.004 USDT. Recipient allowed: false. Paused: false
+Vault refused: RecipientNotAllowed [ '0x90F79bf6EB2c4f870365E785982E1f101E93b906' ]
+
+Left today: 0.004 USDT. Recipient allowed: true. Paused: true
+Vault refused: EnforcedPause []
+```
+
+The transaction hash above is from the fork, so it isn't on BOTScan. On testnet, your link opens the payment, and the vault's **Logs** tab shows a `Paid` event.
+
+<Tip>
+To try the vault without spending tBOT, run it against a local fork with `anvil --fork-url https://rpc.bohr.life`. Point `--rpc-url` and the viem transport at `http://127.0.0.1:8545`, and use `cast rpc anvil_impersonateAccount` to move USDT from a funded testnet address.
+</Tip>
+
+## Manage the vault as the owner
+
+```bash
+# Stop the agent at once
+cast send YOUR_VAULT_ADDRESS "pause()" --rpc-url bot_testnet --account uzo-dev
+
+# Take USDT back to the owner. Works while paused.
+cast send YOUR_VAULT_ADDRESS "withdraw(address,uint256)" 0x75edC9335175Fc0552D51D48439F229c10420fe3 20000 \
+  --rpc-url bot_testnet --account uzo-dev
+
+# Replace a leaked or retired agent key
+cast send YOUR_VAULT_ADDRESS "setOperator(address)" NEW_AGENT_ADDRESS --rpc-url bot_testnet --account uzo-dev
+
+# Change the daily limit to 5 USDT
+cast send YOUR_VAULT_ADDRESS "setDailyLimit(uint256)" 5000000 --rpc-url bot_testnet --account uzo-dev
+
+# Let the agent run again
+cast send YOUR_VAULT_ADDRESS "unpause()" --rpc-url bot_testnet --account uzo-dev
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Vault refused: NotOperator">
+    The key in `AGENT_PRIVATE_KEY` isn't the vault's operator. Check with `cast call YOUR_VAULT_ADDRESS "operator()(address)" --rpc-url bot_testnet`. If you deployed with the owner as operator by mistake, call `setOperator` from the owner.
+  </Accordion>
+  <Accordion title="Vault refused: RecipientNotAllowed">
+    The owner hasn't allowed that address. Run `setRecipientAllowed` with `true` from the owner wallet. Addresses are compared exactly, so make sure it's the one you meant.
+  </Accordion>
+  <Accordion title="Vault refused: DailyLimitExceeded">
+    The second argument is what's left today, in token units. Wait until 00:00 UTC, send less, or raise the limit with `setDailyLimit`.
+  </Accordion>
+  <Accordion title="Vault refused: EnforcedPause">
+    The owner paused the vault. Call `unpause` from the owner wallet when you're ready.
+  </Accordion>
+  <Accordion title="The simulation fails with a token error">
+    The vault doesn't hold enough USDT, so the token's `transfer` reverts. Check with `cast call 0x75edC9335175Fc0552D51D48439F229c10420fe3 "balanceOf(address)(uint256)" YOUR_VAULT_ADDRESS --rpc-url bot_testnet` and send more.
+  </Accordion>
+  <Accordion title="insufficient funds for gas">
+    The agent's address pays gas for `pay`. Send it a little tBOT from the owner wallet.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Spending limits" icon="gauge" href="/guides/ai-agents/spending-limits">
+    How the daily cap and allowlist work.
+  </Card>
+  <Card title="Tool calling" icon="wrench" href="/guides/ai-agents/tool-calling">
+    Let a model call tools that use this vault.
+  </Card>
+</CardGroup>

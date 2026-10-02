@@ -4,4 +4,224 @@ description: "Give an AI agent BOT Chain tools with the AI SDK and zod, simulate
 icon: "wrench"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you give a model two BOT Chain tools, one that reads balances and one that sends USDT, and run an agent that uses them on testnet.
+
+<TestnetOnly />
+
+## What you'll build
+
+- `tools.ts` with two [AI SDK](https://ai-sdk.dev) tools whose inputs are checked by [zod](https://zod.dev) schemas.
+- `agent.ts`, a script that sends a request to Claude and lets it call those tools.
+
+The `sendUsdt` tool follows four rules that apply to any tool that moves funds:
+
+1. **Check input in code.** The schema rejects badly shaped input. The tool then applies hard rules: allowed recipients, a per-transfer cap, enough balance.
+2. **Simulate before sending.** A failed simulation costs nothing and tells you why.
+3. **Return errors as data.** The tool returns `{ ok: false, error }` instead of throwing, so the model can explain the problem to the user.
+4. **Return a BOTScan link.** People can check what happened without trusting the model's summary.
+
+## Prerequisites
+
+- Node.js 22 or later.
+- An [Anthropic API key](https://console.anthropic.com). Any provider the AI SDK supports works if you change the model line.
+- A testnet key for the agent, with a little tBOT for gas and some testnet USDT. Get USDT by swapping on [BDEX V2](/guides/defi/swaps/bdex-v2).
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir bot-agent
+    cd bot-agent
+    npm init -y
+    npm pkg set type=module
+    npm install ai @ai-sdk/anthropic zod viem @uzolabs/sdk
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Add your keys and rules">
+    `AGENT_ALLOWED_RECIPIENTS` is a comma separated list of addresses the agent may pay.
+
+    ```bash .env
+    ANTHROPIC_API_KEY=your-anthropic-key
+    AGENT_PRIVATE_KEY=0xYourTestnetAgentKey
+    AGENT_ALLOWED_RECIPIENTS=0xFirstAddress,0xSecondAddress
+    ```
+
+    <Warning>
+      Use a key that only holds testnet funds, and add `.env` to `.gitignore` before your first commit.
+    </Warning>
+  </Step>
+
+  <Step title="Write the tools">
+    ```ts tools.ts
+    import { tool } from "ai";
+    import { z } from "zod";
+    import { BaseError, createPublicClient, createWalletClient, erc20Abi, formatEther, formatUnits, getAddress, http, isAddress, parseUnits } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+
+    const account = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+    const { usdt } = getAddresses(botChainTestnet.id);
+    const explorer = botChainTestnet.blockExplorers.default.url;
+
+    // Rules the model cannot change. Keep them in code or config, never in the prompt.
+    const ALLOWED_RECIPIENTS = new Set((process.env.AGENT_ALLOWED_RECIPIENTS ?? "").split(",").filter((a) => isAddress(a)).map((a) => getAddress(a)));
+    const MAX_USDT_PER_TRANSFER = parseUnits("1", 6);
+
+    export const getBalances = tool({
+      description: "Get the agent wallet's tBOT and USDT balances on BOT Chain testnet.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const [native, usdtBalance] = await Promise.all([
+          publicClient.getBalance({ address: account.address }),
+          publicClient.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [account.address] }),
+        ]);
+        return { address: account.address, tBOT: formatEther(native), USDT: formatUnits(usdtBalance, 6) };
+      },
+    });
+
+    export const sendUsdt = tool({
+      description: "Send USDT from the agent wallet to an approved recipient on BOT Chain testnet.",
+      inputSchema: z.object({
+        to: z.string().describe("Recipient address, 0x followed by 40 hex characters"),
+        amount: z.string().regex(/^\d+(\.\d{1,6})?$/).describe("Amount in USDT, for example 0.5"),
+      }),
+      execute: async ({ to, amount }) => {
+        // 1. Check the input against hard rules. Return errors as data so the model can explain them.
+        if (!isAddress(to)) return { ok: false, error: "Not a valid address." };
+        const recipient = getAddress(to);
+        if (!ALLOWED_RECIPIENTS.has(recipient)) return { ok: false, error: "Recipient is not on the allowlist." };
+        const value = parseUnits(amount, 6);
+        if (value === 0n || value > MAX_USDT_PER_TRANSFER) return { ok: false, error: "Amount must be above 0 and at most 1 USDT." };
+        const balance = await publicClient.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
+        if (value > balance) return { ok: false, error: `Not enough USDT. Balance: ${formatUnits(balance, 6)}` };
+
+        // 2. Simulate first. A revert here costs nothing.
+        let request;
+        try {
+          ({ request } = await publicClient.simulateContract({
+            account,
+            address: usdt,
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [recipient, value],
+          }));
+        } catch (error) {
+          const reason = error instanceof BaseError ? error.shortMessage : String(error);
+          return { ok: false, error: `Simulation failed: ${reason.replace(/\s+/g, " ")}` };
+        }
+
+        // 3. Send and wait for the receipt. Always hand back a BOTScan link.
+        const hash = await walletClient.writeContract(request);
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        return { ok: receipt.status === "success", hash, explorerUrl: `${explorer}/tx/${hash}` };
+      },
+    });
+    ```
+
+    The rules live in code and environment variables, never in the prompt. Whatever the model is told or tricked into asking for, `sendUsdt` won't pay an address outside the list or more than 1 USDT at once.
+
+    The zod `describe` text is sent to the model as part of the tool definition. Write it for the model: say what the field is and give an example.
+  </Step>
+
+  <Step title="Write the agent">
+    ```ts agent.ts
+    import { anthropic } from "@ai-sdk/anthropic";
+    import { generateText, stepCountIs } from "ai";
+    import { getBalances, sendUsdt } from "./tools.ts";
+
+    const result = await generateText({
+      model: anthropic("claude-sonnet-5-5"),
+      system: [
+        "You manage a USDT wallet on BOT Chain testnet.",
+        "Check the balance before you send. Only send to addresses the user gives you.",
+        "If a tool returns an error, explain it and do not retry.",
+        "After a payment, give the amount, the recipient and the BOTScan link.",
+      ].join("\n"),
+      tools: { getBalances, sendUsdt },
+      stopWhen: stepCountIs(8), // At most 8 model steps per request
+      prompt: process.argv[2] ?? "What's my balance?",
+    });
+
+    for (const step of result.steps) {
+      for (const call of step.toolCalls) console.log(`> ${call.toolName} ${JSON.stringify(call.input)}`);
+      for (const output of step.toolResults) console.log(`< ${JSON.stringify(output.output)}`);
+    }
+    console.log(result.text);
+    ```
+
+    `generateText` runs a loop: the model asks for a tool, the SDK runs it and sends back the result, and the model continues. `stopWhen: stepCountIs(8)` ends the loop after 8 steps, so a confused model can't call tools forever.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env agent.ts "Check my balance, then send 0.001 USDT to 0xFirstAddress"
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+{/* untested: the real Claude call wasn't run because no API key was available; the tools ran on testnet on 2026-10-02 inside generateText with a scripted test model from ai/test, so the model's own words aren't shown */}
+
+The script prints each tool call (`>`) and result (`<`), then the model's reply. In a test on testnet, the tools returned:
+
+```text Output
+> getBalances {}
+< {"address":"0xEc526474F4F9De027942d5f7118A9613266B0C4c","tBOT":"0.001014359982351838","USDT":"0.021366"}
+> sendUsdt {"to":"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC","amount":"0.001"}
+< {"ok":true,"hash":"0x6fc2df27182ab4676b5725f711ecd7e9b4bf5ab414af4b32b397fd75429894b7","explorerUrl":"https://scan.bohr.life/tx/0x6fc2df27182ab4676b5725f711ecd7e9b4bf5ab414af4b32b397fd75429894b7"}
+```
+
+Open the `explorerUrl` to see the transfer on BOTScan. Requests that break a rule come back as data, and nothing is sent:
+
+```text Output
+> sendUsdt {"to":"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC","amount":"0.8"}
+< {"ok":false,"error":"Not enough USDT. Balance: 0.020366"}
+> sendUsdt {"to":"0x90F79bf6EB2c4f870365E785982E1f101E93b906","amount":"0.8"}
+< {"ok":false,"error":"Recipient is not on the allowlist."}
+> sendUsdt {"to":"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC","amount":"5"}
+< {"ok":false,"error":"Amount must be above 0 and at most 1 USDT."}
+```
+
+## Pay from a vault instead
+
+These tools spend from the agent's own wallet, which keeps the example short. For real funds, keep the money in an [agent vault](/guides/ai-agents/agent-vaults) and change `sendUsdt` to call the vault's `pay(to, amount)` with the agent's key, as `vault-pay.ts` on that page does. The tool's checks still help: they give the model a clear answer early. The vault makes sure those rules hold even if the tool code is wrong or the agent's key is stolen.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Recipient is not on the allowlist">
+    The address isn't in `AGENT_ALLOWED_RECIPIENTS`, or the variable isn't loaded. Check that you ran with `--env-file=.env`, and that the addresses are separated by commas with no spaces.
+  </Accordion>
+  <Accordion title="The model never calls a tool">
+    Make the request concrete, and check the tool `description` says when to use it. Models choose tools from those descriptions.
+  </Accordion>
+  <Accordion title="Simulation failed">
+    The token or chain would reject the transfer. The message says why, for example a missing balance or a paused token. Nothing was sent.
+  </Accordion>
+  <Accordion title="insufficient funds for gas">
+    The agent's address pays gas. Send it a little tBOT. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+  <Accordion title="AI_APICallError or 401">
+    `ANTHROPIC_API_KEY` is missing or wrong. If you use another provider, install its AI SDK package and set its key instead.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Human approval" icon="user-check" href="/guides/ai-agents/human-approval">
+    Ask a person before large payments.
+  </Card>
+  <Card title="Agent vaults" icon="vault" href="/guides/ai-agents/agent-vaults">
+    Hold the agent's funds in a contract.
+  </Card>
+</CardGroup>

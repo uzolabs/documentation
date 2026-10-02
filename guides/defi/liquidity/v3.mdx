@@ -5,4 +5,59 @@ description: "Understand concentrated liquidity on BDEX V3 and where to find ful
 icon: "chart-area"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+This page explains how liquidity works on BDEX V3, how it differs from V2, and where to go to manage a position.
+
+## Concentrated liquidity
+
+In a V2 pool, your liquidity covers every possible price. Most of it sits at prices the pool never reaches, so it earns little.
+
+In a V3 pool, you choose a price range. Your tokens only trade while the price is inside it. The same deposit earns a larger share of fees, because it's concentrated where trading happens. The tradeoffs:
+
+- **Out of range, you earn nothing.** If the price leaves your range, your position becomes 100% one token and stops earning until the price comes back or you move it.
+- **You manage it.** A narrow range earns more but goes out of range more often.
+- **Each pool has a fee tier.** BDEX V3 pools charge 0.05%, 0.30% or 1.00%, and the same pair can have a pool on each tier.
+
+## Positions are NFTs
+
+V3 positions aren't fungible, because each one has its own range. The NonfungiblePositionManager mints each position as an NFT. You use it to:
+
+- `mint` a new position with a pool, a tick range and amounts of both tokens,
+- `increaseLiquidity` and `decreaseLiquidity` on an existing position,
+- `collect` the fees and withdrawn tokens,
+- `burn` the NFT once the position is empty.
+
+Withdrawing is two steps: `decreaseLiquidity` moves the tokens into the position's owed balance, and `collect` sends them to you.
+
+The NonfungiblePositionManager is at `0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090` on both mainnet and testnet. See [Contract addresses](/reference/contract-addresses).
+
+## Ticks and ranges
+
+Prices in V3 are expressed as ticks. Each pool only accepts ticks that are a multiple of its tick spacing, which depends on the fee tier. Picking a range means converting the prices you want into valid ticks for that pool. Libraries such as the Uniswap V3 SDK do this math, and BDEX V3 uses the same model.
+
+## Manage positions
+
+For full instructions on minting, adjusting and closing positions, see BOT Chain's [DEX documentation](https://dev-docs.botchain.ai/docs/DEX). To list pools and check their liquidity before you choose one, use the [BDEX API](/reference/bdex-api).
+
+{/* untested: no V3 position was minted on testnet for these docs */}
+
+## V2 or V3
+
+| | V2 | V3 |
+| --- | --- | --- |
+| Range | All prices | One range you pick |
+| Position | Fungible LP token | NFT |
+| Fees | Added to the pool automatically | Collected with `collect` |
+| Upkeep | None | Watch the range |
+
+If you want to provide liquidity without watching it, start with [V2 liquidity](/guides/defi/liquidity/v2).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Provide V2 liquidity" icon="droplet" href="/guides/defi/liquidity/v2">
+    Add and remove liquidity with a script.
+  </Card>
+  <Card title="Swap on BDEX V3" icon="repeat-2" href="/guides/defi/swaps/bdex-v3">
+    See how V3 pools quote.
+  </Card>
+</CardGroup>

@@ -4,4 +4,150 @@ description: "Send USDT from BOT Chain to another network by approving the bridg
 icon: "log-out"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+This guide shows you how to send USDT from BOT Chain to Ethereum or BNB Smart Chain from a script: check the live limits, approve the bridge router, and call `deposit`.
+
+<Warning>
+  **This guide uses mainnet and moves real USDT.** A transfer can't be cancelled once the deposit lands.
+
+  - Send a small test amount first, just above the minimum, and confirm it arrives before you send more.
+  - Check the recipient address is one you control **on the destination chain**. The bridge doesn't check it for you.
+  - Read the limits and fee on the day you send. They live in the contracts and can change.
+  - For Tron, use the official app at [bridge.botchain.ai](https://bridge.botchain.ai/). How the router expects a Tron address to be encoded isn't documented, so this script doesn't support it.
+</Warning>
+
+## What you'll build
+
+A viem script that sends 11 USDT from BOT Chain mainnet to your address on BNB Smart Chain. 11 USDT is just above the 10 USDT minimum read on 2026-10-02. The fee is 1 USDT at that size, so about 10 USDT arrives.
+
+## Prerequisites
+
+- The `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot).
+- A **mainnet** wallet holding the USDT you want to send plus a little BOT for gas. Use a separate wallet from your testnet one.
+- Your recipient address on the destination chain.
+- You've read [Limits and fees](/guides/bridge/limits-and-fees) and the [Bridge overview](/guides/bridge/overview).
+
+## Steps
+
+<Steps>
+  <Step title="Set up a mainnet .env file">
+    Create a separate env file so you never send mainnet transactions by accident:
+
+    ```bash .env.mainnet
+    BOT_PRIVATE_KEY=0xyour_mainnet_private_key
+    RECIPIENT=0xyour_address_on_the_destination_chain
+    AMOUNT=11
+    ```
+
+    Add `.env.mainnet` to `.gitignore`. Never commit or share it.
+  </Step>
+
+  <Step title="Write the script">
+    {/* untested: mainnet with real funds; typechecked against @uzolabs/sdk 0.2.0 and viem 2.57.2 only */}
+
+    ```ts bridge-out.ts
+    import { createPublicClient, createWalletClient, erc20Abi, formatUnits, getAddress, http, parseAbi, parseUnits } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChain } from "@uzolabs/sdk/chains";
+    import { botBridgeAbi, getAddresses, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";
+
+    // MAINNET. This moves real USDT. Read the warnings on this page before you run it.
+    const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChain, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChain, transport: http() });
+    const { usdt, bridgeRouter } = getAddresses(botChain.id);
+    const explorer = botChain.blockExplorers.default.url;
+
+    const destinationChainId = 56n; // BNB Smart Chain. Ethereum is 1.
+    const recipient = getAddress(process.env.RECIPIENT as string); // Your address on the destination chain
+    const amount = parseUnits(process.env.AMOUNT ?? "11", 6); // USDT on BOT Chain has 6 decimals
+
+    // 1. Check the bridge is open and the amount is inside the live limits.
+    const bridgeAbi = parseAbi(["function chainAndTokenFee(uint256 destChainId, bytes32 resourceId) view returns (uint256)"]);
+    const [paused, minFee, minUsd, maxUsd, bridge] = await Promise.all([
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getBridgePause" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMinFee" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMinAmountUsd" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMaxAmountUsd" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "Bridge" }),
+    ]);
+    if (paused) throw new Error("The bridge is paused");
+    if (amount < parseUnits(minUsd.toString(), 6) || amount > parseUnits(maxUsd.toString(), 6)) {
+      throw new Error(`Amount must be between ${minUsd} and ${maxUsd} USDT`);
+    }
+
+    // 2. Estimate what arrives: the fee is a percentage with a minimum.
+    const feeBps = await publicClient.readContract({ address: bridge, abi: bridgeAbi, functionName: "chainAndTokenFee", args: [destinationChainId, USDT_RESOURCE_ID] });
+    const percentFee = (amount * feeBps) / 10_000n;
+    const fee = percentFee > parseUnits(minFee.toString(), 6) ? percentFee : parseUnits(minFee.toString(), 6);
+    console.log(`Sending ${formatUnits(amount, 6)} USDT, fee about ${formatUnits(fee, 6)}, arrives about ${formatUnits(amount - fee, 6)}`);
+
+    // 3. Approve the router for exactly this amount.
+    const approveHash = await walletClient.writeContract({ address: usdt, abi: erc20Abi, functionName: "approve", args: [bridgeRouter, amount] });
+    await publicClient.waitForTransactionReceipt({ hash: approveHash });
+    console.log(`Approved: ${explorer}/tx/${approveHash}`);
+
+    // 4. Simulate, then deposit.
+    const { request } = await publicClient.simulateContract({
+      account,
+      address: bridgeRouter,
+      abi: botBridgeAbi,
+      functionName: "deposit",
+      args: [destinationChainId, USDT_RESOURCE_ID, recipient, amount],
+    });
+    const hash = await walletClient.writeContract(request);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`Deposit ${receipt.status}: ${explorer}/tx/${hash}`);
+    ```
+  </Step>
+
+  <Step title="Understand each part">
+    - **The checks** stop the script before it spends anything if the bridge is paused or the amount is outside the limits. The limits are whole USDT, so they're converted to base units first.
+    - **The fee estimate** uses the same rule as [Limits and fees](/guides/bridge/limits-and-fees#work-out-the-fee). The fee comes out of the amount, so the recipient gets `amount - fee`.
+    - **The approval** is for exactly `amount`. The router pulls the full amount from your wallet during `deposit`. Avoid unlimited approvals.
+    - **`deposit(destinationChainId, resourceId, recipient, amount)`** takes the amount in BOT Chain units (6 decimals) for every destination, including BNB Smart Chain. The function is payable, but you send no BOT with it for USDT.
+    - **`simulateContract`** runs the call first, so a revert costs nothing.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env.mainnet bridge-out.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+The script prints the estimate and two BOTScan links. Then:
+
+1. Copy the deposit transaction hash and follow it with [Track a bridge transfer](/guides/bridge/tracking-transfers). Use `botChain` in that script.
+2. When the status is `delivered`, check the recipient on [BscScan](https://bscscan.com). The amount shows with 18 decimals there.
+
+One testnet transfer observed on 2026-10-01 was confirmed 54 seconds after the deposit. Mainnet timing isn't documented.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Amount must be between ...">
+    Your `AMOUNT` is outside the live limits. Read them with the script in [Limits and fees](/guides/bridge/limits-and-fees).
+  </Accordion>
+  <Accordion title="The simulation reverts">
+    Check the approval succeeded, your USDT balance covers the amount, and the destination chain ID is in the supported list for mainnet.
+  </Accordion>
+  <Accordion title="The transfer stays pending">
+    See [Track a bridge transfer](/guides/bridge/tracking-transfers#troubleshooting). If it doesn't move, contact BOT Chain with the deposit hash.
+  </Accordion>
+  <Accordion title="I sent to the wrong address">
+    A delivered transfer can't be reversed. Always test with a small amount first.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Track a transfer" icon="map-pin" href="/guides/bridge/tracking-transfers">
+    Follow your deposit to arrival.
+  </Card>
+  <Card title="Contract addresses" icon="file-code" href="/reference/contract-addresses#bridge-gateways-on-other-chains">
+    Routers, gateways and the resource ID.
+  </Card>
+</CardGroup>

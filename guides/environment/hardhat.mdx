@@ -5,4 +5,253 @@ description: "Configure a Hardhat 3 project for BOT Chain mainnet and testnet, w
 icon: "hard-hat"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you set up a Hardhat 3 project that can compile, deploy and verify contracts on BOT Chain testnet and mainnet. Your private key never goes in a file you commit.
+
+<TestnetOnly />
+
+## What you'll build
+
+A TypeScript Hardhat 3 project with:
+
+- `botTestnet` and `botMainnet` networks.
+- A private key read through `configVariable`, so it stays out of your code.
+- `chainDescriptors` that point Hardhat at BOTScan for verification.
+- A small network hook that fixes the fee Hardhat Ignition sends on BOT Chain.
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org) 22 or later. These docs were tested with Node 24.
+- A testnet wallet with some tBOT. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+## Steps
+
+<Steps>
+  <Step title="Create the project">
+    ```bash
+    mkdir hello-hardhat
+    cd hello-hardhat
+    npm init -y
+    npm pkg set type=module
+    npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox-viem @nomicfoundation/hardhat-ignition viem typescript @types/node
+    mkdir contracts ignition ignition/modules plugins
+    ```
+
+    Tested with `hardhat` 3.18.1, `@nomicfoundation/hardhat-toolbox-viem` 5.0.7 and `@nomicfoundation/hardhat-ignition` 3.1.8.
+  </Step>
+
+  <Step title="Add the fee hook">
+    BOT Chain blocks have a base fee of 0. Hardhat Ignition reads that as "gas is free" and sends transactions with a fee of 0, which the node rejects with `transaction underpriced`. This hook asks the node what tip it wants and adds it.
+
+    ```ts plugins/bot-chain-fees.ts
+    import type { NetworkHooks } from "hardhat/types/hooks";
+
+    // BOT Chain's base fee is 0, so Ignition sends a fee of 0 and the node
+    // rejects it. This hook asks the node for the tip it wants and adds it.
+    const isZero = (value: unknown) =>
+      typeof value === "string" && BigInt(value) === 0n;
+
+    export default async (): Promise<Partial<NetworkHooks>> => ({
+      async onRequest(context, connection, request, next) {
+        const params = Array.isArray(request.params) ? request.params : [];
+        const tx = params[0] as Record<string, unknown> | undefined;
+
+        if (
+          request.method !== "eth_sendTransaction" ||
+          tx === undefined ||
+          !isZero(tx.maxFeePerGas) ||
+          !isZero(tx.maxPriorityFeePerGas)
+        ) {
+          return next(context, connection, request);
+        }
+
+        const provider = connection.provider;
+        const tip = BigInt(
+          (await provider.request({ method: "eth_maxPriorityFeePerGas" })) as string,
+        );
+        const block = (await provider.request({
+          method: "eth_getBlockByNumber",
+          params: ["latest", false],
+        })) as { baseFeePerGas?: string };
+        const baseFee = BigInt(block.baseFeePerGas ?? "0x0");
+
+        const fixedTx = {
+          ...tx,
+          maxPriorityFeePerGas: `0x${tip.toString(16)}`,
+          maxFeePerGas: `0x${(baseFee * 2n + tip).toString(16)}`,
+        };
+        return next(context, connection, {
+          ...request,
+          params: [fixedTx, ...params.slice(1)],
+        });
+      },
+    });
+    ```
+
+    Transactions that already carry a fee pass through unchanged, so the hook is safe on other chains too.
+  </Step>
+
+  <Step title="Write the config">
+    ```ts hardhat.config.ts
+    import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+    import { configVariable, defineConfig } from "hardhat/config";
+
+    export default defineConfig({
+      plugins: [
+        hardhatToolboxViemPlugin,
+        {
+          id: "bot-chain-fees",
+          hookHandlers: { network: () => import("./plugins/bot-chain-fees.js") },
+        },
+      ],
+      solidity: {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "cancun",
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      networks: {
+        botTestnet: {
+          type: "http",
+          chainType: "l1",
+          chainId: 968,
+          url: "https://rpc.bohr.life",
+          accounts: [configVariable("BOT_PRIVATE_KEY")],
+        },
+        botMainnet: {
+          type: "http",
+          chainType: "l1",
+          chainId: 677,
+          url: "https://rpc.botchain.ai",
+          accounts: [configVariable("BOT_PRIVATE_KEY")],
+        },
+      },
+      chainDescriptors: {
+        968: {
+          name: "BOT Chain Testnet",
+          blockExplorers: {
+            blockscout: {
+              name: "BOTScan Testnet",
+              url: "https://scan.bohr.life",
+              apiUrl: "https://scan.bohr.life/api",
+            },
+          },
+        },
+        677: {
+          name: "BOT Chain",
+          blockExplorers: {
+            blockscout: {
+              name: "BOTScan",
+              url: "https://scan.botchain.ai",
+              apiUrl: "https://scan.botchain.ai/api",
+            },
+          },
+        },
+      },
+    });
+    ```
+
+    What each part does:
+
+    - `evmVersion: "cancun"` stops the compiler from using opcodes BOT Chain doesn't support yet.
+    - `configVariable("BOT_PRIVATE_KEY")` is resolved only when a task needs it, so `npx hardhat build` works without a key.
+    - `chainDescriptors` tells Hardhat that BOTScan is a Blockscout explorer. `hardhat verify blockscout` uses it. No API key is needed.
+  </Step>
+
+  <Step title="Provide your private key">
+    Use a key made only for testing. You have two options.
+
+    **Option 1: the Hardhat keystore (recommended).** The key is stored encrypted on your machine and Hardhat asks for the password when it needs it.
+
+    {/* untested: the keystore prompt is interactive; the docs test used the environment variable option */}
+
+    ```bash
+    npx hardhat keystore set BOT_PRIVATE_KEY
+    ```
+
+    **Option 2: an environment variable** for the current terminal session only.
+
+    ```bash
+    export BOT_PRIVATE_KEY=0xYOUR_TEST_KEY
+    ```
+
+    <Warning>
+      Never paste a private key into `hardhat.config.ts` or a file you commit. If you use a `.env` file, add it to `.gitignore` first. Hardhat does not read `.env` files on its own.
+    </Warning>
+  </Step>
+
+  <Step title="Add a contract and compile">
+    ```solidity contracts/Counter.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    contract Counter {
+        uint256 public count;
+
+        event Incremented(address indexed by, uint256 newCount);
+
+        function increment() external {
+            count += 1;
+            emit Incremented(msg.sender, count);
+        }
+    }
+    ```
+
+    ```bash
+    npx hardhat build
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Check that Hardhat can reach the network and load your key with a small script:
+
+```ts scripts/check-network.ts
+import { network } from "hardhat";
+import { formatEther } from "viem";
+
+const { viem } = await network.getOrCreate();
+const [wallet] = await viem.getWalletClients();
+const publicClient = await viem.getPublicClient();
+
+const chainId = await publicClient.getChainId();
+const balance = await publicClient.getBalance({ address: wallet.account.address });
+
+console.log(`Chain ID: ${chainId}`);
+console.log(`Account:  ${wallet.account.address}`);
+console.log(`Balance:  ${formatEther(balance)} tBOT`);
+```
+
+```bash
+npx hardhat run scripts/check-network.ts --network botTestnet
+```
+
+You should see `Chain ID: 968`, your address and your tBOT balance.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="transaction underpriced: effective gas tip 0, minimum needed 20000000000">
+    The fee hook isn't loaded. Check that `plugins/bot-chain-fees.ts` exists and that the config imports it as `./plugins/bot-chain-fees.js` (with `.js`, even though the file is `.ts`).
+  </Accordion>
+  <Accordion title="HHE7 or a missing configuration variable error">
+    Hardhat couldn't find `BOT_PRIVATE_KEY`. Set it with the keystore or export it in the same terminal you run Hardhat from.
+  </Accordion>
+  <Accordion title="invalid opcode or a deploy that reverts with no reason">
+    You compiled for a newer EVM version. Make sure `evmVersion: "cancun"` is set, then run `npx hardhat clean` and build again.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Deploy with Hardhat" icon="rocket" href="/guides/deploy/deploy-with-hardhat">
+    Deploy `Counter` to testnet with Ignition.
+  </Card>
+  <Card title="Verify with Hardhat" icon="badge-check" href="/guides/deploy/verify/hardhat">
+    Publish your source on BOTScan.
+  </Card>
+</CardGroup>

@@ -5,4 +5,122 @@ description: "Let users connect a wallet, detect when they are on the wrong netw
 icon: "plug"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you build a React component that connects a browser wallet, notices when it's on the wrong network and asks the wallet to switch to BOT Chain testnet.
+
+<TestnetOnly />
+
+{/* untested: typechecked with wagmi 3.7.7 and rendered in a browser without a wallet; connecting and switching need a wallet extension and were not clicked through */}
+
+## What you'll build
+
+A `ConnectWallet` component with three states: not connected, connected to the wrong network, and connected to BOT Chain testnet.
+
+## Prerequisites
+
+- A React app with wagmi set up. See [Set up wagmi](/guides/frontend/wagmi-setup).
+- A browser wallet such as MetaMask.
+
+## Steps
+
+<Steps>
+  <Step title="Write the component">
+    ```tsx src/ConnectWallet.tsx
+    import { useConnect, useConnection, useConnectors, useDisconnect, useSwitchChain } from "wagmi";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    export function ConnectWallet() {
+      const { address, chainId, isConnected } = useConnection();
+      const connectors = useConnectors();
+      const connect = useConnect();
+      const disconnect = useDisconnect();
+      const switchChain = useSwitchChain();
+
+      if (!isConnected) {
+        return (
+          <div>
+            {connectors.map((connector) => (
+              <button key={connector.uid} onClick={() => connect.mutate({ connector })}>
+                Connect {connector.name}
+              </button>
+            ))}
+            {connect.error && <p>{connect.error.message}</p>}
+          </div>
+        );
+      }
+
+      if (chainId !== botChainTestnet.id) {
+        return (
+          <div>
+            <p>Wrong network. Switch to {botChainTestnet.name}.</p>
+            <button
+              disabled={switchChain.isPending}
+              onClick={() => switchChain.mutate({ chainId: botChainTestnet.id })}
+            >
+              Switch network
+            </button>
+            {switchChain.error && <p>{switchChain.error.message}</p>}
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <p>Connected: {address}</p>
+          <button onClick={() => disconnect.mutate()}>Disconnect</button>
+        </div>
+      );
+    }
+    ```
+
+    Notes on the wagmi 3 API:
+
+    - `useConnection` replaces `useAccount`, which is deprecated in wagmi 3.
+    - `useConnectors` lists the connectors from your config. With `injected()` you get one button per detected browser wallet.
+    - Action hooks return a mutation. Call `.mutate(...)`, and read `.isPending` and `.error` from the same object.
+    - `chainId` from `useConnection` is the wallet's chain, which can be one your app doesn't support. That's how you detect the wrong network.
+  </Step>
+
+  <Step title="Render it">
+    ```tsx src/App.tsx
+    import { ConnectWallet } from "./ConnectWallet";
+
+    export function App() {
+      return <ConnectWallet />;
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+1. Run `npm run dev` and open the app. You see a **Connect** button for your wallet.
+2. Click it and approve in the wallet. If the wallet is on another network, you see **Wrong network**.
+3. Click **Switch network**. The wallet asks to switch, or to add BOT Chain Testnet if it doesn't know it yet. Approve it.
+4. The component shows your address.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No connect button appears">
+    No injected wallet was found. Install MetaMask or another browser wallet and reload the page.
+  </Accordion>
+  <Accordion title="Switching fails with an unrecognized chain error">
+    Some wallets can't add chains from a dapp. Add BOT Chain Testnet by hand using the values in [Connect a wallet](/get-started/bot-chain/connect-wallet), then try again.
+  </Accordion>
+  <Accordion title="User rejected the request">
+    The user closed or rejected the wallet popup. Nothing changed; they can click the button again.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Read contract state" icon="book-open-text" href="/guides/frontend/read-contract-state">
+    Show the connected user's balances.
+  </Card>
+  <Card title="Send transactions" icon="send" href="/guides/frontend/send-transactions">
+    Write to a contract and wait for the receipt.
+  </Card>
+</CardGroup>

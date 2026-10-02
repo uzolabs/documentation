@@ -5,4 +5,129 @@ description: "Read the bridge's live transfer limits and minimum fee directly fr
 icon: "gauge"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This guide shows you how to read the bridge's current limits and fees from the contracts, so your app never relies on a number that has changed.
+
+<TestnetOnly />
+
+## What you can read
+
+| Value | Where | Unit |
+| --- | --- | --- |
+| Paused | Router `getBridgePause()` | `true` or `false` |
+| Minimum fee | Router `getMinFee()` | Whole USDT |
+| Minimum amount | Router `getMinAmountUsd()` | Whole USDT |
+| Maximum amount | Router `getMaxAmountUsd()` | Whole USDT |
+| Supported destinations | Bridge `getSupportedDestinationChains(srcChainId)` | Chain IDs |
+| Fee per destination | Bridge `chainAndTokenFee(destChainId, resourceId)` | Basis points |
+
+The router's `Bridge()` function returns the bridge contract's address. The limits are in whole USDT, not base units. Convert them with `parseUnits(value.toString(), 6)` before comparing with an amount.
+
+## Steps
+
+<Steps>
+  <Step title="Set up the project">
+    Use the `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot). This script only reads, so it needs no key.
+  </Step>
+
+  <Step title="Write the script">
+    ```ts bridge-limits.ts
+    import { createPublicClient, formatUnits, http, parseAbi } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { botBridgeAbi, getAddresses, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";
+
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { bridgeRouter } = getAddresses(botChainTestnet.id);
+    const bridgeAbi = parseAbi([
+      "function getSupportedDestinationChains(uint256 srcChainId) view returns (uint256[])",
+      "function chainAndTokenFee(uint256 destChainId, bytes32 resourceId) view returns (uint256)",
+    ]);
+
+    const [bridge, paused, minFee, minUsd, maxUsd] = await Promise.all([
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "Bridge" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getBridgePause" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMinFee" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMinAmountUsd" }),
+      publicClient.readContract({ address: bridgeRouter, abi: botBridgeAbi, functionName: "getMaxAmountUsd" }),
+    ]);
+    const destinations = await publicClient.readContract({ address: bridge, abi: bridgeAbi, functionName: "getSupportedDestinationChains", args: [BigInt(botChainTestnet.id)] });
+
+    console.log(`Router ${bridgeRouter}, bridge ${bridge}`);
+    console.log(`Paused: ${paused}`);
+    console.log(`Min fee: ${minFee} USDT, min amount: ${minUsd} USDT, max amount: ${maxUsd} USDT`);
+    for (const dest of destinations) {
+      const bps = await publicClient.readContract({ address: bridge, abi: bridgeAbi, functionName: "chainAndTokenFee", args: [dest, USDT_RESOURCE_ID] });
+      console.log(`To chain ${dest}: fee ${bps} bps (${formatUnits(bps, 2)}%)`);
+    }
+    ```
+
+    `botBridgeAbi` and `USDT_RESOURCE_ID` come from `@uzolabs/sdk/contracts`. The two bridge functions aren't in that ABI, so the script declares them with `parseAbi`.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx bridge-limits.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+On testnet on 2026-10-02:
+
+```text Output
+Router 0x6239404Aa276ba68486E2Fa40E90CDd36ff8ec3A, bridge 0xB6Aa106b8FC187779F9cdD5590018C479A166e9a
+Paused: false
+Min fee: 1 USDT, min amount: 10 USDT, max amount: 50000 USDT
+To chain 97: fee 10 bps (0.1%)
+To chain 11155111: fee 10 bps (0.1%)
+To chain 3448148188: fee 10 bps (0.1%)
+```
+
+To read mainnet, import `botChain` instead of `botChainTestnet` and use `botChain` in both places. The same day, mainnet returned the same fee and minimums, a maximum of 30150 USDT, and destinations 56, 1 and 728126428. Mainnet and testnet limits differ, so always read the network you're sending on.
+
+## Work out the fee
+
+The fee is the percentage or the minimum fee, whichever is larger, and comes out of the amount you send:
+
+```ts bridge-fee.ts
+import { parseUnits } from "viem";
+
+export function bridgeFee(amount: bigint, feeBps: bigint, minFeeUsdt: bigint): bigint {
+  const percentFee = (amount * feeBps) / 10_000n;
+  const minFee = parseUnits(minFeeUsdt.toString(), 6);
+  return percentFee > minFee ? percentFee : minFee;
+}
+```
+
+This matches real testnet transfers: a 1,000 USDT deposit delivered 999, and a 500 USDT deposit delivered 499, because 0.1% of 500 is below the 1 USDT minimum. BOT Chain's [fee docs](https://dev-docs.botchain.ai/docs/Bridge/fees/) describe the same rule for bridging out and say bridging in is free of bridge fees.
+
+## Check before every transfer
+
+- Stop if `getBridgePause()` is `true`.
+- Check the amount is between the minimum and maximum.
+- Check the destination is in the supported list.
+- Show the user the fee and the amount that will arrive.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The limits look 10^6 times too small">
+    They're whole USDT, not base units. `10` means 10 USDT.
+  </Accordion>
+  <Accordion title="chainAndTokenFee returns 0 or reverts">
+    Call it on the bridge address from `Bridge()`, not on the router, and pass the USDT resource ID from [Contract addresses](/reference/contract-addresses#resource-ids).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Bridge USDT out" icon="log-out" href="/guides/bridge/bridge-out">
+    Use these checks before a deposit.
+  </Card>
+  <Card title="Track a transfer" icon="map-pin" href="/guides/bridge/tracking-transfers">
+    Follow a transfer to arrival.
+  </Card>
+</CardGroup>

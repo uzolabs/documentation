@@ -5,4 +5,152 @@ description: "Find a pool, quote with QuoterV2 and swap through the BDEX V3 Swap
 icon: "repeat-2"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+In this guide you swap tBOT for USDT on BDEX V3 testnet: you find the pool for each fee tier, quote each one with QuoterV2 and swap through the pool with the best price.
+
+<TestnetOnly />
+
+## What you'll build
+
+A viem script that checks the WBOT/USDT pools on the 0.05%, 0.30% and 1.00% fee tiers, picks the best quote, and swaps 0.0005 tBOT through the V3 SwapRouter. You send native tBOT as `value`, so you don't need to wrap or approve anything.
+
+## Prerequisites
+
+- The `bot-defi` project and `.env` file from [Wrap BOT](/guides/defi/tokens/wrap-bot).
+- At least 0.001 tBOT: 0.0005 for the swap plus gas.
+
+## Steps
+
+<Steps>
+  <Step title="Write the script">
+    ```ts swap-v3.ts
+    import { createPublicClient, createWalletClient, erc20Abi, formatUnits, http, parseEther, zeroAddress } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { bdexV3FactoryAbi, bdexV3QuoterV2Abi, bdexV3SwapRouterAbi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    const account = privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`);
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport: http() });
+    const { wbot, usdt, bdexV3Factory, bdexV3QuoterV2, bdexV3SwapRouter } = getAddresses(botChainTestnet.id);
+    const explorer = botChainTestnet.blockExplorers.default.url;
+
+    const amountIn = parseEther("0.0005"); // 0.0005 tBOT, sent as native value
+    const slippageBps = 50n; // 0.5%
+
+    // 1. Find the pool with the best quote. A zero address means no pool for that fee tier.
+    let best: { fee: number; amountOut: bigint } | undefined;
+    for (const fee of [500, 3000, 10000]) {
+      const pool = await publicClient.readContract({ address: bdexV3Factory, abi: bdexV3FactoryAbi, functionName: "getPool", args: [wbot, usdt, fee] });
+      if (pool === zeroAddress) continue;
+
+      // QuoterV2 is not a view function, so simulate it instead of reading it.
+      try {
+        const { result } = await publicClient.simulateContract({
+          address: bdexV3QuoterV2,
+          abi: bdexV3QuoterV2Abi,
+          functionName: "quoteExactInputSingle",
+          args: [{ tokenIn: wbot, tokenOut: usdt, amountIn, fee, sqrtPriceLimitX96: 0n }],
+        });
+        const [amountOut] = result;
+        console.log(`Fee ${fee}: pool ${pool}, quote ${formatUnits(amountOut, 6)} USDT`);
+        if (!best || amountOut > best.amountOut) best = { fee, amountOut };
+      } catch {
+        console.log(`Fee ${fee}: pool ${pool}, no quote (no liquidity in range)`);
+      }
+    }
+    if (!best) throw new Error("No WBOT/USDT pool with liquidity");
+
+    // 2. Swap through SwapRouter. Sending value makes the router wrap tBOT for you.
+    const amountOutMinimum = (best.amountOut * (10_000n - slippageBps)) / 10_000n;
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+    const { request } = await publicClient.simulateContract({
+      account,
+      address: bdexV3SwapRouter,
+      abi: bdexV3SwapRouterAbi,
+      functionName: "exactInputSingle",
+      args: [{
+        tokenIn: wbot,
+        tokenOut: usdt,
+        fee: best.fee,
+        recipient: account.address,
+        deadline,
+        amountIn,
+        amountOutMinimum,
+        sqrtPriceLimitX96: 0n,
+      }],
+      value: amountIn,
+    });
+    const hash = await walletClient.writeContract(request);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`Swap ${receipt.status} on fee tier ${best.fee}: ${explorer}/tx/${hash}`);
+
+    const usdtBalance = await publicClient.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
+    console.log(`USDT balance: ${formatUnits(usdtBalance, 6)}`);
+    ```
+  </Step>
+
+  <Step title="Understand each part">
+    - **`getPool(tokenA, tokenB, fee)`** on the V3 factory returns the pool for one fee tier, or the zero address if nobody created it. Token order doesn't matter.
+    - **`quoteExactInputSingle`** runs the swap inside the quoter and reverts to return the result. It isn't a `view` function, so call it with `simulateContract`. A pool with no liquidity at the current price makes it revert, which is why the call is wrapped in `try`.
+    - **`fee`** is in hundredths of a basis point: `500` is 0.05%, `3000` is 0.30% and `10000` is 1.00%.
+    - **`amountOutMinimum`** is the best quote minus 0.5%. If the swap would return less, it reverts.
+    - **`value: amountIn`** sends tBOT with the call. Because `tokenIn` is WBOT, the router wraps it before the swap.
+    - **`sqrtPriceLimitX96: 0n`** means no price limit. Leave it at zero unless you want the swap to stop at a given price.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx --env-file=.env swap-v3.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+```text Output
+Fee 500: pool 0xc42db978916872b0c9D4B396e2C8BacC315B3Dac, quote 0.000512 USDT
+Fee 3000: pool 0xA83dAda88e1d71810dfe89699dCE4d4E589Dd890, quote 0.005159 USDT
+Fee 10000: pool 0xe564401644E10B1829e19E1B2b2e6e90be79B631, quote 0.001093 USDT
+Swap success on fee tier 3000: https://scan.bohr.life/tx/0x244ccf361ef0f5f84882399c67d15df9f7c1382a7ff5bf812c4e1b429b8df728
+USDT balance: 0.021367
+```
+
+The three testnet pools quoted very different prices, and the lowest fee tier gave the worst one. That's normal for thin pools: the price depends on where liquidity sits, not on the fee. Your numbers will differ.
+
+## Swap an ERC-20 token instead
+
+To swap a token such as USDT, drop `value` and approve the SwapRouter for `amountIn` first, the same way as in [Swap on BDEX V2](/guides/defi/swaps/bdex-v2). To receive native tBOT instead of WBOT, use the router's `multicall` to combine `exactInputSingle` (with the router as recipient) and `unwrapWETH9`.
+
+{/* untested: only the native-in path above was sent on testnet */}
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Too little received">
+    The output fell below `amountOutMinimum`. Quote again right before the swap, and raise the slippage only for very thin pools.
+  </Accordion>
+  <Accordion title="Transaction too old">
+    The deadline passed before the transaction was mined. Build the deadline right before sending.
+  </Accordion>
+  <Accordion title="STF">
+    The router couldn't pull your input token. Approve the SwapRouter for at least `amountIn` and check your balance. You won't see this when you pay with `value`.
+  </Accordion>
+  <Accordion title="Every fee tier prints no quote">
+    No pool has liquidity at the current price for your amount. Try a smaller amount, or use the V2 pool.
+  </Accordion>
+</AccordionGroup>
+
+The error strings come from the SwapRouter's verified source on BOTScan.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Slippage and deadlines" icon="timer" href="/guides/defi/swaps/slippage-and-deadlines">
+    Choose safe values for both.
+  </Card>
+  <Card title="Provide V3 liquidity" icon="chart-area" href="/guides/defi/liquidity/v3">
+    Learn how concentrated liquidity works.
+  </Card>
+</CardGroup>

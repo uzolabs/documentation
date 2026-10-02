@@ -4,4 +4,312 @@ description: "Build a minimal relayer that pays gas for your users, with allowli
 icon: "server"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import TestnetOnly from "/snippets/testnet-only.mdx";
+
+This guide shows you how to run a small HTTP server that takes signed requests from your users and pays the gas to send them, without letting anyone drain its wallet.
+
+<TestnetOnly />
+
+## What you'll build
+
+- `relayer.ts`: a server with `POST /relay` and `GET /health`. It only pays for one contract and one function, caps gas, rate-limits each signer and IP address, and dry-runs every request before it spends anything.
+- `sign-and-relay.ts`: a client that signs a request from a new, empty wallet and posts it to the relayer.
+
+It uses Node's built-in `http` module and viem, so there's nothing else to install. For a production setup with a web app, start from the [gasless app template](/templates/gasless-app/index) instead.
+
+## Prerequisites
+
+- You understand the flow in [Meta-transactions](/guides/gasless/meta-transactions).
+- The `bot-defi` project from [Wrap BOT](/guides/defi/tokens/wrap-bot).
+- A **separate** wallet for the relayer, funded with tBOT from the [faucet](/get-started/bot-chain/get-testnet-tokens). Each relay costs about 0.0027 tBOT at 20 gwei.
+- A forwarder and a target contract. This guide uses the template's testnet `UzoForwarder` and `GuestBook`. To use your own, deploy them as in [Meta-transactions](/guides/gasless/meta-transactions#steps) and change the selector allowlist.
+
+## Steps
+
+<Steps>
+  <Step title="Configure the relayer">
+    ```bash .env.relayer
+    RELAYER_PRIVATE_KEY=0xyour_relayer_private_key
+    FORWARDER=0x9bAb837f41759c737Cb2cC00Ec5D88d5fAcF74C1
+    TARGET=0x7962412A92E5553E66C794c3a352422DEB7BAc27
+    ```
+
+    Use a key that holds only what you're willing to spend on gas. Add `.env.relayer` to `.gitignore`.
+  </Step>
+
+  <Step title="Write the server">
+    ```ts relayer.ts
+    import { createServer } from "node:http";
+    import { createPublicClient, createWalletClient, getAddress, http, parseAbi, toFunctionSelector, type Hex } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const FORWARDER = getAddress(process.env.FORWARDER as string);
+    const TARGET = getAddress(process.env.TARGET as string); // The only contract this relayer pays for
+    const ALLOWED_SELECTORS = [toFunctionSelector("sign(string)")]; // The only functions it pays for
+    const MAX_GAS = 300_000n; // The most gas one request may ask for
+    const RATE_LIMIT = 10; // Requests per signer and per IP address
+    const RATE_WINDOW_MS = 60 * 60 * 1000; // Per hour
+
+    const forwarderAbi = parseAbi([
+      "struct ForwardRequestData { address from; address to; uint256 value; uint256 gas; uint48 deadline; bytes data; bytes signature; }",
+      "function execute(ForwardRequestData request) payable",
+      "function verify(ForwardRequestData request) view returns (bool)",
+    ]);
+
+    const account = privateKeyToAccount(process.env.RELAYER_PRIVATE_KEY as Hex);
+    const transport = http(process.env.RPC_URL); // Blank uses the chain's default RPC
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport });
+    const walletClient = createWalletClient({ account, chain: botChainTestnet, transport });
+
+    // A simple in-memory sliding window. Use a shared store if you run more than one relayer.
+    const hits = new Map<string, number[]>();
+    function overLimit(key: string): boolean {
+      const now = Date.now();
+      const recent = (hits.get(key) ?? []).filter((t) => t > now - RATE_WINDOW_MS);
+      recent.push(now);
+      hits.set(key, recent);
+      return recent.length > RATE_LIMIT;
+    }
+
+    // Send one transaction at a time, so two requests never use the same relayer nonce.
+    let queue: Promise<unknown> = Promise.resolve();
+    function serial<T>(task: () => Promise<T>): Promise<T> {
+      const next = queue.then(task, task);
+      queue = next.catch(() => undefined);
+      return next;
+    }
+
+    class Refused extends Error {
+      constructor(readonly status: number, message: string) { super(message); }
+    }
+
+    async function relay(body: any, ip: string) {
+      const r = body?.request;
+      if (!r || typeof r !== "object") throw new Refused(400, 'Send JSON like { "request": { ... } }');
+      const request = {
+        from: getAddress(r.from),
+        to: getAddress(r.to),
+        value: BigInt(r.value),
+        gas: BigInt(r.gas),
+        deadline: Number(r.deadline),
+        data: r.data as Hex,
+        signature: r.signature as Hex,
+      };
+
+      // 1. Allowlists and limits. Nothing here touches the chain.
+      if (request.to !== TARGET) throw new Refused(403, "This relayer doesn't pay for that contract");
+      if (!ALLOWED_SELECTORS.includes(request.data.slice(0, 10).toLowerCase() as Hex)) throw new Refused(403, "This relayer doesn't pay for that function");
+      if (request.value !== 0n) throw new Refused(400, "value must be 0");
+      if (request.gas === 0n || request.gas > MAX_GAS) throw new Refused(400, `gas must be between 1 and ${MAX_GAS}`);
+      if (!Number.isSafeInteger(request.deadline) || request.deadline < Date.now() / 1000) throw new Refused(400, "The request has expired");
+      if (overLimit(`signer:${request.from}`) || overLimit(`ip:${ip}`)) throw new Refused(429, "Too many requests");
+
+      // 2. Let the forwarder check the signature, nonce and deadline, then dry-run it.
+      const valid = await publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "verify", args: [request] });
+      if (!valid) throw new Refused(400, "The signature doesn't match the request");
+      const { request: tx } = await publicClient.simulateContract({ account, address: FORWARDER, abi: forwarderAbi, functionName: "execute", args: [request] });
+
+      // 3. Send and wait.
+      const hash = await serial(() => walletClient.writeContract(tx));
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+      return { txHash: hash, status: receipt.status };
+    }
+
+    const server = createServer(async (req, res) => {
+      const reply = (status: number, body: unknown) => {
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(JSON.stringify(body));
+      };
+      if (req.method === "GET" && req.url === "/health") {
+        const balance = await publicClient.getBalance({ address: account.address });
+        return reply(200, { relayer: account.address, balance: balance.toString() });
+      }
+      if (req.method !== "POST" || req.url !== "/relay") return reply(404, { error: "Not found" });
+
+      let raw = "";
+      for await (const chunk of req) {
+        raw += chunk;
+        if (raw.length > 8_192) return reply(413, { error: "Body too large" });
+      }
+      try {
+        reply(200, await relay(JSON.parse(raw), req.socket.remoteAddress ?? "unknown"));
+      } catch (error) {
+        if (error instanceof Refused) return reply(error.status, { error: error.message });
+        reply(400, { error: (error as { shortMessage?: string }).shortMessage ?? "Bad request" });
+      }
+    });
+
+    server.listen(8787, () => console.log(`Relayer ${account.address} listening on http://localhost:8787`));
+    ```
+  </Step>
+
+  <Step title="Understand the checks">
+    The order matters. Cheap checks that don't touch the chain run first, so junk requests cost you nothing.
+
+    1. **Target allowlist.** The relayer only pays for calls to `TARGET`. Without this, anyone could use your gas for any contract that trusts the forwarder.
+    2. **Selector allowlist.** Only `sign(string)` is paid for. Add each function you want to sponsor.
+    3. **Value and gas.** `value` must be 0, so the relayer never sends tBOT. `gas` is capped, because the relayer pays for whatever the request asks for.
+    4. **Deadline.** Expired requests are rejected before the RPC sees them.
+    5. **Rate limits.** 10 requests per hour per signer and per IP address. Fresh wallets cost nothing to create, so the IP limit matters as much as the signer limit.
+    6. **`verify` and `simulateContract`.** The forwarder checks the signature, nonce and deadline, then the whole call is dry-run. A request that would revert never costs gas.
+    7. **Serial sending.** One transaction at a time, so two requests never get the same relayer nonce.
+  </Step>
+
+  <Step title="Start it">
+    ```bash
+    npx tsx --env-file=.env.relayer relayer.ts
+    ```
+
+    In another terminal, check its balance:
+
+    ```bash
+    curl http://localhost:8787/health
+    ```
+  </Step>
+
+  <Step title="Write the client">
+    ```ts sign-and-relay.ts
+    import { createPublicClient, encodeFunctionData, http, parseAbi } from "viem";
+    import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const FORWARDER = process.env.FORWARDER as `0x${string}`;
+    const TARGET = process.env.TARGET as `0x${string}`;
+    const RELAYER_URL = process.env.RELAYER_URL ?? "http://localhost:8787";
+
+    const forwarderAbi = parseAbi([
+      "function nonces(address owner) view returns (uint256)",
+      "function eip712Domain() view returns (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)",
+    ]);
+    const guestBookAbi = parseAbi(["function sign(string message) returns (uint256 id)"]);
+    const types = {
+      ForwardRequest: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "gas", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint48" },
+        { name: "data", type: "bytes" },
+      ],
+    } as const;
+
+    const publicClient = createPublicClient({ chain: botChainTestnet, transport: http(process.env.RPC_URL) });
+    const user = privateKeyToAccount(generatePrivateKey()); // A new wallet with no tBOT
+
+    const [[, name, version, chainId, verifyingContract], nonce] = await Promise.all([
+      publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "eip712Domain" }),
+      publicClient.readContract({ address: FORWARDER, abi: forwarderAbi, functionName: "nonces", args: [user.address] }),
+    ]);
+    const message = {
+      from: user.address,
+      to: TARGET,
+      value: 0n,
+      gas: 150_000n,
+      nonce,
+      deadline: Math.floor(Date.now() / 1000) + 10 * 60,
+      data: encodeFunctionData({ abi: guestBookAbi, functionName: "sign", args: ["gm through my relayer"] }),
+    };
+    const signature = await user.signTypedData({
+      domain: { name, version, chainId: Number(chainId), verifyingContract },
+      types,
+      primaryType: "ForwardRequest",
+      message,
+    });
+
+    // JSON has no bigint, so send numbers as strings. The forwarder reads the nonce itself.
+    const { nonce: _, ...rest } = message;
+    const request = { ...rest, value: "0", gas: rest.gas.toString(), deadline: String(rest.deadline), signature };
+    const response = await fetch(`${RELAYER_URL}/relay`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request }),
+    });
+    console.log(response.status, await response.json());
+    ```
+  </Step>
+
+  <Step title="Send a request">
+    The client needs only the contract addresses. It has no key of its own to fund.
+
+    ```bash .env.client
+    FORWARDER=0x9bAb837f41759c737Cb2cC00Ec5D88d5fAcF74C1
+    TARGET=0x7962412A92E5553E66C794c3a352422DEB7BAc27
+    ```
+
+    ```bash
+    npx tsx --env-file=.env.client sign-and-relay.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+{/* untested: run against a local anvil fork of testnet, not the live testnet, because the test wallet was low on tBOT */}
+
+Against a local fork of testnet on 2026-10-02, the client printed:
+
+```text Output
+200 { txHash: '0x0ffaf7ad...', status: 'success' }
+```
+
+and `entryCount()` went up by one. Open your own hash on [BOTScan](https://scan.bohr.life): the sender is the relayer, the target is the forwarder, and the guest book entry's author is the new wallet.
+
+Then check the guards. In the same fork test:
+
+| Request | Response |
+| --- | --- |
+| `to` set to another contract | 403 `This relayer doesn't pay for that contract` |
+| `data` for a different function | 403 `This relayer doesn't pay for that function` |
+| A bad signature, repeated from one IP | 400 `The signature doesn't match the request` until that IP had made 10 requests in the hour, then 429 `Too many requests` |
+
+Requests refused by the allowlists don't count toward the rate limit. Requests that reach the limit check do, even if they fail later.
+
+<Tip>
+  To test without spending tBOT, run the relayer against a local fork. Start `anvil --fork-url https://rpc.bohr.life`, set `RPC_URL=http://127.0.0.1:8545` in both env files, and use one of anvil's prefunded dev keys as `RELAYER_PRIVATE_KEY`. Never use those keys on a real network.
+</Tip>
+
+## Before you go live
+
+This server is deliberately small. Before real users depend on it:
+
+- **Real client IPs.** Behind a proxy or load balancer, `remoteAddress` is the proxy. Read the forwarded client IP, but only from a proxy you trust, or anyone can fake it.
+- **Shared rate limits.** The limits live in memory and reset on restart. Use a shared store such as Redis if you run more than one instance.
+- **CORS and HTTPS.** Allow only your app's origin, and serve over HTTPS.
+- **Balance alerts.** Watch `/health` and alert before the wallet runs dry.
+- **Key storage.** Keep the relayer key in a secrets manager, not a file on disk.
+- **Stuck transactions.** If a send times out, the relayer nonce can get stuck. Track pending transactions and replace them with a higher gas price.
+
+The [gasless app template](/templates/gasless-app/index) handles the first four with `RELAYER_TRUST_PROXY`, `RELAYER_ALLOWED_ORIGINS` and `RELAYER_LOW_BALANCE`. See [Customize the gasless app](/templates/gasless-app/customize).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="403 This relayer doesn't pay for that function">
+    The selector isn't in `ALLOWED_SELECTORS`. Add it with `toFunctionSelector("yourFunction(type)")`, using the exact Solidity signature.
+  </Accordion>
+  <Accordion title="400 The signature doesn't match the request">
+    The client signed with a different domain or nonce, or changed a field after signing. A request that already ran also fails here, because its nonce is used.
+  </Accordion>
+  <Accordion title="400 with a revert reason">
+    `simulateContract` failed, so nothing was sent. The reason comes from the forwarder or your contract. See [Meta-transactions troubleshooting](/guides/gasless/meta-transactions#troubleshooting).
+  </Accordion>
+  <Accordion title="insufficient funds for gas">
+    The relayer wallet is empty. Top it up from the [faucet](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+  <Accordion title="429 Too many requests">
+    The signer or IP address passed 10 requests in the last hour. Wait, or raise `RATE_LIMIT` for testing.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Gasless app template" icon="layout-template" href="/templates/gasless-app/index">
+    A hardened relayer with a web app.
+  </Card>
+  <Card title="EOA paymaster" icon="credit-card" href="/guides/gasless/eoa-paymaster">
+    The other way to sponsor gas.
+  </Card>
+</CardGroup>

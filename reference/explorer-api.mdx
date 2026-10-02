@@ -98,7 +98,7 @@ This is the main workaround for `eth_getLogs` being documented as disabled on th
 curl -s "https://scan.bohr.life/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x75edC9335175Fc0552D51D48439F229c10420fe3&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&page=1&offset=100"
 ```
 
-`topic0` above is the hash of `Transfer(address,address,uint256)`.
+`topic0` above is the hash of `Transfer(address,address,uint256)`. To filter by two topics, also pass an operator such as `topic0_1_opr=and`. Without it, BOTScan returns `Required query parameters missing: topic0_1_opr`. See [Use the BOTScan API](/guides/data/explorer-api#event-logs).
 
 ### More examples
 
