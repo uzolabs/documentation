@@ -1,10 +1,86 @@
 ---
 title: "Addresses"
-description: "Look up BOT Chain contract addresses per network with the planned addresses export and getAddresses."
+description: "Look up BOT Chain contract addresses per network with the addresses export and getAddresses."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can look up any core BOT Chain contract address for mainnet or testnet with `getAddresses(chainId)`, and get it back as a typed value.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Import
+
+```ts Import
+import { addresses, getAddresses } from "@uzolabs/sdk/contracts";
+```
+
+## getAddresses
+
+```ts Signature
+function getAddresses<chainId extends 677 | 968>(chainId: chainId): (typeof addresses)[chainId];
+```
+
+<ParamField path="chainId" type="677 | 968" required>
+  The network. Use `botChain.id` or `botChainTestnet.id` so the chain and addresses always match.
+</ParamField>
+
+<ResponseField name="returns" type="object">
+  The address map for that network. Each value is a checksummed literal address type, and keys that don't exist on that network aren't in the type.
+</ResponseField>
+
+Throws [`UnsupportedChainError`](/sdk/reference/errors#unsupportedchainerror) for any other chain ID. That matters when the ID comes from a wallet at runtime, because TypeScript can't check it there.
+
+```ts addresses-example.ts
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+
+const { usdt, bridgeRouter } = getAddresses(botChainTestnet.id);
+console.log(usdt, bridgeRouter);
+```
+
+```text Output
+0x75edC9335175Fc0552D51D48439F229c10420fe3 0x6239404Aa276ba68486E2Fa40E90CDd36ff8ec3A
+```
+
+## addresses
+
+`addresses` is the same data as a plain object keyed by chain ID: `addresses[677].usdt`. Use it when you need both networks at once, for example to build a table. Use `getAddresses` everywhere else, because it validates the chain ID.
+
+## Every key
+
+Checked against the SDK source for 0.2.0 on 2026-10-02.
+
+| Key | Mainnet (677) | Testnet (968) |
+| --- | --- | --- |
+| `wbot` | `0xD5452816194a3784dBa983426cCe7c122F4abd30` | Same as mainnet |
+| `usdt` | `0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C` | `0x75edC9335175Fc0552D51D48439F229c10420fe3` |
+| `multicall3` | `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265` | Same as mainnet |
+| `permit2` | `0x000000000022D473030F116dDEE9F6B43aC78BA3` | Same as mainnet |
+| `bdexV2Factory` | `0x117115f3B72C8d1989178089A67D0C26f8EE0AA3` | `0x65b8e98ceA190d8c28B3e4716402027f634d15a3` |
+| `bdexV2Router02` | `0x1414eD29FdFD322c3c0a830330ed982E2D629e76` | `0xD6425a02f0845B8D99e349C34D2E7A576E177345` |
+| `bdexV3Factory` | `0x1C51c173323ec11BB4e3C4fD2314c225Dc4b5419` | Same as mainnet |
+| `bdexV3SwapRouter` | `0x07032d47A1b9f8460cBeE9dC17c1d3E438693929` | Same as mainnet |
+| `bdexV3QuoterV2` | `0x034A705b36067cff99ABf5C662Be881cBd8d0176` | Same as mainnet |
+| `bdexV3PositionManager` | `0xDAc3FcFF004d8a8675b94E44941A1a2e3b240090` | Same as mainnet |
+| `universalRouter` | Not included | `0x73Be0A1d8011B335A7aBeF6c45544E8ca4448AB5` |
+| `bridgeRouter` | `0xef8DC669ECa13E612b67Ff09478352E85bD6CC53` | `0x6239404Aa276ba68486E2Fa40E90CDd36ff8ec3A` |
+
+Notes:
+
+- **`universalRouter` is testnet only.** A mainnet Universal Router hasn't been confirmed, so the SDK leaves it out. `getAddresses(677).universalRouter` is a type error.
+- **`bridgeRouter` is an upgradeable proxy** on both networks. Its address stays the same when the logic behind it changes. See [ABIs](/sdk/contracts/abis#proxies).
+- **USDT has 6 decimals** on BOT Chain. Use `TOKENS.USDT.decimals` from [Constants](/sdk/contracts/constants).
+
+For explorer links to each address, see [Contract addresses](/reference/contract-addresses).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="ABIs" icon="file-json" href="/sdk/contracts/abis">
+    Pair each address with its ABI.
+  </Card>
+  <Card title="Contract addresses" icon="file-code" href="/reference/contract-addresses">
+    The same list, linked to BOTScan.
+  </Card>
+</CardGroup>

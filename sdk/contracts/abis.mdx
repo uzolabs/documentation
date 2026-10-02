@@ -3,8 +3,100 @@ title: "ABIs"
 description: "Typed ABIs for BOT Chain contracts, generated from verified sources and regenerated when proxies change."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can call BOT Chain contracts with full type checking by passing one of the SDK's ABIs to viem. Each ABI is generated from the verified contract on BOTScan.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Import
+
+```ts Import
+import { bdexV2Router02Abi, botBridgeAbi, erc20Abi } from "@uzolabs/sdk/contracts";
+```
+
+## Included ABIs
+
+| Export | Contract on BOTScan | Use it with |
+| --- | --- | --- |
+| `wbotAbi` | WBOT | `wbot` |
+| `bdexV2FactoryAbi` | UniswapV2Factory | `bdexV2Factory` |
+| `bdexV2Router02Abi` | UniswapV2Router02 | `bdexV2Router02` |
+| `bdexV3FactoryAbi` | UniswapV3Factory | `bdexV3Factory` |
+| `bdexV3QuoterV2Abi` | QuoterV2 | `bdexV3QuoterV2` |
+| `bdexV3SwapRouterAbi` | SwapRouter | `bdexV3SwapRouter` |
+| `permit2Abi` | Permit2 | `permit2` |
+| `universalRouterAbi` | UniversalRouter | `universalRouter` (testnet only) |
+| `botBridgeAbi` | BotBridge | `bridgeRouter` |
+| `erc20Abi` | Re-exported from viem | `usdt` or any ERC-20 |
+
+All ABIs except `universalRouterAbi` were fetched from mainnet on 2026-09-30. `universalRouterAbi` was fetched from testnet, because that's the only confirmed deployment. The BDEX contracts are verified under their Uniswap names, so their functions match the Uniswap V2 and V3 interfaces.
+
+There's no ABI for `bdexV3PositionManager` in 0.2.0.
+
+## Why they're generated, not written by hand
+
+A hand-copied ABI can be out of date without anything failing until a call reverts or decodes wrong. The SDK avoids that:
+
+1. A script reads each contract from BOTScan's `smart-contracts` API and writes the ABI to a file marked "Do not edit by hand", with the source address and fetch date.
+2. CI runs the same script in check mode on every change and fails if any committed ABI differs from BOTScan.
+3. A nightly job checks that every address still has code and that known proxies still point at the expected implementation.
+
+## Proxies
+
+The bridge router is an upgradeable proxy (EIP-1967). Its own ABI only covers proxy admin functions. The functions you call, such as `deposit`, live in the implementation contract, which the operator can replace.
+
+So for proxies, the script follows the proxy to its current implementation and takes that ABI. On mainnet, `botBridgeAbi` comes from the implementation at `0xD7F50Ee55787C8fFA82abD634801E56f0578a2B3`. If the bridge is upgraded, the nightly check fails and the ABI is regenerated in a new SDK release.
+
+You can see this yourself with the [explorer client](/sdk/explorer/get-contract):
+
+```ts proxy-check.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+
+const explorer = createExplorerClient({ chainId: 677 });
+const contract = await explorer.getContract(getAddresses(677).bridgeRouter);
+console.log(contract.name, contract.proxyType, contract.implementations);
+```
+
+```text Output
+TransparentUpgradeableProxy eip1967 [ '0xD7F50Ee55787C8fFA82abD634801E56f0578a2B3' ]
+```
+
+<Note>
+  The testnet bridge router points at a different implementation, `0x10FeaF2bcdF840B408C281089F2cCe45C82895d4` on 2026-10-02. The SDK uses the mainnet ABI for both networks. The calls used in the [bridge guides](/guides/bridge/bridge-out) worked on testnet with it.
+</Note>
+
+## Using an ABI
+
+```ts wrap-quote.ts
+import { createPublicClient, formatEther, http } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses, wbotAbi } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const { wbot } = getAddresses(botChainTestnet.id);
+
+const [symbol, totalSupply] = await Promise.all([
+  client.readContract({ address: wbot, abi: wbotAbi, functionName: "symbol" }),
+  client.readContract({ address: wbot, abi: wbotAbi, functionName: "totalSupply" }),
+]);
+console.log(`${symbol} total supply on testnet: ${formatEther(totalSupply)}`);
+```
+
+```text Output
+WBOT total supply on testnet: 702221.152230455253094443
+```
+
+Because the ABI is typed, TypeScript knows `symbol` is a `string` and `totalSupply` is a `bigint`. A misspelled function name is a compile error.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Addresses" icon="map-pin" href="/sdk/contracts/addresses">
+    The address for each ABI.
+  </Card>
+  <Card title="getContract" icon="search" href="/sdk/explorer/get-contract">
+    Fetch any verified ABI at runtime.
+  </Card>
+</CardGroup>

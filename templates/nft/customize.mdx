@@ -4,8 +4,171 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the NFT template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Change the NFT template's price, supply, artwork and mint rules, then redeploy it as your own collection.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## What you'll build
+
+Your own version of `UzoNFT`. The settings change without code. The artwork, traits, wallet limits and royalties each need a small contract change. Pick the ones you need.
+
+## Prerequisites
+
+- A copy of the template that deploys, from [Use a template](/templates/using-templates).
+- The [walkthrough](/templates/nft/walkthrough), so you know how `tokenURI` builds the art.
+
+## Name, price and supply
+
+Set these in `.env` and deploy again:
+
+```bash .env
+NFT_NAME="My Collection"
+NFT_SYMBOL=MYC
+NFT_MINT_PRICE=0.05
+NFT_MAX_SUPPLY=500
+```
+
+`NFT_MINT_PRICE` is in BOT. The deploy script converts it to wei and passes it to Foundry as `NFT_MINT_PRICE_WEI`, so you don't set that yourself. For a free mint, use `NFT_MINT_PRICE=0`.
+
+`NFT_MAX_SUPPLY` can't change after deploy. The owner can change the price at any time with `setMintPrice`.
+
+## Change the contract
+
+<Steps>
+  <Step title="Edit the contract">
+    <Tabs>
+      <Tab title="Artwork">
+        Edit `_svg` in `contracts/UzoNFT.sol`. It receives the token ID and its hue and returns an SVG string.
+
+        - Use single quotes inside the SVG. The SVG sits inside a JSON string, and double quotes would break it.
+        - Keep it small. Every byte adds to the deploy cost.
+        - If you need a different colour per token, reuse `_hue`, which gives the same ID the same hue every time.
+      </Tab>
+      <Tab title="More traits">
+        Add entries to the `attributes` array in `tokenURI`. Each entry is a `{"trait_type":"...","value":...}` object. Keep the commas between entries, because the contract builds the JSON by joining strings.
+      </Tab>
+      <Tab title="Limit per wallet">
+        Count mints per address and check the count in `mint()`:
+
+        ```solidity contracts/UzoNFT.sol
+        uint256 public constant MAX_PER_WALLET = 3;
+        mapping(address => uint256) public minted;
+
+        error WalletLimitReached();
+
+        function mint() external payable nonReentrant returns (uint256 tokenId) {
+            if (msg.value != mintPrice) revert WrongPayment(msg.value, mintPrice);
+            uint256 supply = totalSupply();
+            if (supply >= maxSupply) revert SoldOut();
+            if (minted[msg.sender] >= MAX_PER_WALLET) revert WalletLimitReached();
+            minted[msg.sender] += 1;
+
+            tokenId = supply + 1;
+            emit Minted(msg.sender, tokenId);
+            _safeMint(msg.sender, tokenId);
+        }
+        ```
+
+        A limit per address slows down one wallet, but anyone can create more addresses.
+      </Tab>
+      <Tab title="Royalties">
+        Add OpenZeppelin's `ERC2981`, which tells marketplaces what royalty you ask for:
+
+        ```solidity contracts/UzoNFT.sol
+        import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+
+        contract UzoNFT is ERC721, ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
+            // In the constructor, after maxSupply = maxSupply_;
+            //     _setDefaultRoyalty(owner_, 500); // 500 basis points is 5%
+
+            function supportsInterface(bytes4 interfaceId)
+                public
+                view
+                override(ERC721, ERC721Enumerable, ERC2981)
+                returns (bool)
+            {
+                return super.supportsInterface(interfaceId);
+            }
+        }
+        ```
+
+        Replace the existing `supportsInterface` with this one. ERC-2981 only reports the royalty. Each marketplace decides whether to pay it.
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step title="Run the tests">
+    ```bash Terminal
+    npm test
+    npm run test:hardhat
+    ```
+
+    The tests decode the JSON and SVG from `tokenURI`, so a broken quote in your artwork shows up here. Add tests for any new rule, such as a fourth mint from one wallet reverting.
+  </Step>
+  <Step title="Refresh the ABI">
+    ```bash Terminal
+    npm run abi
+    ```
+
+    This rewrites `frontend/src/abi.ts`, so the web app knows about new functions and errors.
+  </Step>
+  <Step title="Deploy and verify">
+    ```bash Terminal
+    npm run deploy
+    npm run verify
+    ```
+
+    Restart `npm run frontend` so it reads the new address.
+  </Step>
+</Steps>
+
+{/* untested: the Limit per wallet and Royalties changes compiled together with forge (solc 0.8.28, OpenZeppelin 5.6.1) on 2026-10-02 but were not deployed */}
+
+## Change the look
+
+Edit the variables at the top of `frontend/src/theme.css` for colours and fonts, and `frontend/src/styles.css` for styles that belong only to this app.
+
+## Hand over ownership
+
+The owner sets the price and receives withdrawals. To hand that to a multisig, call `transferOwnership(newOwner)` from the owner wallet. The new owner receives all future withdrawals.
+
+```bash Terminal
+cast send <nft address> "transferOwnership(address)" <new owner> --rpc-url https://rpc.bohr.life --private-key $PRIVATE_KEY
+```
+
+{/* untested: transferOwnership was not sent, to keep the test deploys' owner unchanged */}
+
+Load `PRIVATE_KEY` from your `.env` into the shell first, for example with `source .env`, rather than pasting it into the command.
+
+## Verify
+
+Mint one token from the web app and check the gallery shows your new art. On BOTScan, open the token's page and check its image and attributes. If you added royalties, call `royaltyInfo(1, 10000)` on the **Read contract** tab. It should return the owner and `500`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tests fail to decode the JSON after I changed the artwork">
+    A double quote inside the SVG ends the JSON string early. Use single quotes for every SVG attribute.
+  </Accordion>
+  <Accordion title="WrongPayment when minting">
+    You must send exactly `mintPrice`. The owner may have changed it since the page loaded. Reload and try again.
+  </Accordion>
+  <Accordion title="Compiler error about supportsInterface or _update">
+    Each parent that defines the function must appear in the `override(...)` list. With `ERC2981` added, `supportsInterface` needs all three.
+  </Accordion>
+  <Accordion title="I want to charge USDT instead of BOT">
+    USDT on BOT Chain has 6 decimals, so use `parseUnits(amount, 6)`, never `parseEther`, and move it with OpenZeppelin's `SafeERC20`. See [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Gasless app template" icon="fuel" href="/templates/gasless-app/index">
+    Let users act without holding tBOT.
+  </Card>
+  <Card title="Events without getLogs" icon="list" href="/guides/frontend/events-without-getlogs">
+    Read history without event logs.
+  </Card>
+</CardGroup>

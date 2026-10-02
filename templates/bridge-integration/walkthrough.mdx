@@ -4,8 +4,34 @@ sidebarTitle: "Walkthrough"
 description: "A file-by-file tour of the contracts and scripts in the Bridge integration template."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import TemplateInDevelopment from "/snippets/status-template-in-development.mdx";
 
-<InDevelopment />
+Walk through a bridge transfer from BOT Chain step by step using the hand-written guides, until the bridge integration template has code to tour.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<TemplateInDevelopment />
+
+## Why there's no file tour yet
+
+The bridge integration template is planned and has no folder in [uzolabs/templates](https://github.com/uzolabs/templates). This page will cover its files once it's published. Until then, the guides below cover the same ground in order.
+
+## Do it today
+
+| What you'd learn from the template | Guide |
+| --- | --- |
+| How lock and release works, and which contracts are involved | [Bridge overview](/guides/bridge/overview) |
+| Reading live limits and the minimum fee before you send | [Limits and fees](/guides/bridge/limits-and-fees) |
+| Approving USDT and calling `deposit` | [Bridge out](/guides/bridge/bridge-out) |
+| Following a transfer to arrival, and refunds | [Tracking transfers](/guides/bridge/tracking-transfers) |
+
+The guides read every address from `@uzolabs/sdk/contracts` and run on BOT Chain Testnet first. USDT has 6 decimals on BOT Chain, so read [USDT and decimals](/guides/defi/tokens/usdt-and-decimals) before you handle amounts.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Bridge out" icon="send" href="/guides/bridge/bridge-out">
+    Start the hand-written transfer.
+  </Card>
+  <Card title="DEX integration template" icon="arrow-left-right" href="/templates/dex-integration/index">
+    A ready template that gets you test USDT.
+  </Card>
+</CardGroup>

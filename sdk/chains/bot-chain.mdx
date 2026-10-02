@@ -1,10 +1,88 @@
 ---
 title: "botChain"
-description: "Reference for the planned botChain object: chain ID, RPC URLs, explorer, native currency and contracts."
+description: "Reference for the botChain object: chain ID, RPC URLs, explorer, native currency and contracts."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+`botChain` is the viem chain object for BOT Chain mainnet. Pass it to any viem client or wagmi config to work with chain 677.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+<Warning>
+  **Mainnet uses real BOT.** Build and test against [`botChainTestnet`](/sdk/chains/bot-chain-testnet) first, and only switch to `botChain` when you're ready to spend real funds.
+</Warning>
+
+## Import
+
+```ts Import
+import { botChain } from "@uzolabs/sdk/chains";
+```
+
+## Fields
+
+<ResponseField name="id" type="677">
+  The chain ID.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  `"BOT Chain"`.
+</ResponseField>
+
+<ResponseField name="nativeCurrency" type="object">
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">`"BOT"`</ResponseField>
+    <ResponseField name="symbol" type="string">`"BOT"`</ResponseField>
+    <ResponseField name="decimals" type="18">BOT uses 18 decimals, like ETH.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="rpcUrls.default.http" type="string[]">
+  `["https://rpc.botchain.ai"]`. The public RPC. It doesn't serve `eth_getLogs`. See [Known limitations](/get-started/bot-chain/known-limitations).
+</ResponseField>
+
+<ResponseField name="blockExplorers.default" type="object">
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">`"BOTScan"`</ResponseField>
+    <ResponseField name="url" type="string">`"https://scan.botchain.ai"`. Use it to build links to transactions and addresses.</ResponseField>
+    <ResponseField name="apiUrl" type="string">`"https://scan.botchain.ai/api/v2"`. BOTScan's v2 API, used by the [explorer client](/sdk/explorer/overview).</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="contracts.multicall3.address" type="Address">
+  `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`. viem uses it for `multicall` and for automatic request batching.
+</ResponseField>
+
+`botChain` has no `testnet` field. viem treats a missing value as mainnet.
+
+## Example
+
+```ts mainnet-read.ts
+import { createPublicClient, formatEther, http } from "viem";
+import { botChain } from "@uzolabs/sdk/chains";
+
+const client = createPublicClient({ chain: botChain, transport: http() });
+const [blockNumber, gasPrice] = await Promise.all([client.getBlockNumber(), client.getGasPrice()]);
+console.log(`Block ${blockNumber}, gas price ${formatEther(gasPrice, "gwei")} gwei`);
+console.log(`${botChain.blockExplorers.default.url}/block/${blockNumber}`);
+```
+
+Output from a run on 2026-10-02:
+
+```text Output
+Block 25326924, gas price 20 gwei
+https://scan.botchain.ai/block/25326924
+```
+
+This only reads from the chain. It doesn't send a transaction or use a wallet.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="botChainTestnet" icon="flask-conical" href="/sdk/chains/bot-chain-testnet">
+    The testnet object.
+  </Card>
+  <Card title="Gas and fees" icon="fuel" href="/get-started/bot-chain/gas-and-fees">
+    How gas works on BOT Chain.
+  </Card>
+</CardGroup>

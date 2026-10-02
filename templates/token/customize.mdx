@@ -4,8 +4,170 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the Token template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Change the token template's name, supply rules and look, then redeploy it as your own token.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## What you'll build
+
+Your own version of `UzoToken`: a new name and supply, and optionally a fixed supply, burning or a hard cap. Each change below is independent, so pick the ones you need.
+
+## Prerequisites
+
+- A copy of the template that deploys, from [Use a template](/templates/using-templates).
+- The [walkthrough](/templates/token/walkthrough), so you know which file does what.
+
+## Name, symbol and supply
+
+These need no code changes. Set them in `.env` and deploy again:
+
+```bash .env
+TOKEN_NAME="My Token"
+TOKEN_SYMBOL=MYT
+TOKEN_INITIAL_SUPPLY=500000
+```
+
+`TOKEN_INITIAL_SUPPLY` is in whole tokens. The deploy script converts it to the smallest unit for you. Each deploy creates a new contract. The old one stays on chain.
+
+## Change the contract
+
+<Steps>
+  <Step title="Edit the contract">
+    Pick one or more of the changes in the tabs.
+
+    <Tabs>
+      <Tab title="Burnable">
+        Add OpenZeppelin's `ERC20Burnable`, so holders can destroy their own tokens.
+
+        ```solidity contracts/UzoToken.sol
+        import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+        contract UzoToken is ERC20, ERC20Burnable, ERC20Permit, Ownable {
+            // constructor and mint unchanged
+        }
+        ```
+      </Tab>
+      <Tab title="Capped">
+        Use `ERC20Capped` so `mint` can never push the supply past a limit. Because `ERC20Capped` overrides `_update`, you must override it too.
+
+        ```solidity contracts/UzoToken.sol
+        import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+
+        contract UzoToken is ERC20, ERC20Capped, ERC20Permit, Ownable {
+            constructor(string memory name_, string memory symbol_, uint256 initialSupply, address owner_)
+                ERC20(name_, symbol_)
+                ERC20Capped(10_000_000 ether)
+                ERC20Permit(name_)
+                Ownable(owner_)
+            {
+                _mint(owner_, initialSupply);
+            }
+
+            function mint(address to, uint256 amount) external onlyOwner {
+                _mint(to, amount);
+            }
+
+            function _update(address from, address to, uint256 value)
+                internal
+                override(ERC20, ERC20Capped)
+            {
+                super._update(from, to, value);
+            }
+        }
+        ```
+
+        `10_000_000 ether` means 10 million tokens with 18 decimals. The `ether` suffix only multiplies by 10^18; it has nothing to do with BOT.
+      </Tab>
+      <Tab title="Fixed supply">
+        Remove `mint` so nobody can create more tokens after deploy:
+
+        1. Delete the `mint` function and `Ownable` from `contracts/UzoToken.sol`.
+        2. Remove the `owner` argument from the constructor, `script/Deploy.s.sol`, `ignition/modules/UzoToken.ts` and `scripts/deploy.ts`.
+        3. Delete the mint tests in `test/UzoToken.t.sol`.
+      </Tab>
+      <Tab title="Decimals">
+        Override `decimals()` to use something other than 18:
+
+        ```solidity contracts/UzoToken.sol
+        function decimals() public pure override returns (uint8) {
+            return 6;
+        }
+        ```
+
+        Amounts in the scripts and web app then scale differently. Check every `parseUnits` and `formatUnits` call, and read [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step title="Run the tests">
+    ```bash Terminal
+    npm test
+    npm run test:hardhat
+    ```
+
+    Add tests for whatever you changed, such as a test that minting past the cap reverts.
+  </Step>
+  <Step title="Refresh the ABI">
+    ```bash Terminal
+    npm run abi
+    ```
+
+    This rebuilds the contract and rewrites `frontend/src/abi.ts`, so the web app can call the new functions.
+  </Step>
+  <Step title="Deploy and verify">
+    ```bash Terminal
+    npm run deploy
+    npm run verify
+    ```
+
+    Restart `npm run frontend` so it reads the new address.
+  </Step>
+</Steps>
+
+{/* untested: Burnable, Capped and Decimals compiled with forge (solc 0.8.28, OpenZeppelin 5.6.1) on 2026-10-02 but were not deployed */}
+
+## Change the look
+
+Edit the variables at the top of `frontend/src/theme.css` to change colours. Swap its two `@import` lines to load your own fonts. Put styles that belong only to your app in `frontend/src/styles.css`.
+
+## Hand over ownership
+
+The deployer owns the token and is the only account that can mint. To give that power to a multisig, call `transferOwnership(newOwner)` from the owner wallet:
+
+```bash Terminal
+cast send <token address> "transferOwnership(address)" <new owner> --rpc-url https://rpc.bohr.life --private-key $PRIVATE_KEY
+```
+
+{/* untested: transferOwnership was not sent, to keep the test deploys' owner unchanged */}
+
+Load `PRIVATE_KEY` from your `.env` into the shell first, for example with `source .env`, rather than pasting it into the command.
+
+## Verify
+
+After deploying, open the BOTScan link from the deploy output. On the **Read contract** tab, check `name`, `symbol`, `totalSupply` and, if you added one, `cap`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Compiler error: function needs to specify overridden contracts">
+    Two parents define the same function, usually `_update`. Add an override that lists both, as in the Capped tab.
+  </Accordion>
+  <Accordion title="The web app doesn't show my new function">
+    Run `npm run abi` after changing the contract, then restart `npm run frontend`.
+  </Accordion>
+  <Accordion title="Hardhat verify fails after I changed the constructor">
+    `scripts/verify.ts` passes the arguments saved in `deployments/968.json`. Update `scripts/deploy.ts` and the Ignition module so they save and pass your new arguments.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="NFT template" icon="image" href="/templates/nft/index">
+    A paid mint with on-chain art.
+  </Card>
+  <Card title="Add liquidity" icon="droplets" href="/guides/defi/liquidity/v2">
+    Make your token tradable on BDEX.
+  </Card>
+</CardGroup>

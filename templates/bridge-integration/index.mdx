@@ -5,8 +5,54 @@ description: "A planned starter project for sending USDT out of BOT Chain throug
 icon: "waypoints"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import TemplateInDevelopment from "/snippets/status-template-in-development.mdx";
 
-<InDevelopment />
+Send USDT from BOT Chain to another network today with the hand-written bridge guides, while the bridge integration template is planned.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<TemplateInDevelopment />
+
+{/* screenshot: none yet, the template has no code or web app */}
+
+## What it will do
+
+The bridge integration template is listed as **Planned** in [uzolabs/templates](https://github.com/uzolabs/templates). Its aim is a starter project for sending USDT out of BOT Chain through the bridge. There's no code, scope or release date yet, so this page doesn't describe files, scripts or commands. They'll appear here once the template is published.
+
+## Do it today
+
+Everything the template is meant to wrap already works by hand:
+
+<Steps>
+  <Step title="Learn how the bridge works">
+    Read [Bridge overview](/guides/bridge/overview) for lock and release, the contracts, and why decimals change between chains.
+  </Step>
+  <Step title="Check limits and fees">
+    Follow [Limits and fees](/guides/bridge/limits-and-fees) to read the live limits and the minimum fee from the contract.
+  </Step>
+  <Step title="Send a transfer">
+    Follow [Bridge out](/guides/bridge/bridge-out) to approve the bridge and call `deposit`. Rehearse on testnet first.
+  </Step>
+  <Step title="Track it">
+    Follow [Tracking transfers](/guides/bridge/tracking-transfers) to follow a transfer to arrival and understand refunds.
+  </Step>
+</Steps>
+
+## How it will relate to the SDK
+
+The bridge functions in `@uzolabs/sdk` are also planned. See [SDK bridge](/sdk/bridge/overview) for what's planned and its own do-it-today steps.
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="Bridge out" icon="send" href="/guides/bridge/bridge-out">
+    The full transfer, written by hand.
+  </Card>
+  <Card title="Templates overview" icon="layout-grid" href="/templates/overview">
+    The templates you can use now.
+  </Card>
+  <Card title="Templates on GitHub" icon="github" href="https://github.com/uzolabs/templates">
+    Follow progress.
+  </Card>
+  <Card title="Add a template" icon="git-pull-request" href="/templates/contributing/add-a-template">
+    How templates are built and accepted.
+  </Card>
+</CardGroup>

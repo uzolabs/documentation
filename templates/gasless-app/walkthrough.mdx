@@ -4,8 +4,123 @@ sidebarTitle: "Walkthrough"
 description: "A file-by-file tour of the contracts and scripts in the Gasless app template."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Follow the gasless app template file by file: the signed request, the contracts that trust it, and the checks the relayer makes before it pays.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## Project layout
+
+```text Project layout
+contracts/UzoForwarder.sol        OpenZeppelin's ERC2771Forwarder, named "UzoForwarder"
+contracts/GuestBook.sol           the guest book, trusts the forwarder
+test/GuestBook.t.sol              Solidity tests, run by Foundry and by Hardhat
+script/Deploy.s.sol               Foundry deploy script (forwarder, then guest book)
+ignition/modules/GuestBook.ts     Hardhat Ignition deploy module
+relayer/src/server.ts             starts the relayer: reads .env and the deploy record
+relayer/src/app.ts                HTTP routes, rate limits and CORS
+relayer/src/forward.ts            request parsing and the allowlist checks
+relayer/src/chain.ts              verify, simulate and send through the forwarder
+relayer/src/rate-limit.ts         in-memory sliding window limiter
+relayer/src/paymaster.ts          optional paymaster adapter, off by default
+scripts/sign.ts                   signs from a new 0 tBOT wallet through the relayer
+frontend/                         Vite + React + wagmi web app
+```
+
+Deploy and verify work as in the token template, except that two contracts are deployed: the forwarder first, then the guest book with the forwarder's address. See [Token walkthrough](/templates/token/walkthrough#deploying).
+
+## The signed request
+
+The user signs EIP-712 typed data called a `ForwardRequest`:
+
+| Field | Meaning |
+| --- | --- |
+| `from` | The signer |
+| `to` | The contract to call, here the guest book |
+| `value` | BOT to send with the call. The relayer only accepts 0 |
+| `gas` | Gas limit for the inner call |
+| `nonce` | From `forwarder.nonces(signer)`. Goes up by one each time, so a request works once |
+| `deadline` | 10 minutes after signing |
+| `data` | The encoded call, such as `sign("hi")` |
+
+The EIP-712 domain is ("UzoForwarder", "1", chain ID, forwarder address). The app and `npm run sign` read it from the forwarder's `eip712Domain()`, so it always matches the deployed contract.
+
+## The contracts
+
+`UzoForwarder` is OpenZeppelin's `ERC2771Forwarder` with a name. `execute(request)` checks the signature, nonce and deadline, then calls the target with the signer's address appended to the calldata.
+
+`GuestBook` extends `ERC2771Context` and trusts that forwarder. Its `_msgSender()` returns the appended address when the caller is the forwarder, and `msg.sender` otherwise.
+
+| Function | What it does |
+| --- | --- |
+| `sign(message)` | Stores the author, block time and message. Reverts with `EmptyMessage` or, above 280 bytes, `MessageTooLong` |
+| `getEntries(offset, limit)` | Returns a page of entries, oldest first, at most 100 |
+| `entryCount()` | How many entries exist |
+
+Anyone can also call `sign` directly and pay their own gas. They're still recorded as the author.
+
+## What the relayer checks
+
+`POST /relay` takes `{ "request": { from, to, value, gas, deadline, data, signature } }`, with numbers as decimal strings. In order, the relayer:
+
+<Steps>
+  <Step title="Checks the shape">
+    Refuses bodies over 8 KB and anything that isn't a well-formed request.
+  </Step>
+  <Step title="Checks the target">
+    Refuses any contract except the deployed guest book and any function except `sign(string)`, with a 403.
+  </Step>
+  <Step title="Checks the limits">
+    Refuses a `value` other than 0, `gas` above `RELAYER_MAX_GAS` (300,000 by default), a past deadline, and an empty or too-long message.
+  </Step>
+  <Step title="Applies rate limits">
+    Counts the request against the signer and the caller's IP address, 10 each per hour by default. Over the limit it answers 429 with `Retry-After`. Rejected requests count too, so nobody can make the relayer call the node for free.
+  </Step>
+  <Step title="Asks the forwarder">
+    Calls the forwarder's `verify(request)` to check the signature, nonce, deadline and that the guest book trusts this forwarder.
+  </Step>
+  <Step title="Simulates, then sends">
+    Simulates `execute(request)` and returns a plain reason if it would revert. Otherwise it sends it, one transaction at a time so nonces never clash, and waits up to 60 seconds for the receipt.
+  </Step>
+</Steps>
+
+The response is `{ txHash, txUrl, status, paidBy, relayer }`. `GET /health` returns the relayer's address, balance, chain and paymaster setting. The relayer logs a warning when its balance falls below `RELAYER_LOW_BALANCE`, 1 tBOT by default.
+
+## Relayer settings
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `RELAYER_PORT` | `8787` | Port to listen on |
+| `RELAYER_RATE_LIMIT` | `10` | Requests per signer and per IP in each window |
+| `RELAYER_RATE_WINDOW_SECONDS` | `3600` | Length of the window |
+| `RELAYER_ALLOWED_ORIGINS` | `http://localhost:5173` | Pages allowed to call from a browser. Blank allows any |
+| `RELAYER_MAX_GAS` | `300000` | Highest `gas` a request may ask for |
+| `RELAYER_TRUST_PROXY` | `false` | Read `X-Forwarded-For`. Only set behind your own reverse proxy, since anyone can fake it otherwise |
+| `RELAYER_LOW_BALANCE` | `1` | Warn below this many tBOT |
+| `PAYMASTER_URL` | blank | Turns on the optional paymaster adapter |
+
+Rate limits live in memory, so they reset when the relayer restarts. The relayer reads contract addresses from `deployments/<chainId>.json`, or from `GUESTBOOK_ADDRESS` and `FORWARDER_ADDRESS` if you set them.
+
+## The optional paymaster
+
+`relayer/src/paymaster.ts` implements BOT Chain's EOA paymaster flow: ask the paymaster `pm_isSponsorable`, and if it agrees, send the transaction with a gas price of 0. It's only used when `PAYMASTER_URL` is set. If the paymaster refuses or fails, the relayer pays the gas itself, and the web app shows who paid. See [EOA paymaster](/guides/gasless/eoa-paymaster).
+
+{/* untested: the paymaster adapter has unit tests in the template but has not been run against a real paymaster */}
+
+## The web app
+
+`frontend/src/forward.ts` builds the request (domain, nonce, gas estimate, deadline) and posts it to the relayer. `App.tsx` only ever asks the wallet for `eth_signTypedData_v4`. The sign card moves through "Preparing", "Sign in your wallet", "Relaying", then "Signed. Gas paid by relayer" with a BOTScan link.
+
+The guest book list reads `entryCount()`, then the newest 20 entries with `getEntries`, every 10 seconds. It doesn't use the `Signed` event, because BOT Chain's public RPCs don't serve `eth_getLogs`. A relayer card shows the relayer's address and balance, and warns when it's offline, low on tBOT or on another chain.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Customize" icon="sliders-horizontal" href="/templates/gasless-app/customize">
+    Relay your own contract and host the relayer.
+  </Card>
+  <Card title="Run a relayer" icon="server" href="/guides/gasless/run-a-relayer">
+    Running a relayer in production.
+  </Card>
+</CardGroup>

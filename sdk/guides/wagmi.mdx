@@ -1,12 +1,131 @@
 ---
 title: "Use with wagmi"
 sidebarTitle: "wagmi"
-description: "Use the planned SDK's BOT Chain chain objects in a wagmi config."
+description: "Use the SDK's BOT Chain chain objects in a wagmi config."
 icon: "atom"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can pass the SDK's BOT Chain chain objects straight to wagmi, and use its addresses and ABIs with wagmi's contract hooks.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## What you'll build
+
+A wagmi config for BOT Chain testnet and mainnet, and a component that reads a token balance with the SDK's addresses.
+
+## Prerequisites
+
+- A React app with wagmi set up. [Set up wagmi](/guides/frontend/wagmi-setup) walks through it from scratch.
+- `@uzolabs/sdk` installed: `npm install @uzolabs/sdk`.
+
+## Steps
+
+<Steps>
+  <Step title="Add the chains to your config">
+    `botChain` and `botChainTestnet` are viem chain objects, which is what wagmi expects.
+
+    ```ts src/wagmi.ts
+    import { createConfig, http } from "wagmi";
+    import { injected } from "wagmi/connectors";
+    import { botChain, botChainTestnet } from "@uzolabs/sdk/chains";
+
+    export const config = createConfig({
+      chains: [botChainTestnet, botChain],
+      connectors: [injected()],
+      transports: {
+        [botChainTestnet.id]: http(),
+        [botChain.id]: http(),
+      },
+    });
+
+    declare module "wagmi" {
+      interface Register {
+        config: typeof config;
+      }
+    }
+    ```
+
+    The `Register` block types every hook from your config. Without it, `useChainId` returns a plain `number`, which `getAddresses` won't accept.
+
+    Each chain object includes the public RPC, BOTScan as the explorer and the Multicall3 address, so wagmi can batch reads without extra config.
+  </Step>
+
+  <Step title="Look up addresses for the connected chain">
+    `getAddresses(chainId)` takes `677` or `968`, the two IDs in the config. Pair it with `useChainId` so the component follows the user's network.
+
+    {/* untested: needs a running React app; the same config is tested in /guides/frontend/wagmi-setup */}
+
+    ```tsx src/UsdtBalance.tsx
+    import { erc20Abi, formatUnits } from "viem";
+    import { useAccount, useChainId, useReadContract } from "wagmi";
+    import { getAddresses, TOKENS } from "@uzolabs/sdk/contracts";
+
+    export function UsdtBalance() {
+      const chainId = useChainId();
+      const { address } = useAccount();
+      const { data } = useReadContract({
+        address: getAddresses(chainId).usdt,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: address ? [address] : undefined,
+        query: { enabled: Boolean(address) },
+      });
+
+      if (!address) return <p>Connect a wallet</p>;
+      return <p>USDT: {data === undefined ? "..." : formatUnits(data, TOKENS.USDT.decimals)}</p>;
+    }
+    ```
+
+    With the `Register` block, `useChainId` returns a chain ID from your config, so its type is `677 | 968`, which is the SDK's [`SupportedChainId`](/sdk/reference/types#supportedchainid).
+  </Step>
+
+  <Step title="Use the SDK's ABIs for BDEX and the bridge">
+    The SDK's ABIs are `as const` arrays, so wagmi infers function names, arguments and return types from them:
+
+    {/* untested: needs a running React app */}
+
+    ```tsx src/useQuote.ts
+    import { parseEther } from "viem";
+    import { useChainId, useReadContract } from "wagmi";
+    import { bdexV2Router02Abi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    export function useQuote() {
+      const { bdexV2Router02, wbot, usdt } = getAddresses(useChainId());
+      return useReadContract({
+        address: bdexV2Router02,
+        abi: bdexV2Router02Abi,
+        functionName: "getAmountsOut",
+        args: [parseEther("1"), [wbot, usdt]],
+      });
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify
+
+Connect a wallet on BOT Chain testnet. The balance component shows your testnet USDT, and switching to mainnet in your wallet updates it to the mainnet USDT contract.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Type error: chain ID is not assignable to SupportedChainId">
+    `useChainId` is typed from your config. If you add a chain the SDK doesn't support, guard before calling `getAddresses`, or it throws [`UnsupportedChainError`](/sdk/reference/errors#unsupportedchainerror).
+  </Accordion>
+  <Accordion title="The wallet doesn't know BOT Chain">
+    wagmi can ask the wallet to add the network. See [Connect a wallet](/guides/frontend/connect-wallet).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Read contract state" icon="book-open" href="/guides/frontend/read-contract-state">
+    More reads with wagmi.
+  </Card>
+  <Card title="Send transactions" icon="send" href="/guides/frontend/send-transactions">
+    Writes, receipts and errors.
+  </Card>
+</CardGroup>

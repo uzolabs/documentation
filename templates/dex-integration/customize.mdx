@@ -4,8 +4,154 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the DEX integration template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Change the DEX integration template's slippage, tokens and routes, or move the swap widget into your own app.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## What you'll build
+
+Your own swap scripts and widget on top of BDEX. Each change below is independent. The scripts and the widget share `frontend/src/dex/`, so most changes apply to both at once.
+
+## Prerequisites
+
+- A copy of the template that quotes, from [Use a template](/templates/using-templates).
+- The [walkthrough](/templates/dex-integration/walkthrough), so you know how routes and approvals work.
+
+## Options per run
+
+These need no code changes:
+
+```bash Terminal
+npm run swap-v2 -- 1 BOT USDT --slippage 1
+npm run swap-v3 -- 0.1 WBOT USDT --fee 500
+```
+
+- `--slippage 1` accepts up to 1% less than the quote, for this run only.
+- `--fee 500`, `--fee 3000` or `--fee 10000` picks a V3 pool. Without it, `swap-v3` uses the pool with the best quote.
+
+## Change the code
+
+<Steps>
+  <Step title="Make your change">
+    <Tabs>
+      <Tab title="Slippage and deadline">
+        Edit the defaults in `frontend/src/dex/math.ts`. Values are in basis points, so 50 means 0.5%.
+
+        ```ts frontend/src/dex/math.ts
+        export const DEFAULT_SLIPPAGE_BPS = 50
+        export const MAX_SLIPPAGE_BPS = 500
+        export const DEADLINE_MINUTES = 20
+        ```
+
+        Raising the maximum lets users accept worse prices by mistake. Keep it low unless you have a reason.
+      </Tab>
+      <Tab title="More tokens">
+        Tokens live in `frontend/src/dex/routes.ts`. To add one:
+
+        1. Add its symbol to the `TokenSymbol` type and the `SYMBOLS` list.
+        2. Add an entry to the object `getTokens` returns, with its address, its `decimals` and `isNative: false`.
+        3. Take the address from `@uzolabs/sdk/contracts` or an environment variable, not a hard-coded string, so testnet and mainnet both work.
+
+        Call the token's `decimals()` on BOTScan before you add it. A wrong value makes every amount wrong by a power of ten.
+      </Tab>
+      <Tab title="Multi-hop routes">
+        The template trades directly between two tokens. To go from A to C through B:
+
+        - On V2, pass a longer `path`, such as `[A, B, C]`, to the Router02 swap functions.
+        - On V3, use `exactInput` with an encoded path of tokens and fee tiers.
+
+        Quote the whole path first. V2's `getAmountsOut` accepts the same path. For V3 use QuoterV2's `quoteExactInput`.
+      </Tab>
+      <Tab title="Exact output">
+        To receive an exact amount, such as exactly 10 USDT, use `swapTokensForExactTokens` on V2 or `exactOutputSingle` on V3. Approve the most you're willing to pay, and set that as the maximum input.
+      </Tab>
+      <Tab title="Remove liquidity">
+        `add-liquidity-v2` gives you the pair's LP token. To take liquidity out, approve the LP token to Router02, then call `removeLiquidity`, or `removeLiquidityETH` to get BOT back instead of WBOT. See [V2 liquidity](/guides/defi/liquidity/v2).
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step title="Run the tests">
+    ```bash Terminal
+    npm test
+    npm run typecheck
+    ```
+
+    `npm test` covers the slippage maths and the failure reasons. Add a test for any new rule.
+  </Step>
+  <Step title="Try it on testnet">
+    ```bash Terminal
+    npm run quote
+    npm run frontend
+    ```
+
+    Quote first, then send a small swap from the widget and check the BOTScan link.
+  </Step>
+</Steps>
+
+{/* untested: the more tokens, multi-hop, exact output and remove liquidity changes are described from the template README and were not written or run */}
+
+## Embed the widget in your app
+
+`SwapCard` in `frontend/src/App.tsx` is self-contained. To use it in your own wagmi app, copy:
+
+1. `SwapCard` from `App.tsx`, with `SwapResult.tsx`.
+2. The whole `frontend/src/dex/` folder.
+3. `frontend/src/styles.css`, and the variables from `theme.css` if you want the same look.
+
+Your app must already have a `WagmiProvider` and a `QueryClientProvider`. See [wagmi setup](/guides/frontend/wagmi-setup).
+
+## Change the look
+
+Edit the variables at the top of `frontend/src/theme.css` for colours and fonts. The two background glows switch off for users who prefer reduced motion.
+
+## Mainnet
+
+<Warning>
+Mainnet uses real BOT and real USDT, and this template hasn't been audited. Check the quote, the minimum received and the router address before you approve anything. Use a separate wallet.
+</Warning>
+
+```bash Terminal
+npm run quote -- 1 BOT USDT --mainnet
+```
+
+Every script that sends a transaction waits for you to type `MAINNET`. For the widget, set `VITE_CHAIN_ID=677` in `frontend/.env`, run `npm --prefix frontend run build`, and host the `frontend/dist` folder on any static host.
+
+## Verify
+
+There's no contract to verify. After a swap, open the BOTScan link the script printed and check the token transfers match the "After" balances.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="EXPIRED or Transaction too old">
+    More than 20 minutes passed between building the swap and mining it, usually because the wallet popup stayed open. Swap again for a fresh deadline.
+  </Accordion>
+  <Accordion title="Too little received or INSUFFICIENT_OUTPUT_AMOUNT">
+    The price moved past your slippage. Nothing was swapped and only gas was spent. Quote again, or raise slippage a little with `--slippage 1`.
+  </Accordion>
+  <Accordion title="No pool for a fee tier">
+    Not every tier has a pool. On testnet there was no 0.01% WBOT/USDT pool when the template was tested. Run `npm run find-pools` to see which exist.
+  </Accordion>
+  <Accordion title="BOT and WBOT are 1:1 and need no pool">
+    Use `npm run wrap -- 1` or `npm run wrap -- 1 --unwrap`. In the widget, the button says Wrap or Unwrap.
+  </Accordion>
+  <Accordion title="The widget quotes nothing">
+    Quotes appear about half a second after you stop typing. If they never do, check the browser console. A slow or blocked RPC is the usual cause. Set `VITE_RPC_URL` in `frontend/.env` and restart `npm run frontend`.
+  </Accordion>
+  <Accordion title="A new token's amounts are wildly wrong">
+    Its `decimals` in `getTokens` doesn't match the contract. Read `decimals()` on BOTScan and fix the entry.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="BDEX V3 swaps" icon="arrow-left-right" href="/guides/defi/swaps/bdex-v3">
+    Fee tiers and the SwapRouter by hand.
+  </Card>
+  <Card title="Token template" icon="coins" href="/templates/token/index">
+    Make a token, then add a pool for it.
+  </Card>
+</CardGroup>

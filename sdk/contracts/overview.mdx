@@ -1,11 +1,68 @@
 ---
 title: "Contracts"
-description: "Contract addresses, ABIs and constants for BOT Chain, bundled in one planned SDK module."
+description: "Contract addresses, ABIs and constants for BOT Chain, bundled in one SDK module."
 icon: "file-code"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can call any core BOT Chain contract from viem by importing its address and ABI from `@uzolabs/sdk/contracts`, instead of copying them from an explorer.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## What's in the module
+
+| Export | What it is | Page |
+| --- | --- | --- |
+| `addresses`, `getAddresses` | Contract addresses for each network | [Addresses](/sdk/contracts/addresses) |
+| `wbotAbi`, `bdexV2Router02Abi`, `botBridgeAbi` and others | Typed ABIs from verified contracts | [ABIs](/sdk/contracts/abis) |
+| `USDT_RESOURCE_ID`, `TOKENS`, `EXTERNAL_BRIDGE` | Shared constants | [Constants](/sdk/contracts/constants) |
+
+## Why it helps
+
+- **Typed per network.** `getAddresses(968)` returns only the keys that exist on testnet, as literal address types. If you use a contract that doesn't exist on that network, TypeScript catches it before you run anything.
+- **ABIs that match the chain.** Each ABI is fetched from BOTScan, and CI fails if it drifts. Because the ABIs are declared `as const`, viem can infer function names, arguments and return types.
+- **One source of truth.** The [Contract addresses](/reference/contract-addresses) page and the SDK list the same addresses. When an address changes, updating the SDK version picks it up.
+
+## How it works
+
+```ts quote.ts
+import { createPublicClient, formatUnits, http, parseUnits } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { bdexV2Router02Abi, getAddresses, TOKENS } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const { bdexV2Router02, wbot, usdt } = getAddresses(botChainTestnet.id);
+
+// Quote 1 tBOT (as WBOT) to USDT on BDEX V2. Reads only, no wallet needed.
+const amountIn = parseUnits("1", TOKENS.BOT.decimals);
+const amounts = await client.readContract({
+  address: bdexV2Router02,
+  abi: bdexV2Router02Abi,
+  functionName: "getAmountsOut",
+  args: [amountIn, [wbot, usdt]],
+});
+console.log(`1 tBOT quotes at ${formatUnits(amounts[1], TOKENS.USDT.decimals)} USDT`);
+```
+
+Output from a run on 2026-10-02:
+
+```text Output
+1 tBOT quotes at 16.055264 USDT
+```
+
+Testnet prices come from test liquidity and don't reflect mainnet.
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Addresses" icon="map-pin" href="/sdk/contracts/addresses">
+    Every key on each network.
+  </Card>
+  <Card title="ABIs" icon="file-json" href="/sdk/contracts/abis">
+    What's included and where it comes from.
+  </Card>
+  <Card title="Constants" icon="hash" href="/sdk/contracts/constants">
+    Resource ID, decimals, bridge gateways.
+  </Card>
+</CardGroup>

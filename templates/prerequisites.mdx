@@ -4,4 +4,121 @@ description: "Install Node.js, Foundry and MetaMask, and get testnet tBOT, befor
 icon: "list-checks"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
+
+Install the four things every template needs, Node.js, Foundry, a browser wallet and testnet BOT, and check each one before you start.
+
+<StatusTemplateReady />
+
+## What you need
+
+| Tool | Version | Why |
+| --- | --- | --- |
+| Node.js | 20.19 or newer | Runs the deploy scripts and the web app |
+| Foundry | Latest | Compiles, tests and deploys the contracts. Not needed for the DEX integration template |
+| Browser wallet | Any EIP-6963 wallet, such as MetaMask | Signs transactions in the web app |
+| tBOT | About 1 tBOT is plenty | Pays for gas on BOT Chain Testnet |
+
+You don't need to install Hardhat. Each template installs Hardhat 3 as a dev dependency, so `npm run deploy:hardhat` works after `npm install`.
+
+## Install Node.js and Foundry
+
+<Tabs>
+  <Tab title="macOS">
+    1. Install Node.js 20.19 or newer from [nodejs.org](https://nodejs.org), or with a version manager such as `nvm`.
+    2. Install Foundry:
+
+    ```bash Terminal
+    curl -L https://foundry.paradigm.xyz | bash
+    foundryup
+    ```
+
+    Open a new terminal so `forge` is on your PATH.
+  </Tab>
+  <Tab title="Linux">
+    1. Install Node.js 20.19 or newer from [nodejs.org](https://nodejs.org) or with `nvm`. Distribution packages are often older than 20.19, so check the version.
+    2. Install Foundry:
+
+    ```bash Terminal
+    curl -L https://foundry.paradigm.xyz | bash
+    foundryup
+    ```
+
+    Open a new terminal so `forge` is on your PATH.
+  </Tab>
+  <Tab title="Windows">
+    1. Install Node.js 20.19 or newer from [nodejs.org](https://nodejs.org).
+    2. Install Foundry from **Git Bash** or **WSL**, not from PowerShell or Command Prompt:
+
+    ```bash Git Bash
+    curl -L https://foundry.paradigm.xyz | bash
+    foundryup
+    ```
+
+    3. Open a new terminal. Foundry installs to `~/.foundry/bin`. If PowerShell can't find `forge`, add it for the current window:
+
+    ```powershell PowerShell
+    $env:Path += ";$env:USERPROFILE\.foundry\bin"
+    ```
+  </Tab>
+</Tabs>
+
+Full install options are in the [Foundry book](https://getfoundry.sh) and on [Set up Foundry](/guides/environment/foundry).
+
+## Set up a test wallet
+
+<Steps>
+  <Step title="Create a fresh account">
+    Install [MetaMask](https://metamask.io) or another browser wallet and create a new account just for testing. Never use a wallet that holds real funds, because its key goes into a `.env` file.
+  </Step>
+  <Step title="Add BOT Chain Testnet">
+    Add the network with the values on [Connect a wallet](/get-started/bot-chain/connect-wallet). The template web apps also offer a "Switch to BOT Chain Testnet" button that adds it for you.
+  </Step>
+  <Step title="Get tBOT">
+    Request 10 tBOT from the [faucet](https://faucet.botchain.ai/basic). You can ask once per address every 24 hours. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+  </Step>
+  <Step title="Export the private key">
+    In your wallet's account details, export the private key. You'll paste it after `PRIVATE_KEY=` in the template's `.env`. Keep it out of chat, screenshots and commits.
+  </Step>
+</Steps>
+
+<Note>
+The gasless app and the AI agent templates use two wallets: one to deploy and a second for the relayer or the agent. Fund both from the faucet.
+</Note>
+
+## Verify
+
+Run these in a new terminal. Each one should print a version.
+
+```bash Terminal
+node --version
+forge --version
+npm --version
+```
+
+`node --version` must print `v20.19.0` or higher. Then open [BOTScan for testnet](https://scan.bohr.life), search for your address and check that it holds tBOT.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="&quot;forge: command not found&quot;">
+    Open a new terminal after installing. On Windows, check that `~/.foundry/bin` is on your PATH, as shown in the Windows tab.
+  </Accordion>
+  <Accordion title="npm install fails with an engine or syntax error">
+    Your Node.js is older than 20.19. Upgrade and run `npm install` again.
+  </Accordion>
+  <Accordion title="The faucet says to wait">
+    Each address can request once every 24 hours. Wait, or use the tBOT you already have. A token deploy costs about 0.02 tBOT.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Use a template" icon="play" href="/templates/using-templates">
+    Download, deploy and run your first template.
+  </Card>
+  <Card title="Choose a toolchain" icon="wrench" href="/guides/environment/choose-a-toolchain">
+    Foundry or Hardhat, and when each fits.
+  </Card>
+</CardGroup>

@@ -5,6 +5,70 @@ description: "Reference for the planned buildBridgeDeposit function, including h
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned `buildBridgeDeposit` will build an unsigned USDT deposit from BOT Chain to another network, after checking the bridge's live limits. You can build the same transaction today with viem.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned function
+
+### buildBridgeDeposit
+
+The name comes from the SDK plan. Parameters and return types aren't final. It's planned to:
+
+1. Read the pause state and limits, and throw [`BridgeValidationError`](/sdk/reference/errors#reserved-for-planned-modules) if the bridge is paused, the amount is outside the limits or the destination isn't supported.
+2. Return an unsigned call to the bridge router's `deposit(destinationChainId, resourceId, recipient, amount)`, which you sign and send.
+
+You approve the router to spend your USDT first, as with any ERC-20 deposit.
+
+## Bot gas
+
+Bot gas gives a recipient a little BOT for gas when USDT arrives **on BOT Chain**. In plain words, from the verified [BotBridge source](https://scan.botchain.ai/address/0xD7F50Ee55787C8fFA82abD634801E56f0578a2B3?tab=contract):
+
+- **Who asks for it.** The sender calls `depositWithBotGas` instead of `deposit` on the source chain. It takes the same four arguments.
+- **What arrives.** When the transfer lands on BOT Chain, the router works out what the configured BOT amount costs in USDT, using a time-weighted average price. It sends the recipient that BOT plus the rest of the USDT. With 0.1 BOT configured on mainnet, the recipient gets 0.1 BOT and slightly less USDT than a plain deposit.
+- **When it fails.** If the USDT arriving is less than the BOT costs, or the price can't be read, the delivery reverts on BOT Chain and has to be retried or refunded.
+
+### It doesn't apply to deposits from BOT Chain
+
+The router only accepts a bot gas deposit when the destination is the chain in the bot gas config, which is BOT Chain itself. A deposit **from** BOT Chain always goes somewhere else, so `depositWithBotGas` is rejected. We confirmed this on testnet on 2026-10-02: simulating `depositWithBotGas` to BSC testnet (chain 97) reverted with `invalid bot gas deposit`.
+
+So because v1 only supports BOT Chain as the source, `buildBridgeDeposit` will build plain `deposit` calls. Bot gas matters to you when your users bridge **into** BOT Chain through the official app at [bridge.botchain.ai](https://bridge.botchain.ai/), which happens on the other chain.
+
+## Do it today
+
+[Bridge USDT out](/guides/bridge/bridge-out) is a tested script that does everything `buildBridgeDeposit` will do: read limits, approve and call `deposit`. The core of it:
+
+{/* untested: node crashes on this machine since 2026-10-02; the full deposit flow is tested in /guides/bridge/bridge-out */}
+
+```ts deposit-call.ts
+import { encodeFunctionData, parseUnits } from "viem";
+import { botBridgeAbi, getAddresses, TOKENS, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";
+
+const recipient = "0xEc526474F4F9De027942d5f7118A9613266B0C4c"; // your address on the destination chain
+const tx = {
+  to: getAddresses(968).bridgeRouter,
+  data: encodeFunctionData({
+    abi: botBridgeAbi,
+    functionName: "deposit",
+    args: [97n, USDT_RESOURCE_ID, recipient, parseUnits("11", TOKENS.USDT.decimals)],
+  }),
+};
+console.log(tx);
+```
+
+This builds the request without sending it. Pass `tx` to your wallet client's `sendTransaction` after the USDT approval. Chain 97 is BSC testnet.
+
+<Warning>
+  On mainnet, a deposit moves real USDT and can't be cancelled. Check the recipient is an address you control on the destination chain, and send a small amount first. Read the warnings in [Bridge USDT out](/guides/bridge/bridge-out) before you run it on mainnet.
+</Warning>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Status and limits" icon="gauge" href="/sdk/bridge/status-and-limits">
+    Checks to run before building a deposit.
+  </Card>
+  <Card title="Track a transfer" icon="radar" href="/guides/bridge/tracking-transfers">
+    Confirm it arrived.
+  </Card>
+</CardGroup>

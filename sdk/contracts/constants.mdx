@@ -3,8 +3,81 @@ title: "Constants"
 description: "Shared constants such as USDT_RESOURCE_ID and TOKENS, plus experimental bridge values."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can use the SDK's constants to bridge USDT, format token amounts with the right decimals and find the bridge contracts on other chains, without hard-coding any of these values.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Import
+
+```ts Import
+import { EXTERNAL_BRIDGE, TOKENS, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";
+```
+
+## USDT_RESOURCE_ID
+
+```ts Signature
+const USDT_RESOURCE_ID = "0xac589789ed8c9d2c61f17b13369864b5f181e58eba230a6ee4ec4c3e7750cd1d";
+```
+
+The bridge uses a resource ID to identify each bridged token. Pass this value as the `resourceId` argument to the bridge router's `deposit` and to the fee and pause reads. It's the same on mainnet, testnet and every connected chain.
+
+See it used in [Bridge USDT out](/guides/bridge/bridge-out).
+
+## TOKENS
+
+```ts Signature
+const TOKENS = {
+  BOT: { decimals: 18 },
+  USDT: { decimals: 6 },
+};
+```
+
+Use these with viem's `parseUnits` and `formatUnits`:
+
+```ts amounts.ts
+import { formatUnits, parseUnits } from "viem";
+import { TOKENS } from "@uzolabs/sdk/contracts";
+
+const tenUsdt = parseUnits("10", TOKENS.USDT.decimals);
+console.log(tenUsdt, formatUnits(tenUsdt, TOKENS.USDT.decimals));
+```
+
+```text Output
+10000000n 10
+```
+
+<Warning>
+  USDT on BOT Chain has **6 decimals**, but USDT on BNB Smart Chain has 18. Using 18 for BOT Chain USDT makes amounts 10<sup>12</sup> times too large. If you bridge to BNB Smart Chain, you still pass the amount in BOT Chain units.
+</Warning>
+
+## EXTERNAL_BRIDGE
+
+<Badge>Experimental</Badge>
+
+The bridge gateway and USDT addresses on the other side of the bridge, keyed by chain ID.
+
+| Chain | Key | `bridgeGateway` | `usdt` |
+| --- | --- | --- | --- |
+| Ethereum | `1` | `0x2945d3aF6f012e49f7421252b5fB57D1bb7E6Edd` | `0xdAC17F958D2ee523a2206206994597C13D831ec7` |
+| BNB Smart Chain | `56` | `0x3cd6fB6b0CDdD3610f0f4769AA7Bb686Cd4a4b55` | `0x55d398326f99059fF775485246999027B3197955` |
+
+```ts gateway.ts
+import { EXTERNAL_BRIDGE } from "@uzolabs/sdk/contracts";
+
+console.log(EXTERNAL_BRIDGE[56].bridgeGateway);
+```
+
+It's experimental because the gateway ABIs aren't published, so the SDK doesn't call these contracts. Use the addresses to find incoming transfers on BscScan or Etherscan, as shown in [Track a bridge transfer](/guides/bridge/tracking-transfers#confirm-arrival-on-the-destination). The shape of this export may change. Testnet gateways and Tron aren't included.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Limits and fees" icon="gauge" href="/guides/bridge/limits-and-fees">
+    Read live bridge limits with the resource ID.
+  </Card>
+  <Card title="Addresses" icon="map-pin" href="/sdk/contracts/addresses">
+    Contract addresses on BOT Chain.
+  </Card>
+</CardGroup>

@@ -5,6 +5,45 @@ description: "Reference for the planned createRoutingClient. You supply the Rout
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned routing client will ask the BDEX Routing API for the best route across pools and give you calldata to sign. The API's base URL isn't public, so you'll have to supply it yourself.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned function
+
+### createRoutingClient
+
+The name comes from the SDK plan. Parameters and return types aren't final, but two rules are set:
+
+<ParamField path="url" type="string" required>
+  The Routing API base URL. It isn't public, so the SDK can't include a default. If you leave it out, the client is planned to throw [`MissingConfigError`](/sdk/reference/errors#reserved-for-planned-modules) instead of guessing.
+</ParamField>
+
+<ParamField path="router allowlist" type="Address[]">
+  The routers you trust. Routing API responses include calldata for a router contract. The client is planned to check that router against an allowlist and throw [`RouterNotAllowedError`](/sdk/reference/errors#reserved-for-planned-modules) if it isn't on the list. The exact option name isn't final.
+</ParamField>
+
+## Why the allowlist matters
+
+When you sign calldata that came from an API, you're trusting the API to send your tokens to the right contract. If the API is wrong or compromised, the calldata could target a contract that drains your approval. Checking the target router against addresses you already trust, such as the ones in [`getAddresses`](/sdk/contracts/addresses), limits that risk.
+
+## Do it today
+
+Without the Routing API, you can still find a good route yourself:
+
+1. **List pools.** The public [BDEX API](/reference/bdex-api) lists V2 pairs and V3 pools, so you can see which routes exist.
+2. **Quote each candidate.** For V2, pass a multi-hop path such as `[tokenA, wbot, usdt]` to `getAmountsOut`. For V3, compare fee tiers with QuoterV2. See [BDEX V2](/sdk/bdex/v2) and [BDEX V3](/sdk/bdex/v3).
+3. **Swap through a router you know.** Use Router02 or SwapRouter from [`getAddresses`](/sdk/contracts/addresses), as in the [swap guides](/guides/defi/swaps/overview).
+
+The UniversalRouter that the Routing API targets takes encoded commands, not plain function calls. The SDK includes `universalRouterAbi` and the testnet `universalRouter` address, but building commands by hand isn't covered in these docs.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Swaps overview" icon="arrow-left-right" href="/guides/defi/swaps/overview">
+    Which router to use and why.
+  </Card>
+  <Card title="Errors" icon="circle-alert" href="/sdk/reference/errors">
+    The errors this client will throw.
+  </Card>
+</CardGroup>

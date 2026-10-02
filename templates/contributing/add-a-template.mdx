@@ -4,4 +4,104 @@ description: "Rules and steps for contributing a new starter template to Uzo."
 icon: "git-pull-request"
 ---
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+Contribute a new starter template to [uzolabs/templates](https://github.com/uzolabs/templates): set up the repo, follow its rules, and open a pull request that reviewers can accept.
+
+<Info>
+**Open for contributions.** This page follows `CONTRIBUTING.md` on the repo's `main` branch as of 3 October 2026. If the two differ, the repo is right.
+</Info>
+
+## What you'll build
+
+A new template folder that works on its own after someone copies just that folder, with tests, deploy and verify scripts for both Foundry and Hardhat 3, and a small web app.
+
+## Prerequisites
+
+- Node.js 20.19 or newer and [Foundry](https://getfoundry.sh).
+- A funded testnet wallet. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+- A look at one Ready template, such as [Token](/templates/token/index), so you know the shape.
+
+## Rules for every template
+
+1. Don't hard-code chain IDs, RPC URLs, or contract or pool addresses. Use `@uzolabs/sdk`, environment variables or lookups at runtime.
+2. Never commit a private key, mnemonic or API key, including in tests, examples and CI. Only `.env.example` is committed.
+3. Don't use `eth_getLogs` or log-based hooks in frontends. Poll reads instead.
+4. Explain every new dependency in the template's README.
+5. If something about BOT Chain is still unknown, make it a setting or leave it out.
+6. No em dashes in READMEs, comments or UI text.
+7. Start every README with the learning-template disclaimer and end it with the independence note.
+8. Default to testnet. Mainnet needs `--mainnet` or `MAINNET=true` plus a typed confirmation.
+9. No runtime imports from sibling folders or `_shared/`.
+10. Foundry and Hardhat 3 must both compile, test, deploy and verify from the same `contracts/` and `test/`.
+
+`npm run check` enforces the rules a script can check. Reviewers check the rest.
+
+## Steps
+
+<Steps>
+  <Step title="Set up the repo">
+    ```bash Terminal
+    git clone https://github.com/uzolabs/templates.git
+    cd templates
+    npm install
+    npm run format:check
+    npm run sync:check
+    npm run check
+    ```
+  </Step>
+  <Step title="Start from the token template">
+    Copy `token/` and rename it. Replace the contract, tests, deploy script, Ignition module and frontend.
+  </Step>
+  <Step title="Add it to CI">
+    Add the folder to the `template` matrix in both `.github/workflows/ci.yml` and `.github/workflows/testnet-deploy.yml`.
+  </Step>
+  <Step title="Deploy and verify on testnet">
+    Deploy and verify with both toolchains, then paste the real commands and output into the template's README.
+  </Step>
+  <Step title="Run the checks">
+    ```bash Terminal
+    npm run check -- <name>
+    ```
+
+    Repeat until it passes.
+  </Step>
+</Steps>
+
+To change a file every template shares, edit it in `_shared/`, run `npm run sync`, then commit `_shared/` and the templates together. CI fails if a template's copy drifts.
+
+## Verify
+
+Before you open a pull request, run these in your template folder:
+
+```bash Terminal
+npm test
+npm run test:hardhat
+npm --prefix frontend run build
+```
+
+Keep each pull request to one template or one shared change. Never paste keys, even testnet ones, into issues or pull requests.
+
+A template is **In progress** when its code, tests and CI pass but the live testnet deploy and verification aren't recorded yet. It becomes **Ready** once they are.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="sync:check reports drift">
+    A shared file was edited inside a template. Make the change in `_shared/` instead and run `npm run sync`.
+  </Accordion>
+  <Accordion title="check fails on a hard-coded address">
+    Read the address from `@uzolabs/sdk/contracts` or an environment variable.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Templates on GitHub" icon="github" href="https://github.com/uzolabs/templates">
+    The repo and its issues. Questions can also go to uzolabsxyz@gmail.com.
+  </Card>
+  <Card title="Use a template" icon="copy" href="/templates/using-templates">
+    How people will copy yours.
+  </Card>
+</CardGroup>
+
+The code is MIT licensed. The Uzo name and logo aren't covered by that license.

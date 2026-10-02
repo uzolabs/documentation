@@ -5,6 +5,80 @@ description: "Build ERC-20 and Permit2 approval transactions for BDEX routers wi
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned approval builders will create the transactions that let a BDEX router spend your tokens, using either a standard ERC-20 approval or Permit2. You can check and set approvals today with viem.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned builders
+
+The SDK plan includes builders for two kinds of approval. Their names and parameters aren't published yet.
+
+| Kind | What it approves | Used by |
+| --- | --- | --- |
+| ERC-20 | A router calls `transferFrom` on your token directly. You call the token's `approve(spender, amount)`. | Router02, SwapRouter |
+| Permit2 | You approve the Permit2 contract once per token. Permit2 then grants each router a limited allowance with an expiry. | UniversalRouter |
+
+Like the swap builders, they'll return an unsigned transaction for you to sign.
+
+## Do it today: ERC-20
+
+Check the allowance first, and approve only what you need:
+
+{/* untested: node crashes on this machine since 2026-10-02; the same read returned 0 with cast */}
+
+```ts erc20-approval.ts
+import { createPublicClient, erc20Abi, http, parseEther } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const { wbot, bdexV2Router02 } = getAddresses(botChainTestnet.id);
+const owner = "0xEc526474F4F9De027942d5f7118A9613266B0C4c"; // replace with your address
+const amountIn = parseEther("0.001");
+
+const allowance = await client.readContract({ address: wbot, abi: erc20Abi, functionName: "allowance", args: [owner, bdexV2Router02] });
+console.log(allowance >= amountIn ? "Already approved" : "Approval needed");
+```
+
+If it says an approval is needed, send `approve(router, amountIn)` with a wallet client. [Swap on BDEX V2](/guides/defi/swaps/bdex-v2) shows the full flow.
+
+<Warning>
+  An unlimited approval (`maxUint256`) saves a transaction on later swaps, but it lets the router move all of that token for as long as the approval stands. Approve exact amounts unless you have a reason not to.
+</Warning>
+
+## Do it today: Permit2
+
+Permit2 keeps a second allowance for each owner, token and spender. Read it with `permit2Abi`:
+
+{/* untested: node crashes on this machine since 2026-10-02; the same read returned 0,0,0 with cast */}
+
+```ts permit2-allowance.ts
+import { createPublicClient, http } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses, permit2Abi } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const { wbot, permit2, universalRouter } = getAddresses(botChainTestnet.id);
+const owner = "0xEc526474F4F9De027942d5f7118A9613266B0C4c"; // replace with your address
+
+const [amount, expiration, nonce] = await client.readContract({
+  address: permit2,
+  abi: permit2Abi,
+  functionName: "allowance",
+  args: [owner, wbot, universalRouter],
+});
+console.log({ amount, expiration, nonce });
+```
+
+A Permit2 approval has two steps: an ERC-20 `approve` of the token to the Permit2 contract, then a Permit2 `approve(token, spender, amount, expiration)` or a signed permit for the router. The testnet UniversalRouter is the only Permit2 spender in the SDK's addresses.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BDEX V2" icon="repeat" href="/sdk/bdex/v2">
+    Approve, then swap.
+  </Card>
+  <Card title="Contract addresses" icon="map-pin" href="/reference/contract-addresses">
+    Permit2 and router addresses.
+  </Card>
+</CardGroup>

@@ -4,8 +4,114 @@ sidebarTitle: "Walkthrough"
 description: "A file-by-file tour of the contracts and scripts in the Token template."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Follow the token template file by file, from the contract to the web app, so you know what to change and what to leave alone.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## Project layout
+
+```text Project layout
+contracts/UzoToken.sol        the token
+test/UzoToken.t.sol           Solidity tests, run by Foundry and by Hardhat
+script/Deploy.s.sol           Foundry deploy script
+ignition/modules/UzoToken.ts  Hardhat Ignition deploy module
+scripts/deploy.ts             runs either deployer, then saves the result
+scripts/verify.ts             runs either verifier with the saved arguments
+scripts/transfer.ts           sends tokens from the command line
+scripts/lib/                  network selection, mainnet guard, Ignition fee hook, helpers
+frontend/                     Vite + React + wagmi web app
+deployments/<chainId>.json    written by deploy
+```
+
+## The contract
+
+`contracts/UzoToken.sol` combines three OpenZeppelin contracts:
+
+| Parent | What it adds |
+| --- | --- |
+| `ERC20` | Balances, transfers and allowances |
+| `ERC20Permit` | Approvals by signature (EIP-2612), so a user can approve without a separate transaction |
+| `Ownable` | One owner, the only account that can call `mint` |
+
+The constructor takes `(name, symbol, initialSupply, owner)` and mints the initial supply to the owner. The deploy scripts pass the deployer as the owner.
+
+## Tests
+
+`test/UzoToken.t.sol` holds 18 Solidity tests. `forge test` and `hardhat test solidity` both run the same file, so you write each test once.
+
+```bash Terminal
+npm test
+npm run test:hardhat
+```
+
+## Two toolchains, one project
+
+`foundry.toml` and `hardhat.config.ts` both point at `contracts/` and `test/`, and both compile with Solidity 0.8.28 for the `cancun` EVM. Foundry finds imports through `remappings.txt`. Hardhat finds them in `node_modules`. OpenZeppelin and forge-std come from npm, so there are no git submodules to update.
+
+## Deploying
+
+`scripts/deploy.ts` does the same work for either toolchain:
+
+1. Reads the network from `@uzolabs/sdk/chains` and checks that the RPC reports the chain ID you asked for.
+2. Checks that your wallet has gas. On mainnet it also asks you to type `MAINNET`.
+3. Runs `forge script script/Deploy.s.sol`, or `hardhat ignition deploy` with `--tool hardhat`.
+4. Confirms there is code at the new address.
+5. Writes `deployments/968.json`, `frontend/.env` and `frontend/src/abi.ts`.
+
+<Note>
+BOT Chain blocks have a base fee of 0. Hardhat Ignition reads that as free gas and would send a fee of 0, which the node rejects with "transaction underpriced". `scripts/lib/ignition-fees.ts` is a Hardhat network hook, registered as the `uzo-ignition-fees` plugin, that fills in the fee the RPC asks for (20 gwei on testnet). Foundry gets this right on its own.
+</Note>
+
+## Verifying
+
+`scripts/verify.ts` reads the address and constructor arguments from `deployments/968.json` and prints the command it runs. With Foundry:
+
+```bash Terminal
+forge verify-contract <address> contracts/UzoToken.sol:UzoToken --chain 968 --verifier blockscout --verifier-url https://scan.bohr.life/api/ --watch --constructor-args <abi-encoded args>
+```
+
+With Hardhat:
+
+```bash Terminal
+npx hardhat verify blockscout --network botTestnet <address> "Uzo Token" UZO 1000000000000000000000000 <owner address>
+```
+
+BOTScan runs Blockscout, so neither command needs an API key. See [Verify contracts](/guides/deploy/verify/overview).
+
+## Sending from the command line
+
+```bash Terminal
+npm run transfer -- 0xRecipientAddress 25
+```
+
+`scripts/transfer.ts` sends 25 tokens from your `.env` wallet and prints both balances before and after.
+
+## The web app
+
+| File | What it does |
+| --- | --- |
+| `frontend/src/wagmi.ts` | Sets up wagmi with the injected connector. With more than one wallet extension, "Connect wallet" lists each by name (EIP-6963) |
+| `frontend/src/App.tsx` | Reads name, symbol, total supply, owner and your balance in one batched call, every 10 seconds, and sends transfers |
+| `frontend/src/theme.css` | The Uzo Labs look: colours, cards and buttons in plain CSS |
+| `frontend/src/styles.css` | Styles for this app only |
+
+Each transaction shows "confirm in wallet", then "pending" with a BOTScan link, then "confirmed" or a readable error. Status lines sit in an `aria-live` region so screen readers announce them.
+
+The app doesn't subscribe to events, because BOT Chain's public RPCs don't serve `eth_getLogs`. See [Events without getLogs](/guides/frontend/events-without-getlogs).
+
+## Using a local node
+
+Set `VITE_RPC_URL` in `frontend/.env` to point the web app at another RPC, such as `anvil --chain-id 968`. The batched reads go through Multicall3, which a fresh anvil doesn't have. Copy its code from testnet with `cast code` and set it with `anvil_setCode`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Customize" icon="sliders-horizontal" href="/templates/token/customize">
+    Change the supply rules, add burning or a cap.
+  </Card>
+  <Card title="USDT and decimals" icon="coins" href="/guides/defi/tokens/usdt-and-decimals">
+    Why decimals matter when you work with amounts.
+  </Card>
+</CardGroup>

@@ -4,8 +4,132 @@ sidebarTitle: "Walkthrough"
 description: "A file-by-file tour of the contracts and scripts in the DEX integration template."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Follow the DEX integration template file by file: how it finds pools, prices routes, handles native BOT and protects each swap.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## Project layout
+
+```text Project layout
+scripts/find-pools.ts          V2 getPair and V3 getPool for each fee tier
+scripts/quote.ts               prices every route and marks the best
+scripts/wrap.ts                WBOT deposit and withdraw
+scripts/swap-v2.ts             approve, then swap through Router02
+scripts/swap-v3.ts             approve, then swap through SwapRouter
+scripts/add-liquidity-v2.ts    approve both tokens, then addLiquidity
+scripts/lib/                   arguments, balances, network selection, mainnet guard, approve and send
+frontend/src/dex/              routes, quotes, slippage maths, transaction building, failure reasons
+frontend/src/SwapResult.tsx    the window that reports whether a transaction worked
+frontend/                      Vite + React + wagmi swap widget
+```
+
+The scripts and the widget share `frontend/src/dex/`, so a quote in the terminal and a quote in the browser come from the same code. There are no contracts.
+
+## Finding pools
+
+```bash Terminal
+npm run find-pools
+```
+
+```text Output
+Pools for WBOT/USDT on BOT Chain Testnet
+
+BDEX V2
+  pair 0xD3EC267707BA234583645E75CE283Cf679dd94Fa
+       holds 524.880384895183775641 WBOT and 8517.025298 USDT
+
+BDEX V3
+  0.01%  no pool
+  0.05%  0xc42db978916872b0c9D4B396e2C8BacC315B3Dac
+  0.3%   0xA83dAda88e1d71810dfe89699dCE4d4E589Dd890
+  1%     0xe564401644E10B1829e19E1B2b2e6e90be79B631
+```
+
+This output is from 1 October 2026. The script calls `getPair` on the V2 factory and `getPool` on the V3 factory once per fee tier. Not every tier has a pool, and some hold very little.
+
+## Quotes
+
+```bash Terminal
+npm run quote -- 0.1 BOT USDT
+```
+
+```text Output
+Quotes for 0.1 BOT to USDT on BOT Chain Testnet:
+
+  BDEX V2                  1.617485 USDT  <- best
+  BDEX V3, 0.05% pool      0.102521 USDT
+  BDEX V3, 0.3% pool       1.031879 USDT
+  BDEX V3, 1% pool         0.218651 USDT
+```
+
+- V2 quotes come from Router02's `getAmountsOut`.
+- V3 quotes come from QuoterV2's `quoteExactInputSingle`. It isn't a view function: it runs the swap and reverts with the result. The template calls it with viem's `simulateContract`, which uses `eth_call`, so nothing is sent.
+
+The best route is the one that gives you the most.
+
+## BOT and WBOT
+
+Pools hold ERC-20 tokens. BOT isn't one, so pools trade WBOT, which is always worth exactly 1 BOT.
+
+| You want | What the template calls |
+| --- | --- |
+| BOT to WBOT, or back | `deposit` or `withdraw` on WBOT. Not a swap: 1:1, no fee |
+| Pay BOT on V2 | `swapExactETHForTokens`, with BOT as the value |
+| Receive BOT on V2 | `swapExactTokensForETH` |
+| Pay BOT on V3 | `exactInputSingle`, with BOT as the value. SwapRouter wraps it |
+| Receive BOT on V3 | `multicall` of `exactInputSingle` (to the router) and `unwrapWETH9` (to you), in one transaction |
+
+"ETH" in the router function names means the chain's native coin, which is BOT here.
+
+## Slippage, deadline and approvals
+
+- **Slippage.** The minimum you accept is the quote minus your slippage, 0.5% by default and at most 5%. If the pool would give less, the swap reverts and you only lose gas.
+- **Deadline.** Each swap carries a deadline 20 minutes ahead, so a transaction stuck in the mempool can't fill hours later.
+- **Approvals.** Before swapping a token, the script approves the router for exactly the trade amount. Router02 and SwapRouter each need their own approval. If enough is already approved, the script skips that step.
+- **Decimals.** USDT has 6 decimals and BOT and WBOT have 18. Every amount goes through `parseUnits(amount, token.decimals)`. See [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+
+## A swap from the terminal
+
+```bash Terminal
+npm run swap-v3 -- 1 USDT BOT --fee 3000
+```
+
+```text Output
+Pool:    0.3% fee tier
+Quote:   1 USDT gives about 0.096329976186033133 BOT
+Minimum: 0.095848326305102967 BOT (0.5% slippage). Less than that and the swap reverts.
+
+Allowance: already enough USDT approved.
+Swap: waiting for confirmation. https://scan.bohr.life/tx/0x0016d7609a83cac246fcae20f134a03671bbf33a21eb5a700af35d64a2bd341e
+
+After:
+  BOT   9.748059056186033133  (+0.093894276186033133)
+  WBOT  0
+  USDT  1001.649364  (-1)
+```
+
+The BOT change after the swap includes gas. If the public RPC is busy, the scripts retry for about 15 seconds before they stop. A step that already went through, such as an approval, isn't repeated when you run the command again.
+
+## The widget
+
+| File | What it does |
+| --- | --- |
+| `frontend/src/wagmi.ts` | wagmi with the injected connector. Uses testnet unless `VITE_CHAIN_ID` is mainnet's ID |
+| `frontend/src/App.tsx` | `SwapCard`: quotes every route 400 ms after you stop typing, refreshes quotes and balances every 15 seconds, and steps you through connect, switch network, approve and swap |
+| `frontend/src/SwapResult.tsx` | After each transaction, shows what you paid, what you got, the route and the gas fee, or why it failed |
+| `frontend/src/dex/errors.ts` | Turns failures into plain reasons, such as slippage, deadline or not enough tBOT. `npm test` checks them |
+
+"What you got" is your balance after the block minus your balance before it. If a transaction reverted on chain, the widget replays it on the block before to get the router's reason. It never reads event logs, because BOT Chain's public RPCs don't serve `eth_getLogs`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Customize" icon="sliders-horizontal" href="/templates/dex-integration/customize">
+    Change slippage, add tokens and routes.
+  </Card>
+  <Card title="Slippage and deadlines" icon="timer" href="/guides/defi/swaps/slippage-and-deadlines">
+    How the minimum and deadline protect a swap.
+  </Card>
+</CardGroup>

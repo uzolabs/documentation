@@ -1,11 +1,126 @@
 ---
 title: "Errors"
-description: "Every planned SDK error class, what causes it and how to fix it."
+description: "Every SDK error class, what causes it and how to fix it, including classes reserved for planned modules."
 icon: "circle-alert"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can handle every failure the SDK reports by checking for `UzoError` and branching on its `code`, which doesn't change between releases even if the message wording does.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## How errors work
+
+Every error the SDK throws extends `UzoError`, which extends JavaScript's `Error`. Each one has:
+
+<ResponseField name="name" type="string">
+  The class name, such as `"ExplorerError"`.
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  A stable code, such as `"EXPLORER_ERROR"`. Branch on this, not on `message`.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A sentence that says what went wrong and what to do next.
+</ResponseField>
+
+<ResponseField name="cause" type="unknown">
+  The underlying error, when there is one. For example, the `fetch` failure behind an `ExplorerError`.
+</ResponseField>
+
+Import any class from the package root:
+
+{/* untested: node crashes on this machine since 2026-10-02; output taken from the SDK source */}
+
+```ts handle-errors.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+import { InvalidAddressError, UnsupportedChainError, UzoError } from "@uzolabs/sdk";
+
+try {
+  getAddresses(1 as never);
+} catch (error) {
+  if (error instanceof UnsupportedChainError) console.log(error.code, error.chainId);
+}
+
+try {
+  await createExplorerClient({ chainId: 968 }).getAddressInfo("0x123" as never);
+} catch (error) {
+  if (error instanceof InvalidAddressError) console.log(error.code, error.message);
+  else if (error instanceof UzoError) console.log("Other SDK error:", error.code);
+  else throw error;
+}
+```
+
+```text Output
+UNSUPPORTED_CHAIN 1
+INVALID_ADDRESS Invalid address: 0x123. Pass a 0x-prefixed, 20-byte hex address.
+```
+
+Errors from viem itself, such as a reverted call or an RPC timeout, aren't wrapped. They reach you as viem's own error classes.
+
+## Errors thrown in 0.2.0
+
+### UnsupportedChainError
+
+| | |
+| --- | --- |
+| Code | `UNSUPPORTED_CHAIN` |
+| Extra field | `chainId`: the value you passed |
+| Thrown by | `getAddresses`, `createExplorerClient` |
+
+**Cause:** a chain ID other than `677` (BOT Chain) or `968` (BOT Chain Testnet). Often this is the user's wallet being on another network.
+
+**Fix:** pass `677` or `968`. In a dapp, ask the user to switch networks before you call the SDK. See [Connect a wallet](/guides/frontend/connect-wallet).
+
+### InvalidAddressError
+
+| | |
+| --- | --- |
+| Code | `INVALID_ADDRESS` |
+| Extra field | `address`: the value you passed |
+| Thrown by | `getAddressInfo`, `getContract` |
+
+**Cause:** the input isn't a 0x-prefixed, 20-byte hex string. Common causes are a truncated paste, a missing `0x`, or an ENS-style name.
+
+**Fix:** pass a full address. Mixed-case addresses are accepted and checksummed for you.
+
+### ExplorerError
+
+| | |
+| --- | --- |
+| Code | `EXPLORER_ERROR` |
+| Extra fields | `url`: the BOTScan URL requested. `status`: the HTTP status, or `undefined` if no response arrived |
+| Thrown by | `getAddressInfo`, `getContract` |
+
+| Message starts with | Cause | Fix |
+| --- | --- | --- |
+| "Could not reach BOTScan" | Network failure or DNS problem. `status` is `undefined`. | Check your connection and retry. |
+| "BOTScan returned HTTP" | BOTScan answered with an error status, such as 429 or 500. | Retry later with backoff. |
+| "BOTScan returned a response that is not JSON" | An HTML error page or a proxy in the way. | Retry later. |
+| "No contract found" | `getContract` got a 404. `status` is `404`. | Check the address and that the client's `chainId` matches the network the contract is on. |
+
+## Reserved for planned modules
+
+These classes are exported in 0.2.0 so you can write handlers now, but nothing throws them yet. They're for the [planned modules](/sdk/overview#modules). Their fields come from the 0.2.0 source. When they'll be thrown may change.
+
+| Class | Code | Extra fields | Planned use |
+| --- | --- | --- | --- |
+| `SlippageTooHighError` | `SLIPPAGE_TOO_HIGH` | `slippageBps`, `maxBps` | A swap request asks for more slippage than the allowed maximum. |
+| `RouterNotAllowedError` | `ROUTER_NOT_ALLOWED` | `router` | Calldata from the Routing API targets a router that isn't on your allowlist. |
+| `MissingConfigError` | `MISSING_CONFIG` | `key` | A required setting is missing, such as the Routing API or paymaster URL. The SDK doesn't guess unknown values. |
+| `PaymasterError` | `PAYMASTER_ERROR` | none | The paymaster rejects or can't sponsor a transaction. |
+| `BridgeValidationError` | `BRIDGE_VALIDATION` | `reason` | Bridge input fails a check, such as a paused bridge or an amount outside the limits. |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Types" icon="braces" href="/sdk/reference/types">
+    Exported TypeScript types.
+  </Card>
+  <Card title="Explorer client" icon="search" href="/sdk/explorer/overview">
+    The main source of runtime errors in 0.2.0.
+  </Card>
+</CardGroup>

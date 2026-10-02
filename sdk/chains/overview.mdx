@@ -1,11 +1,61 @@
 ---
 title: "Chains"
-description: "The BOT Chain mainnet and testnet chain objects the SDK will export for viem and wagmi."
+description: "The BOT Chain mainnet and testnet chain objects the SDK exports for viem and wagmi."
 icon: "link"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can connect viem or wagmi to BOT Chain mainnet or testnet by importing one chain object from `@uzolabs/sdk/chains`.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## The two chain objects
+
+| Export | Network | Chain ID | Native currency | RPC | Explorer |
+| --- | --- | --- | --- | --- | --- |
+| [`botChain`](/sdk/chains/bot-chain) | Mainnet | 677 | BOT | `https://rpc.botchain.ai` | [scan.botchain.ai](https://scan.botchain.ai) |
+| [`botChainTestnet`](/sdk/chains/bot-chain-testnet) | Testnet | 968 | tBOT | `https://rpc.bohr.life` | [scan.bohr.life](https://scan.bohr.life) |
+
+Both are viem `Chain` objects built with `defineChain`. You can use them anywhere viem or wagmi asks for a chain.
+
+## Why use them
+
+A chain object is only a few lines, but they're easy to get wrong. The SDK's objects include two values that hand-written versions often miss:
+
+- **The Multicall3 address.** BOT Chain's Multicall3 is at `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265` on both networks. The standard address that many tools assume has no code on testnet. With the SDK's chain objects, viem's `multicall` and wagmi's `useReadContracts` work without any extra setup.
+- **The explorer API URL.** `blockExplorers.default.apiUrl` points at BOTScan's v2 API, which the [explorer client](/sdk/explorer/overview) uses.
+
+## How to use them
+
+```ts clients.ts
+import { createPublicClient, http } from "viem";
+import { botChain, botChainTestnet } from "@uzolabs/sdk/chains";
+
+// Choose the network once and pass the chain everywhere.
+const chain = process.env.NETWORK === "mainnet" ? botChain : botChainTestnet;
+const client = createPublicClient({ chain, transport: http() });
+
+console.log(chain.name, await client.getChainId());
+```
+
+Choosing the chain in one place means your addresses, explorer links and clients always match. The [contracts module](/sdk/contracts/addresses) uses the same idea: `getAddresses(chain.id)`.
+
+To use your own RPC endpoint, pass it to the transport: `http("https://your-rpc.example")`. The chain object stays the same.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="botChain" icon="link" href="/sdk/chains/bot-chain">
+    Every field of the mainnet object.
+  </Card>
+  <Card title="botChainTestnet" icon="flask-conical" href="/sdk/chains/bot-chain-testnet">
+    Every field of the testnet object.
+  </Card>
+  <Card title="Use with wagmi" icon="atom" href="/sdk/guides/wagmi">
+    Add both networks to a React app.
+  </Card>
+  <Card title="Network details" icon="network" href="/reference/networks">
+    RPCs, faucet and limits.
+  </Card>
+</CardGroup>

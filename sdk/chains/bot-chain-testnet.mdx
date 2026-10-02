@@ -1,10 +1,90 @@
 ---
 title: "botChainTestnet"
-description: "Reference for the planned botChainTestnet object for BOT Chain testnet, chain 968."
+description: "Reference for the botChainTestnet object for BOT Chain testnet, chain 968."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
+import TestnetOnly from "/snippets/testnet-only.mdx";
 
-<InDevelopment />
+`botChainTestnet` is the viem chain object for BOT Chain testnet. Pass it to any viem client or wagmi config to build and test on chain 968 with free tBOT.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+<TestnetOnly />
+
+## Import
+
+```ts Import
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+```
+
+## Fields
+
+<ResponseField name="id" type="968">
+  The chain ID.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  `"BOT Chain Testnet"`.
+</ResponseField>
+
+<ResponseField name="nativeCurrency" type="object">
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">`"tBOT"`</ResponseField>
+    <ResponseField name="symbol" type="string">`"tBOT"`</ResponseField>
+    <ResponseField name="decimals" type="18">tBOT uses 18 decimals.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="rpcUrls.default.http" type="string[]">
+  `["https://rpc.bohr.life"]`. The public testnet RPC. It's sometimes slow or briefly unavailable, so retry failed reads.
+</ResponseField>
+
+<ResponseField name="blockExplorers.default" type="object">
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">`"BOTScan"`</ResponseField>
+    <ResponseField name="url" type="string">`"https://scan.bohr.life"`</ResponseField>
+    <ResponseField name="apiUrl" type="string">`"https://scan.bohr.life/api/v2"`</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="contracts.multicall3.address" type="Address">
+  `0x47FA21f684bBAD707A53a0f9BE59F1422F46C265`, the same as mainnet. The standard `0xcA11...CA11` address has no code on testnet, so this field matters.
+</ResponseField>
+
+<ResponseField name="testnet" type="true">
+  Marks the chain as a testnet. Libraries that read viem chain objects can use it to tell test networks apart.
+</ResponseField>
+
+## Example
+
+```ts testnet-balance.ts
+import { createPublicClient, formatEther, http } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const address = "0xEc526474F4F9De027942d5f7118A9613266B0C4c"; // Replace with your address
+const balance = await client.getBalance({ address });
+console.log(`${formatEther(balance)} ${botChainTestnet.nativeCurrency.symbol}`);
+console.log(`${botChainTestnet.blockExplorers.default.url}/address/${address}`);
+```
+
+Output from a run on 2026-10-02:
+
+```text Output
+8.859351339982351838 tBOT
+https://scan.bohr.life/address/0xEc526474F4F9De027942d5f7118A9613266B0C4c
+```
+
+If the balance is 0, get tBOT from the [faucet](https://faucet.botchain.ai/basic).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="botChain" icon="link" href="/sdk/chains/bot-chain">
+    The mainnet object.
+  </Card>
+  <Card title="Get testnet tokens" icon="droplet" href="/get-started/bot-chain/get-testnet-tokens">
+    Use the faucet.
+  </Card>
+</CardGroup>

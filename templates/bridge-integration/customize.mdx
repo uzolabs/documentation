@@ -4,8 +4,36 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the Bridge integration template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import TemplateInDevelopment from "/snippets/status-template-in-development.mdx";
 
-<InDevelopment />
+Build your own bridge flow from BOT Chain today by adapting the hand-written guides, since the bridge integration template has no code to customize yet.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<TemplateInDevelopment />
+
+## Why there's nothing to customize yet
+
+The bridge integration template is planned and not published. This page will list its settings and extension points once it exists.
+
+## Do it today
+
+Start from [Bridge out](/guides/bridge/bridge-out) and make these choices in your own code:
+
+- **Check before every transfer.** Read the limits and minimum fee from the contract each time, as in [Limits and fees](/guides/bridge/limits-and-fees). Don't hard-code them.
+- **Show progress.** Use [Tracking transfers](/guides/bridge/tracking-transfers) to show users where a transfer is and what a refund means.
+- **Get test USDT.** There's no USDT faucet. Swap tBOT for USDT with the [DEX integration template](/templates/dex-integration/index).
+- **Keep amounts exact.** Convert with each token's decimals, never `parseEther`. See [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+
+<Warning>
+Bridge transfers on mainnet move real USDT, and if a transfer is refunded the bridge fee isn't returned. Rehearse every step on testnet first.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Bridge overview" icon="waypoints" href="/guides/bridge/overview">
+    How the bridge moves USDT.
+  </Card>
+  <Card title="Templates overview" icon="layout-grid" href="/templates/overview">
+    The templates you can use now.
+  </Card>
+</CardGroup>

@@ -1,11 +1,85 @@
 ---
 title: "Explorer client"
-description: "Query BOTScan from TypeScript with the planned createExplorerClient."
+description: "Query BOTScan from TypeScript with createExplorerClient."
 icon: "search"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can check whether an address is a contract or token, and fetch a verified contract's ABI, by creating a BOTScan client with `createExplorerClient`.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## What it does
+
+BOTScan is BOT Chain's block explorer. It runs Blockscout, which has a public JSON API. The explorer client wraps two of its endpoints and returns small, typed results:
+
+| Method | BOTScan endpoint | Returns |
+| --- | --- | --- |
+| [`getAddressInfo(address)`](/sdk/explorer/get-address-info) | `GET /api/v2/addresses/{address}` | Contract or wallet, verified, name, token details |
+| [`getContract(address)`](/sdk/explorer/get-contract) | `GET /api/v2/smart-contracts/{address}` | Name, ABI, verification, proxy details |
+
+No API key is needed.
+
+## Why use it
+
+- **Check before you call.** Confirm a user-supplied address is a verified contract, or a token with the decimals you expect, before you send a transaction to it.
+- **Load ABIs at runtime.** For contracts the SDK doesn't include, fetch the verified ABI instead of pasting it in by hand.
+- **Clear errors.** Network failures, HTTP errors and bad addresses all throw [`ExplorerError`](/sdk/reference/errors#explorererror) or [`InvalidAddressError`](/sdk/reference/errors#invalidaddresserror) with a message that says what to do.
+
+## createExplorerClient
+
+```ts Signature
+function createExplorerClient(options: { chainId: 677 | 968 }): ExplorerClient;
+```
+
+<ParamField path="chainId" type="677 | 968" required>
+  Which BOTScan to query: `677` uses `https://scan.botchain.ai/api/v2`, `968` uses `https://scan.bohr.life/api/v2`. Any other value throws `UnsupportedChainError`.
+</ParamField>
+
+The client is read-only and keeps no state, so you can create one per network and reuse it.
+
+## Example
+
+```ts explorer.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+
+const explorer = createExplorerClient({ chainId: 677 });
+const { usdt, bridgeRouter } = getAddresses(677);
+
+const info = await explorer.getAddressInfo(usdt);
+console.log(info);
+
+const contract = await explorer.getContract(bridgeRouter);
+console.log(contract.name, contract.isVerified, contract.proxyType, contract.implementations);
+```
+
+Output from a run on 2026-10-02:
+
+```text Output
+{
+  isContract: true,
+  isVerified: true,
+  name: 'Tether USD',
+  token: { symbol: 'USDT', decimals: 6 }
+}
+TransparentUpgradeableProxy true eip1967 [ '0xD7F50Ee55787C8fFA82abD634801E56f0578a2B3' ]
+```
+
+## Limits
+
+- The client doesn't retry or time out on its own. If BOTScan is slow, wrap calls in your own retry.
+- BOTScan's rate limits aren't documented. Cache results that don't change, such as a verified ABI.
+- For anything else BOTScan offers, such as transaction history or logs, call its API directly. See [Use the BOTScan API](/guides/data/explorer-api).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="getAddressInfo" icon="user-search" href="/sdk/explorer/get-address-info">
+    Wallet, contract or token.
+  </Card>
+  <Card title="getContract" icon="file-code" href="/sdk/explorer/get-contract">
+    Verified ABI and proxy details.
+  </Card>
+</CardGroup>

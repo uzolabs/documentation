@@ -1,10 +1,106 @@
 ---
 title: "getAddressInfo"
-description: "Reference for the planned getAddressInfo method, which fetches details about an address from BOTScan."
+description: "Reference for the getAddressInfo method, which fetches details about an address from BOTScan."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+`getAddressInfo` tells you whether an address on BOT Chain is a contract, whether it's verified on BOTScan, and, for tokens, the symbol and decimals.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Usage
+
+```ts address-info.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+
+const explorer = createExplorerClient({ chainId: 968 });
+
+console.log(await explorer.getAddressInfo(getAddresses(968).usdt));
+console.log(await explorer.getAddressInfo("0xEc526474F4F9De027942d5f7118A9613266B0C4c"));
+```
+
+Output from a run on testnet on 2026-10-02. The first address is USDT, the second is a wallet:
+
+```text Output
+{
+  isContract: true,
+  isVerified: true,
+  name: 'Tether USD',
+  token: { symbol: 'USDT', decimals: 6 }
+}
+{ isContract: false, isVerified: false, name: null }
+```
+
+## Parameters
+
+<ParamField path="address" type="Address" required>
+  A 0x-prefixed, 20-byte hex address. Any letter case is accepted. The client checksums it before calling BOTScan. Anything else throws [`InvalidAddressError`](/sdk/reference/errors#invalidaddresserror) without making a request.
+</ParamField>
+
+## Returns
+
+`Promise<AddressInfo>`
+
+<ResponseField name="isContract" type="boolean" required>
+  `true` if the address has contract code.
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" required>
+  `true` if the contract's source is verified on BOTScan. Always `false` for wallets.
+</ResponseField>
+
+<ResponseField name="name" type="string | null" required>
+  The contract or token name BOTScan shows, or `null` if it has none.
+</ResponseField>
+
+<ResponseField name="token" type="{ symbol: string; decimals: number }">
+  Present only when BOTScan recognizes the address as a token with a symbol and whole-number decimals.
+</ResponseField>
+
+An address BOTScan has never seen doesn't throw. It returns `{ isContract: false, isVerified: false, name: null }`, the same as an unused wallet.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `InvalidAddressError` | The input isn't a valid address. |
+| `ExplorerError` | BOTScan can't be reached, returns an HTTP error other than 404, or returns something that isn't JSON. Check `error.status` and `error.url`. |
+
+## Common use: check a token before using it
+
+```ts check-token.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import type { Address } from "viem";
+
+const explorer = createExplorerClient({ chainId: 968 });
+
+async function assertToken(address: Address, expectedDecimals: number) {
+  const info = await explorer.getAddressInfo(address);
+  if (!info.isContract || !info.token) throw new Error(`${address} is not a token`);
+  if (info.token.decimals !== expectedDecimals) {
+    throw new Error(`${info.token.symbol} has ${info.token.decimals} decimals, expected ${expectedDecimals}`);
+  }
+  return info.token;
+}
+
+console.log(await assertToken("0x75edC9335175Fc0552D51D48439F229c10420fe3", 6));
+```
+
+```text Output
+{ symbol: 'USDT', decimals: 6 }
+```
+
+BOTScan's data is a convenience, not a guarantee. For anything that moves funds, also read `decimals()` from the contract itself.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="getContract" icon="file-code" href="/sdk/explorer/get-contract">
+    Fetch the verified ABI.
+  </Card>
+  <Card title="Errors" icon="circle-alert" href="/sdk/reference/errors">
+    Every error class.
+  </Card>
+</CardGroup>

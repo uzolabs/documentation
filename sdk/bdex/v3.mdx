@@ -5,6 +5,67 @@ description: "Reference for the planned getPoolV3 and quoteExactInputSingleV3 fu
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned V3 helpers will find a BDEX V3 pool for a token pair and fee tier, and quote a single-pool swap. You can do both today with viem and the SDK's V3 ABIs.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned functions
+
+The names below come from the SDK plan. Parameters and return types aren't final, so they aren't listed.
+
+### getPoolV3
+
+Will return the pool address for two tokens and a fee tier, using the V3 factory's `getPool(tokenA, tokenB, fee)`. The factory returns the zero address when no pool exists. BDEX V3 pools on testnet use the 500, 3000 and 10000 fee tiers (0.05%, 0.30% and 1%).
+
+### quoteExactInputSingleV3
+
+Will quote a swap through one pool with QuoterV2's `quoteExactInputSingle`. QuoterV2 isn't a `view` function: it runs the swap and reverts to return the result, so it has to be simulated, not read. A pool with no liquidity at the current price makes it revert.
+
+## Do it today
+
+The SDK ships `bdexV3FactoryAbi`, `bdexV3QuoterV2Abi` and `bdexV3SwapRouterAbi`, with addresses for both networks.
+
+{/* untested: node crashes on this machine since 2026-10-02; the three pools were confirmed with cast */}
+
+```ts v3-quote.ts
+import { createPublicClient, formatUnits, http, parseEther, zeroAddress } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { bdexV3FactoryAbi, bdexV3QuoterV2Abi, getAddresses } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const { wbot, usdt, bdexV3Factory, bdexV3QuoterV2 } = getAddresses(botChainTestnet.id);
+const amountIn = parseEther("0.0005");
+
+for (const fee of [500, 3000, 10000]) {
+  const pool = await client.readContract({ address: bdexV3Factory, abi: bdexV3FactoryAbi, functionName: "getPool", args: [wbot, usdt, fee] });
+  if (pool === zeroAddress) continue;
+  try {
+    const { result } = await client.simulateContract({
+      address: bdexV3QuoterV2,
+      abi: bdexV3QuoterV2Abi,
+      functionName: "quoteExactInputSingle",
+      args: [{ tokenIn: wbot, tokenOut: usdt, amountIn, fee, sqrtPriceLimitX96: 0n }],
+    });
+    console.log(`Fee ${fee}: ${formatUnits(result[0], 6)} USDT`);
+  } catch {
+    console.log(`Fee ${fee}: no liquidity in range`);
+  }
+}
+```
+
+Quotes differ a lot between fee tiers on testnet, so always compare them. To send the swap, call SwapRouter's `exactInputSingle` with the best tier. The full, tested script is in [Swap on BDEX V3](/guides/defi/swaps/bdex-v3).
+
+<Note>
+  `getAddresses(968)` has a `universalRouter`, but mainnet doesn't, because the mainnet Universal Router isn't confirmed. Use SwapRouter for V3 swaps on both networks.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BDEX V2" icon="repeat" href="/sdk/bdex/v2">
+    Simpler pools with one fee.
+  </Card>
+  <Card title="Provide V3 liquidity" icon="droplets" href="/guides/defi/liquidity/v3">
+    Add liquidity to a V3 pool.
+  </Card>
+</CardGroup>

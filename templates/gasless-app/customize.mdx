@@ -4,8 +4,159 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the Gasless app template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Point the gasless app template at your own contract, tune what the relayer will pay for, and host the relayer for real users.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## What you'll build
+
+A relayer that pays gas for the functions you choose on your own contract, with limits that fit your budget. Start with the settings, then change the contract and the relayer's allowlist together.
+
+## Prerequisites
+
+- A copy of the template that relays, from [Use a template](/templates/using-templates).
+- The [walkthrough](/templates/gasless-app/walkthrough), so you know the relayer's checks.
+
+## Rate limits and gas cap
+
+These need no code changes. Set them in `.env` and restart the relayer:
+
+```bash .env
+RELAYER_RATE_LIMIT=10
+RELAYER_RATE_WINDOW_SECONDS=3600
+RELAYER_MAX_GAS=300000
+RELAYER_LOW_BALANCE=1
+```
+
+The limiter keeps counts in memory. If you run more than one relayer instance, replace the `RateLimiter` in `relayer/src/rate-limit.ts` with one backed by a shared store, or each instance counts separately.
+
+## Relay your own contract
+
+<Steps>
+  <Step title="Make the contract trust the forwarder">
+    Extend `ERC2771Context`, pass the forwarder's address to the constructor, and use `_msgSender()` wherever you'd use `msg.sender`:
+
+    ```solidity contracts/Counter.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.28;
+
+    import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+
+    contract Counter is ERC2771Context {
+        mapping(address => uint256) public counts;
+
+        constructor(address trustedForwarder) ERC2771Context(trustedForwarder) {}
+
+        function increment() external {
+            counts[_msgSender()] += 1;
+        }
+    }
+    ```
+
+    A single `msg.sender` left in your contract would record the relayer instead of the user.
+  </Step>
+  <Step title="Deploy it with the forwarder">
+    Update `script/Deploy.s.sol`, `ignition/modules/GuestBook.ts` and `scripts/deploy.ts` to deploy your contract after `UzoForwarder`, passing the forwarder's address. Keep writing both addresses to `deployments/968.json`.
+  </Step>
+  <Step title="Change the relayer's allowlist">
+    In `relayer/src/forward.ts`, the relayer refuses everything except one target and one function:
+
+    ```ts relayer/src/forward.ts
+    export const SIGN_SELECTOR = toFunctionSelector("sign(string)")
+
+    if (request.to !== getAddress(policy.guestBook))
+      throw new RelayError(403, "This relayer only pays for calls to the guest book.")
+    if (request.data.slice(0, 10).toLowerCase() !== SIGN_SELECTOR)
+      throw new RelayError(403, "This relayer only pays for GuestBook.sign.")
+    ```
+
+    Change the selector to your function, such as `toFunctionSelector("increment()")`, and point the target check at your contract. Replace the message length checks below it with checks that suit your function's arguments.
+
+    Allow only the functions you're willing to pay for. Every allowed function is one anyone can call at your expense, up to the rate limits.
+  </Step>
+  <Step title="Test, refresh the ABI and redeploy">
+    ```bash Terminal
+    npm test
+    npm run test:relayer
+    npm run abi
+    npm run deploy
+    ```
+
+    Restart the relayer and the web app after the deploy, because both read the addresses when they start.
+  </Step>
+</Steps>
+
+{/* untested: the Counter contract compiled with forge (solc 0.8.28, OpenZeppelin 5.6.1) on 2026-10-02 but was not deployed, and the relayer allowlist change was not run */}
+
+## Message length
+
+To change the 280 byte limit, change all three together:
+
+| File | Constant |
+| --- | --- |
+| `contracts/GuestBook.sol` | `MAX_MESSAGE_LENGTH` |
+| `relayer/src/forward.ts` | `MAX_MESSAGE_BYTES` |
+| `frontend/src/App.tsx` | `MAX_BYTES` |
+
+The contract is the final check. The other two only give a clearer error sooner.
+
+## Who may use it
+
+To limit who can use your relayer, add a check in `relayer/src/app.ts` before it sends, such as an allowlist of signer addresses or a login.
+
+## Host the relayer
+
+1. Run `npm run relayer` on a server with its own `.env` and a relayer wallet funded with only what you're willing to spend.
+2. Put it behind HTTPS.
+3. Set `RELAYER_ALLOWED_ORIGINS` to your site's address.
+4. Set `VITE_RELAYER_URL` in `frontend/.env` to the relayer's public URL, then rebuild the web app.
+
+Set `RELAYER_TRUST_PROXY=true` only if the relayer runs behind your own reverse proxy.
+
+<Warning>
+On mainnet the relayer spends real BOT on every message, so anyone who can reach it can cost you money, up to the rate limits. The template hasn't been audited. Deploy with `npm run deploy -- --mainnet` only after a review, and use separate mainnet wallets.
+</Warning>
+
+## Change the look
+
+Edit the variables at the top of `frontend/src/theme.css` for colours and fonts, and `frontend/src/styles.css` for this app's own styles.
+
+## Verify
+
+With the relayer running, sign from a wallet holding 0 tBOT. On BOTScan, the transaction's sender is the relayer, and your contract records the signer. For the counter above, `counts(<signer>)` on the **Read contract** tab should go up by one.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="This relayer only pays for calls to the guest book">
+    The target check still points at the guest book, or `frontend/.env` and `deployments/968.json` point at different deploys. Update the check, redeploy, and restart the relayer and the web app.
+  </Accordion>
+  <Accordion title="My contract records the relayer as the sender">
+    Somewhere it uses `msg.sender` instead of `_msgSender()`, or it was deployed with a different forwarder address.
+  </Accordion>
+  <Accordion title="The forwarder rejected the signature or the request has expired">
+    The request was already used, signed for an old nonce, or is more than 10 minutes old. Sign again. After a new deploy, restart the relayer so it uses the new forwarder.
+  </Accordion>
+  <Accordion title="Could not reach the relayer">
+    Check that it's running and that `VITE_RELAYER_URL` matches its port. A CORS error in the browser console means the page's address is missing from `RELAYER_ALLOWED_ORIGINS`.
+  </Accordion>
+  <Accordion title="Too many requests">
+    The signer or IP hit the rate limit. Wait, or raise `RELAYER_RATE_LIMIT` and restart the relayer.
+  </Accordion>
+  <Accordion title="The relayer is low on tBOT">
+    Its balance is below `RELAYER_LOW_BALANCE`. Send it tBOT from the [faucet](/get-started/bot-chain/get-testnet-tokens).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run a relayer" icon="server" href="/guides/gasless/run-a-relayer">
+    Operating a relayer safely.
+  </Card>
+  <Card title="EOA paymaster" icon="fuel" href="/guides/gasless/eoa-paymaster">
+    BOT Chain's paymaster flow.
+  </Card>
+</CardGroup>

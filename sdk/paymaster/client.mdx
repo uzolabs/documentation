@@ -5,6 +5,59 @@ description: "Reference for the planned createPaymasterClient and the sponsor ch
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned `createPaymasterClient` will check whether a paymaster sponsors a transaction and send the signed transaction to it. Until it ships, you can make the same two calls with viem.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned function
+
+### createPaymasterClient
+
+The name comes from the SDK plan. Parameters and return types aren't final. One rule is set:
+
+<ParamField path="url" type="string" required>
+  The paymaster endpoint. No endpoint is confirmed for BOT Chain, so there's no default. If you leave it out, the client is planned to throw [`MissingConfigError`](/sdk/reference/errors#reserved-for-planned-modules).
+</ParamField>
+
+The client is planned to give you two operations:
+
+- **A sponsor check.** It sends `pm_isSponsorable` with the transaction's `to`, `from`, `value`, `data` and `gas`, every value hex-encoded. BOT Chain's docs say the reply has `Sponsorable`, a boolean, and `SponsorPolicy`, the name of the policy that matched.
+- **A send.** It takes a transaction you've signed and posts it to the paymaster's `eth_sendRawTransaction`.
+
+## The signing flow
+
+Signing stays with your wallet. The SDK won't hold keys.
+
+<Steps>
+  <Step title="Build the transaction">
+    Encode the call and estimate gas against a normal RPC.
+  </Step>
+  <Step title="Check sponsorship">
+    Ask the paymaster. If it says no, send a normal paid transaction instead.
+  </Step>
+  <Step title="Sign with a gas price of 0">
+    Sign a **legacy** transaction with `gasPrice: 0n`. The paymaster design sets the gas price directly, so don't use an EIP-1559 transaction.
+  </Step>
+  <Step title="Send to the paymaster">
+    Send the signed bytes to the paymaster URL. The public RPC rejects them with `gasPrice too low`.
+  </Step>
+</Steps>
+
+If the paymaster never includes the transaction, its nonce stays unused. You can replace it with a normal paid transaction that uses the same nonce.
+
+## Do it today
+
+[EOA paymaster](/guides/gasless/eoa-paymaster#the-api) has a viem script that does all four steps against a `PAYMASTER_URL` you provide. It's typechecked but untested, because there's no endpoint to run it against.
+
+For gasless transactions that work on BOT Chain now, use [meta-transactions](/guides/gasless/meta-transactions) with a [relayer](/guides/gasless/run-a-relayer).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Paymaster module" icon="fuel" href="/sdk/paymaster/overview">
+    Why the URL is required.
+  </Card>
+  <Card title="Errors" icon="circle-alert" href="/sdk/reference/errors">
+    The errors this client will throw.
+  </Card>
+</CardGroup>

@@ -5,8 +5,40 @@ description: "Release notes for @uzolabs/sdk. No releases yet."
 icon: "clock"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+This page lists what changed in each `@uzolabs/sdk` release, so you can see what's safe to upgrade to and what to change in your code.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+The SDK follows semantic versioning. Before 1.0, a minor release (0.x.0) can include breaking changes, so pin an exact version and read this page before you upgrade. The source of truth is [CHANGELOG.md on GitHub](https://github.com/uzolabs/uzo-sdk/blob/main/CHANGELOG.md). Releases are published to [npm](https://www.npmjs.com/package/@uzolabs/sdk).
+
+<Update label="0.2.0" description="2026-09-30">
+  **Added**
+
+  - [`@uzolabs/sdk/contracts`](/sdk/contracts/overview): the `addresses` object, [`getAddresses(chainId)`](/sdk/contracts/addresses), [`USDT_RESOURCE_ID`, `TOKENS` and `EXTERNAL_BRIDGE`](/sdk/contracts/constants) (experimental), and [typed ABIs](/sdk/contracts/abis) generated from BOTScan, plus viem's `erc20Abi`.
+  - [`@uzolabs/sdk/explorer`](/sdk/explorer/overview): `createExplorerClient({ chainId })` with `getAddressInfo` and `getContract`. No API key needed.
+  - [Errors](/sdk/reference/errors): `UzoError` and its subclasses, each with a stable `code`.
+
+  **Removed**
+
+  - The mainnet `bdexV3SwapRouter02` address entry. BOTScan verifies that address as a `UniversalRouter`, not a SwapRouter02, and the mainnet Universal Router isn't confirmed yet.
+</Update>
+
+<Update label="0.1.0" description="2026-09-30">
+  **Added**
+
+  - First release. [`@uzolabs/sdk/chains`](/sdk/chains/overview) with viem chain definitions for [BOT Chain](/sdk/chains/bot-chain) (`botChain`, chain ID 677) and [BOT Chain Testnet](/sdk/chains/bot-chain-testnet) (`botChainTestnet`, chain ID 968), including the RPC, BOTScan explorer and Multicall3 settings.
+</Update>
+
+## Upcoming
+
+These modules are planned. Version numbers come from the SDK's README. There are no release dates.
+
+| Version | Module |
+| --- | --- |
+| 0.3.0 | [`@uzolabs/sdk/bdex`](/sdk/bdex/overview) |
+| 0.4.0 | [`@uzolabs/sdk/bridge`](/sdk/bridge/overview) |
+| 0.5.0 | [`@uzolabs/sdk/paymaster`](/sdk/paymaster/overview) |
+
+To hear about new releases, watch the [repository on GitHub](https://github.com/uzolabs/uzo-sdk) and choose **Releases only**.

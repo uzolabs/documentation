@@ -1,12 +1,113 @@
 ---
 title: "SDK quickstart"
 sidebarTitle: "Quickstart"
-description: "Read the latest BOT Chain block with the planned SDK, or with plain viem while the SDK is in development."
+description: "Read the latest BOT Chain block with @uzolabs/sdk, or with plain viem."
 icon: "zap"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
+import TestnetOnly from "/snippets/testnet-only.mdx";
 
-<InDevelopment />
+In this quickstart you read the latest BOT Chain block number with `@uzolabs/sdk` and viem. It takes about two minutes and needs no wallet.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+<TestnetOnly />
+
+## What you'll build
+
+A script that connects to BOT Chain testnet and prints the latest block number. You'll also see the same script written without the SDK, which shows exactly what the SDK saves you.
+
+## Prerequisites
+
+- Node.js 18 or later.
+
+## Steps
+
+<Steps>
+  <Step title="Create a project">
+    ```bash
+    mkdir bot-sdk-quickstart
+    cd bot-sdk-quickstart
+    npm init -y
+    npm pkg set type=module
+    npm install @uzolabs/sdk viem
+    npm install -D tsx
+    ```
+  </Step>
+
+  <Step title="Write the script">
+    ```ts read-block.ts
+    import { createPublicClient, http } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const blockNumber = await client.getBlockNumber();
+    console.log(`${botChainTestnet.name} (${botChainTestnet.id}) is at block ${blockNumber}`);
+    ```
+
+    `botChainTestnet` includes the chain ID, RPC URL, explorer and Multicall3 address, so you don't need to pass a URL to `http()`.
+  </Step>
+
+  <Step title="Run it">
+    ```bash
+    npx tsx read-block.ts
+    ```
+  </Step>
+</Steps>
+
+## Verify it worked
+
+Output from a run on 2026-10-02:
+
+```text Output
+BOT Chain Testnet (968) is at block 25492960
+```
+
+You'll see a higher block number. If you run the script again, the number goes up. To read mainnet instead, import `botChain`.
+
+## The same script without the SDK
+
+If you can't add a dependency, you can define the chain yourself with viem's `defineChain`. These are the same values the SDK exports:
+
+```ts read-block-viem.ts
+import { createPublicClient, defineChain, http } from "viem";
+
+const botChainTestnet = defineChain({
+  id: 968,
+  name: "BOT Chain Testnet",
+  nativeCurrency: { name: "tBOT", symbol: "tBOT", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.bohr.life"] } },
+  blockExplorers: { default: { name: "BOTScan", url: "https://scan.bohr.life", apiUrl: "https://scan.bohr.life/api/v2" } },
+  contracts: { multicall3: { address: "0x47FA21f684bBAD707A53a0f9BE59F1422F46C265" } },
+  testnet: true,
+});
+
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+const blockNumber = await client.getBlockNumber();
+console.log(`${botChainTestnet.name} (${botChainTestnet.id}) is at block ${blockNumber}`);
+```
+
+It prints the same line. The downside is that you now maintain these values yourself. If an address or URL changes, you have to update it by hand in every project.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="HTTP request failed, or status 503">
+    The public testnet RPC is sometimes slow or briefly unavailable. Wait a few seconds and try again. See [Known limitations](/get-started/bot-chain/known-limitations).
+  </Accordion>
+  <Accordion title="Cannot use import statement outside a module">
+    Run `npm pkg set type=module`, or rename the file to `read-block.mts`.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Contract addresses" icon="file-code" href="/sdk/contracts/addresses">
+    Read a BDEX quote with typed addresses.
+  </Card>
+  <Card title="Explorer client" icon="search" href="/sdk/explorer/overview">
+    Look up contracts on BOTScan.
+  </Card>
+</CardGroup>

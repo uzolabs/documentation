@@ -1,10 +1,115 @@
 ---
 title: "getContract"
-description: "Reference for the planned getContract method, which fetches a verified contract's details from BOTScan."
+description: "Reference for the getContract method, which fetches a verified contract's details from BOTScan."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+`getContract` fetches a contract's verified name and ABI from BOTScan, and tells you whether it's a proxy and which implementation it points to.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Usage
+
+```ts get-contract.ts
+import { createPublicClient, http } from "viem";
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses } from "@uzolabs/sdk/contracts";
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+
+const explorer = createExplorerClient({ chainId: botChainTestnet.id });
+const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+
+// The bridge router is a proxy, so its own ABI only has admin functions.
+const proxy = await explorer.getContract(getAddresses(968).bridgeRouter);
+console.log(proxy.name, proxy.proxyType, proxy.implementations);
+
+// Follow it to the implementation to get the functions you call.
+const impl = await explorer.getContract(proxy.implementations[0]);
+console.log(impl.name, impl.isVerified, `${impl.abi.length} ABI items`);
+
+// Use the fetched ABI with the proxy address.
+const paused = await client.readContract({
+  address: getAddresses(968).bridgeRouter,
+  abi: impl.abi,
+  functionName: "getBridgePause",
+});
+console.log("Bridge paused:", paused);
+```
+
+Output from a run on 2026-10-02:
+
+```text Output
+TransparentUpgradeableProxy eip1967 [ '0x10FeaF2bcdF840B408C281089F2cCe45C82895d4' ]
+BotBridge true 69 ABI items
+Bridge paused: false
+```
+
+ABIs fetched at runtime aren't typed, so viem can't check function names or return types. For contracts the SDK already includes, use its [typed ABIs](/sdk/contracts/abis) instead.
+
+## Parameters
+
+<ParamField path="address" type="Address" required>
+  The contract address. Invalid input throws [`InvalidAddressError`](/sdk/reference/errors#invalidaddresserror) without a request.
+</ParamField>
+
+## Returns
+
+`Promise<ContractInfo>`
+
+<ResponseField name="name" type="string" required>
+  The verified contract name, such as `"TransparentUpgradeableProxy"`. An empty string if the contract isn't verified.
+</ResponseField>
+
+<ResponseField name="abi" type="Abi" required>
+  The verified ABI. An empty array if the contract isn't verified.
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" required>
+  `true` if BOTScan has verified source for this contract.
+</ResponseField>
+
+<ResponseField name="proxyType" type="string | null" required>
+  The proxy pattern BOTScan detected, such as `"eip1967"`, or `null` if it's not a proxy.
+</ResponseField>
+
+<ResponseField name="implementations" type="Address[]" required>
+  For proxies, the implementation addresses BOTScan found. Empty for other contracts.
+</ResponseField>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ExplorerError` with `status: 404` | No contract at that address on this network. Check the address and the `chainId` you passed to the client. |
+| `ExplorerError` | BOTScan can't be reached, returns another HTTP error, or returns something that isn't JSON. |
+| `InvalidAddressError` | The input isn't a valid address. |
+
+An unverified contract doesn't throw. Check `isVerified` before you use `abi`.
+
+```ts not-a-contract.ts
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+import { ExplorerError } from "@uzolabs/sdk";
+
+const explorer = createExplorerClient({ chainId: 968 });
+try {
+  await explorer.getContract("0x000000000000000000000000000000000000dEaD");
+} catch (error) {
+  if (error instanceof ExplorerError) console.log(error.code, error.status, error.message);
+}
+```
+
+```text Output
+EXPLORER_ERROR 404 No contract found at 0x000000000000000000000000000000000000dEaD on chain 968. Check the address and network.
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="ABIs" icon="file-json" href="/sdk/contracts/abis">
+    Typed ABIs included in the SDK.
+  </Card>
+  <Card title="Verify a contract" icon="badge-check" href="/guides/deploy/verify/overview">
+    Get your own contract verified on BOTScan.
+  </Card>
+</CardGroup>

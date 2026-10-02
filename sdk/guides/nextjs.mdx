@@ -1,12 +1,137 @@
 ---
 title: "Use with Next.js"
 sidebarTitle: "Next.js"
-description: "Set up the planned SDK in a Next.js App Router project, with server and client reads."
+description: "Set up the SDK in a Next.js App Router project, with server and client reads."
 icon: "triangle"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can use the SDK in a Next.js App Router project, reading chain data in server components and handling wallets in client components.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## What you'll build
+
+A Next.js page that shows the testnet USDT contract's verified name, read on the server, and a client component that reads the connected wallet's balance.
+
+## Prerequisites
+
+- Node.js 20 or later.
+- A Next.js project using the App Router: `npx create-next-app@latest`.
+- `npm install @uzolabs/sdk viem wagmi @tanstack/react-query`.
+
+## Server or client?
+
+| Read | Where | Why |
+| --- | --- | --- |
+| Contract state that doesn't depend on the user | Server component | No wallet needed, and the result can be cached. |
+| Explorer data (`createExplorerClient`) | Server component | Keeps BOTScan requests off the user's browser. |
+| Anything about the connected wallet | Client component | Only the browser has the wallet. |
+| Transactions | Client component | The user signs in their wallet. |
+
+`@uzolabs/sdk/chains`, `/contracts` and `/explorer` don't use browser or Node-only APIs, so they work on both sides.
+
+## Steps
+
+<Steps>
+  <Step title="Read on the server">
+    A server component can be `async`, so call the SDK directly:
+
+    {/* untested: node crashes on this machine since 2026-10-02; getContract is tested in /sdk/explorer/get-contract */}
+
+    ```tsx app/page.tsx
+    import { createExplorerClient } from "@uzolabs/sdk/explorer";
+    import { getAddresses } from "@uzolabs/sdk/contracts";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { Balance } from "./balance";
+
+    export const revalidate = 300; // re-read at most every 5 minutes
+
+    export default async function Page() {
+      const explorer = createExplorerClient({ chainId: botChainTestnet.id });
+      const usdt = await explorer.getContract(getAddresses(botChainTestnet.id).usdt);
+
+      return (
+        <main>
+          <h1>{usdt.name || "Unverified contract"}</h1>
+          <Balance />
+        </main>
+      );
+    }
+    ```
+  </Step>
+
+  <Step title="Add the wagmi providers">
+    wagmi hooks need a client boundary. Save the config from [Use with wagmi](/sdk/guides/wagmi#steps) as `app/wagmi.ts`, then create the providers in a file marked `"use client"`:
+
+    {/* untested: needs a running Next.js app */}
+
+    ```tsx app/providers.tsx
+    "use client";
+
+    import type { ReactNode } from "react";
+    import { WagmiProvider } from "wagmi";
+    import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+    import { config } from "./wagmi";
+
+    const queryClient = new QueryClient();
+
+    export function Providers({ children }: { children: ReactNode }) {
+      return (
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </WagmiProvider>
+      );
+    }
+    ```
+
+    Then wrap `{children}` with `<Providers>` in `app/layout.tsx`. The layout itself stays a server component.
+  </Step>
+
+  <Step title="Read the wallet on the client">
+    {/* untested: needs a running Next.js app */}
+
+    ```tsx app/balance.tsx
+    "use client";
+
+    import { useAccount, useBalance } from "wagmi";
+
+    export function Balance() {
+      const { address } = useAccount();
+      const { data } = useBalance({ address });
+      if (!address) return <p>Connect a wallet to see your balance.</p>;
+      return <p>{data ? `${data.formatted} ${data.symbol}` : "..."}</p>;
+    }
+    ```
+  </Step>
+</Steps>
+
+## Verify
+
+Run `npm run dev` and open the page. The heading shows the USDT contract's name from BOTScan. After you connect a wallet on testnet, your tBOT balance appears below it.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Hydration mismatch on wallet data">
+    The server never knows the wallet, so render wallet data only in client components, as above.
+  </Accordion>
+  <Accordion title="ExplorerError during build">
+    Server components that fetch run at build time unless they're dynamic. If BOTScan is slow or down, the build fails with [`ExplorerError`](/sdk/reference/errors#explorererror). Catch it and render a fallback, or use `export const dynamic = "force-dynamic"`.
+  </Accordion>
+  <Accordion title="Secrets in client components">
+    Anything in a `"use client"` file is sent to the browser. Keep private keys and paid RPC URLs in server code, and never give them a `NEXT_PUBLIC_` prefix.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Explorer module" icon="search" href="/sdk/explorer/overview">
+    What you can read from BOTScan.
+  </Card>
+  <Card title="Connect a wallet" icon="wallet" href="/guides/frontend/connect-wallet">
+    Connect buttons and network switching.
+  </Card>
+</CardGroup>

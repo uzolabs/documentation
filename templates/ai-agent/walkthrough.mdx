@@ -4,8 +4,37 @@ sidebarTitle: "Walkthrough"
 description: "A file-by-file tour of the contracts and scripts in the AI agent template."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import TemplateInDevelopment from "/snippets/status-template-in-development.mdx";
 
-<InDevelopment />
+Learn the parts of an AI agent that spends from a vault, using the hand-written guides, until the AI agent template is published and has files to tour.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<TemplateInDevelopment />
+
+## Why there's no file tour yet
+
+The AI agent template isn't published, so its files and scripts may still change. This page will walk through them once it ships. Until then, here's how its planned parts map to the guides.
+
+## The planned parts
+
+| Part | What it does in the planned design | Guide to use today |
+| --- | --- | --- |
+| Vault contract | Holds the funds. Lets the operator pay and swap within a daily limit per UTC day, and only to allowed recipients and tokens. The owner can pause, change the operator and withdraw | [Agent vaults](/guides/ai-agents/agent-vaults), [Spending limits](/guides/ai-agents/spending-limits) |
+| Identity check | An optional hook that asks an identity or reputation contract whether a recipient is trusted | [Identity hooks](/guides/ai-agents/identity-hooks) |
+| Agent tools | Read the vault's status, quote a swap, pay and swap. Each sending tool simulates first | [Tool calling](/guides/ai-agents/tool-calling) |
+| Approvals | Ask a person in the terminal before a payment, and before swaps above a threshold | [Human approval](/guides/ai-agents/human-approval) |
+| Swaps | Swap USDT through BDEX with a minimum output, keeping the result in the vault | [Swaps overview](/guides/defi/swaps/overview) |
+
+## Do it today
+
+Work through the guides in the order of the table. Each one runs on BOT Chain Testnet and reads secrets from environment variables. When you're done, compare your setup with the [security checklist](/guides/ai-agents/security-checklist).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Agent vaults" icon="vault" href="/guides/ai-agents/agent-vaults">
+    Start with the contract.
+  </Card>
+  <Card title="Security model" icon="shield" href="/templates/ai-agent/security-model">
+    How the planned roles fit together.
+  </Card>
+</CardGroup>

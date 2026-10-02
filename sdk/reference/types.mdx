@@ -1,11 +1,123 @@
 ---
 title: "Types"
-description: "Shared TypeScript types in the planned SDK, such as TxRequest and SwapQuote."
+description: "Shared TypeScript types in the SDK, plus the types planned for later modules."
 icon: "braces"
 ---
 
+import EarlyRelease from "/snippets/status-early-release.mdx";
 import InDevelopment from "/snippets/status-in-development.mdx";
+
+You can type your own functions against the SDK by importing its exported types, so the compiler catches a wrong chain ID or a missing field before your code runs.
+
+<EarlyRelease />
+
+## Import
+
+All types are exported from the package root and from the subpath they belong to. Use `import type` so nothing is added to your bundle:
+
+```ts Import
+import type { AddressInfo, ContractInfo, ExplorerClient, SupportedChainId } from "@uzolabs/sdk";
+```
+
+## Types in 0.2.0
+
+### SupportedChainId
+
+```ts Signature
+type SupportedChainId = 677 | 968;
+```
+
+The chain IDs the SDK accepts: `677` for BOT Chain and `968` for BOT Chain Testnet. `getAddresses` and `createExplorerClient` take this type, so passing another number literal is a compile error. If the value comes from a wallet at runtime, it's a plain `number`, and the SDK checks it and throws [`UnsupportedChainError`](/sdk/reference/errors#unsupportedchainerror).
+
+{/* untested: node crashes on this machine since 2026-10-02 */}
+
+```ts is-supported.ts
+import type { SupportedChainId } from "@uzolabs/sdk";
+
+function isSupported(id: number): id is SupportedChainId {
+  return id === 677 || id === 968;
+}
+```
+
+### AddressInfo
+
+Returned by [`getAddressInfo`](/sdk/explorer/get-address-info).
+
+<ResponseField name="isContract" type="boolean" required>
+  `true` if the address has contract code.
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" required>
+  `true` if the source is verified on BOTScan.
+</ResponseField>
+
+<ResponseField name="name" type="string | null" required>
+  The name BOTScan shows, or `null`.
+</ResponseField>
+
+<ResponseField name="token" type="{ symbol: string; decimals: number }">
+  Present only for tokens with a symbol and whole-number decimals.
+</ResponseField>
+
+### ContractInfo
+
+Returned by [`getContract`](/sdk/explorer/get-contract).
+
+<ResponseField name="name" type="string" required>
+  The verified contract name, or `""` if unverified.
+</ResponseField>
+
+<ResponseField name="abi" type="Abi" required>
+  The verified ABI from viem's `Abi` type, or `[]` if unverified.
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" required>
+  Whether BOTScan has verified source.
+</ResponseField>
+
+<ResponseField name="proxyType" type="string | null" required>
+  The detected proxy pattern, such as `"eip1967"`, or `null`.
+</ResponseField>
+
+<ResponseField name="implementations" type="Address[]" required>
+  Implementation addresses for proxies. Empty otherwise.
+</ResponseField>
+
+### ExplorerClient
+
+```ts Signature
+type ExplorerClient = {
+  getAddressInfo(address: Address): Promise<AddressInfo>;
+  getContract(address: Address): Promise<ContractInfo>;
+};
+```
+
+The object returned by [`createExplorerClient`](/sdk/explorer/overview#createexplorerclient). Use it to type a function that accepts a client, or to write a mock in tests.
+
+### Address and ABI types
+
+The SDK doesn't define its own `Address`, `Hex` or `Abi` types. It uses viem's, so values move between the SDK and viem without conversion. The `addresses` object and the ABIs are declared `as const`, so `getAddresses(968).usdt` has its exact address as its type and ABI reads return typed results.
+
+## Planned types
 
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+The brief for the planned modules names two shared types. Their fields aren't published, so they aren't listed here.
+
+| Type | Planned purpose | Module |
+| --- | --- | --- |
+| `TxRequest` | A transaction you sign and send yourself, returned by the builder functions. The SDK never holds keys. | `bdex`, `bridge` |
+| `SwapQuote` | The result of a BDEX quote. | `bdex` |
+
+Until they ship, viem's own types cover the same ground. Pass the result of `encodeFunctionData` as `data` in a `sendTransaction` call, as shown in [Send transactions](/guides/frontend/send-transactions).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Errors" icon="circle-alert" href="/sdk/reference/errors">
+    Error classes and codes.
+  </Card>
+  <Card title="Changelog" icon="history" href="/sdk/reference/changelog">
+    What changed in each release.
+  </Card>
+</CardGroup>

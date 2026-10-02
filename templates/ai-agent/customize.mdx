@@ -4,8 +4,35 @@ sidebarTitle: "Customize"
 description: "Ideas and steps for turning the AI agent template into your own project."
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import TemplateInDevelopment from "/snippets/status-template-in-development.mdx";
 
-<InDevelopment />
+Adapt an AI agent that spends from a vault to your own rules today by changing the hand-written guides, since the AI agent template has no published code to customize yet.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<TemplateInDevelopment />
+
+## Why there's nothing to customize yet
+
+The AI agent template is in development. This page will list its settings once it's published. The choices below apply to any agent you build from the guides now.
+
+## Do it today
+
+- **Set the daily limit.** Pick the most you'd accept losing in one day if the agent's key leaked or the model misbehaved. See [Spending limits](/guides/ai-agents/spending-limits).
+- **Choose recipients and tokens.** Allow only the addresses and tokens the agent needs. See [Agent vaults](/guides/ai-agents/agent-vaults).
+- **Set the approval threshold.** Decide which actions a person must approve. See [Human approval](/guides/ai-agents/human-approval).
+- **Add or remove tools.** Every tool you add is something the model can try. Give each one a narrow schema and simulate before sending. See [Tool calling](/guides/ai-agents/tool-calling).
+- **Check trust.** If you rely on an identity or reputation contract, plug it in through a small interface. See [Identity hooks](/guides/ai-agents/identity-hooks).
+
+<Warning>
+On mainnet an agent spends real funds. Use a separate owner and operator, keep the daily limit small, and complete the [security checklist](/guides/ai-agents/security-checklist) first.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Security checklist" icon="shield" href="/guides/ai-agents/security-checklist">
+    Check your setup before you fund it.
+  </Card>
+  <Card title="Templates overview" icon="layout-grid" href="/templates/overview">
+    The templates you can use now.
+  </Card>
+</CardGroup>

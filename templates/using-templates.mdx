@@ -4,8 +4,133 @@ description: "The same five steps for every Uzo template: download, install, con
 icon: "play"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import StatusTemplateReady from "/snippets/status-template-ready.mdx";
 
-<InDevelopment />
+Download any Ready template, deploy its contract to BOT Chain Testnet and open its web app, using the same five steps every time.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<StatusTemplateReady />
+
+## What you'll build
+
+A copy of one template in a folder of your own, with its contract deployed and verified on testnet and its web app running at `http://localhost:5173`. The steps below use the token template. Swap `token` for `nft`, `dex-integration` or `gasless-app` to use another one.
+
+## Prerequisites
+
+- Node.js 20.19 or newer, Foundry, a browser wallet and some tBOT. See [Prerequisites](/templates/prerequisites).
+- A fresh test wallet that holds nothing of value. You'll paste its private key into a local `.env` file.
+
+## Steps
+
+<Steps>
+  <Step title="Download the template">
+    [giget](https://github.com/unjs/giget) copies one folder from GitHub without the rest of the repo or its git history.
+
+    ```bash Terminal
+    npx giget gh:uzolabs/templates/token my-token
+    ```
+  </Step>
+  <Step title="Install">
+    ```bash Terminal
+    cd my-token && npm install
+    ```
+
+    `npm install` also installs the web app in `frontend/`, so there's no second install.
+  </Step>
+  <Step title="Add your test key">
+    ```bash Terminal
+    cp .env.example .env
+    ```
+
+    Open `.env` and paste your test wallet's private key after `PRIVATE_KEY=`. The file is in `.gitignore`, so git won't commit it. Leave `MAINNET=false`.
+
+    ```bash .env
+    PRIVATE_KEY=
+    BOT_TESTNET_RPC_URL=
+    BOT_MAINNET_RPC_URL=
+    MAINNET=false
+    ```
+
+    The RPC lines are optional. Leave them blank to use the public RPCs from `@uzolabs/sdk`. Each template adds its own settings below these, such as `TOKEN_NAME` for the token template.
+  </Step>
+  <Step title="Deploy">
+    ```bash Terminal
+    npm run deploy
+    ```
+
+    This compiles the contract with Foundry, deploys it to BOT Chain Testnet (chain 968) and prints its address and a BOTScan link. It also writes:
+
+    - `deployments/968.json`, with the address and constructor arguments.
+    - `frontend/.env`, with `VITE_CONTRACT_ADDRESS` and `VITE_CHAIN_ID`.
+    - `frontend/src/abi.ts`, refreshed from the compiled contract.
+
+    Prefer Hardhat? Run `npm run deploy:hardhat`. Both toolchains build the same `contracts/` folder and run the same tests.
+
+    The DEX integration template has no contract, so it skips this step. Run `npm run quote` instead.
+  </Step>
+  <Step title="Run the web app">
+    ```bash Terminal
+    npm run frontend
+    ```
+
+    Open `http://localhost:5173`, connect your wallet and, if it asks, click "Switch to BOT Chain Testnet".
+  </Step>
+</Steps>
+
+## Verify
+
+BOTScan is a Blockscout explorer, so verifying source code needs no API key. Wait about a minute after deploying so the explorer can index the contract, then run:
+
+```bash Terminal
+npm run verify
+```
+
+Use `npm run verify:hardhat` if you deployed with Hardhat. Open the BOTScan link from the deploy output and check that the **Contract** tab shows your source code.
+
+## Deploying to mainnet
+
+<Warning>
+Mainnet uses real BOT. The templates haven't been audited. Deploy to mainnet only after you understand the code and have had it reviewed, and use a separate wallet whose key never goes into a file you share.
+</Warning>
+
+Add `--mainnet` to a command, or set `MAINNET=true` in `.env`. The script shows a warning and waits for you to type `MAINNET`. Anything else cancels. It also refuses to run in CI, where nobody can type the confirmation.
+
+```bash Terminal
+npm run deploy -- --mainnet
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="&quot;has 0 tBOT, so it cannot pay for gas&quot;">
+    Your wallet needs tBOT. Get 10 from the [faucet](https://faucet.botchain.ai/basic) (once per address every 24 hours) and check that the address in the error is the one you funded.
+  </Accordion>
+  <Accordion title="&quot;PRIVATE_KEY is not set&quot;">
+    Run `cp .env.example .env` in the template folder and paste your test key after `PRIVATE_KEY=`.
+  </Accordion>
+  <Accordion title="&quot;forge: command not found&quot;">
+    Install Foundry and open a new terminal. On Windows, check that `~/.foundry/bin` is on your PATH. See [Prerequisites](/templates/prerequisites).
+  </Accordion>
+  <Accordion title="&quot;HTTP request failed&quot; or an RPC 503">
+    The public RPC is sometimes busy for a minute. The scripts retry for about 15 seconds. Wait and run the same command again. Steps that already went through are not repeated.
+  </Accordion>
+  <Accordion title="Verification fails right after deploying">
+    The explorer hasn't indexed the contract yet. Wait a minute and run `npm run verify` again. It's safe to run more than once.
+  </Accordion>
+  <Accordion title="The web app still shows an old contract">
+    Vite reads `frontend/.env` when it starts. Stop `npm run frontend` and start it again after each deploy.
+  </Accordion>
+  <Accordion title="npm warns about install scripts">
+    npm 11 skips some packages' install scripts until you approve them. The templates don't need them, so you can ignore the warning.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Token walkthrough" icon="coins" href="/templates/token/walkthrough">
+    What each file in the token template does.
+  </Card>
+  <Card title="Deploy with Foundry" icon="hammer" href="/guides/deploy/deploy-with-foundry">
+    Deploy and verify by hand with Foundry.
+  </Card>
+</CardGroup>

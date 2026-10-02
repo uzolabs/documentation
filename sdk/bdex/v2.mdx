@@ -5,6 +5,71 @@ description: "Reference for the planned getAmountsOutV2 and buildSwapExactTokens
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned V2 helpers will quote a swap through BDEX V2 pools and build the swap transaction for you to sign. You can do both today with viem and the Router02 ABI.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned functions
+
+The names below come from the SDK plan. Parameters and return types aren't final, so they aren't listed.
+
+### getAmountsOutV2
+
+Will quote how much of the last token in a path you get for an input amount. It wraps Router02's `getAmountsOut(amountIn, path)`, which returns one amount per token in the path with the 0.30% pool fee already taken out.
+
+### buildSwapExactTokensForTokensV2
+
+Will return an unsigned transaction for Router02's `swapExactTokensForTokens`. It's planned to apply a minimum output from your slippage and a deadline, and to throw [`SlippageTooHighError`](/sdk/reference/errors#reserved-for-planned-modules) if the slippage is above the cap. You sign and send the result yourself.
+
+## Do it today
+
+The SDK already ships `bdexV2Router02Abi` and the Router02 address for both networks.
+
+<Steps>
+  <Step title="Quote">
+    {/* untested: node crashes on this machine since 2026-10-02; the same getAmountsOut call is tested in /sdk/bdex/overview */}
+
+    ```ts v2-quote.ts
+    import { createPublicClient, formatUnits, http, parseEther } from "viem";
+    import { botChainTestnet } from "@uzolabs/sdk/chains";
+    import { bdexV2Router02Abi, getAddresses } from "@uzolabs/sdk/contracts";
+
+    const client = createPublicClient({ chain: botChainTestnet, transport: http() });
+    const { wbot, usdt, bdexV2Router02: router } = getAddresses(botChainTestnet.id);
+
+    const amountIn = parseEther("0.001");
+    const amounts = await client.readContract({
+      address: router,
+      abi: bdexV2Router02Abi,
+      functionName: "getAmountsOut",
+      args: [amountIn, [wbot, usdt]],
+    });
+    const quoted = amounts[amounts.length - 1];
+    const amountOutMin = (quoted * (10_000n - 50n)) / 10_000n; // 0.5% slippage
+    console.log(`Quote ${formatUnits(quoted, 6)} USDT, minimum ${formatUnits(amountOutMin, 6)} USDT`);
+    ```
+  </Step>
+  <Step title="Approve and swap">
+    Approve Router02 to spend your input token, then call `swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline)`. The full, tested script is in [Swap on BDEX V2](/guides/defi/swaps/bdex-v2). To swap native tBOT without wrapping, use `swapExactETHForTokens` with the amount as `value`, as shown in the same guide.
+  </Step>
+</Steps>
+
+## Things the helpers will handle for you
+
+Until then, handle these yourself:
+
+- **Decimals.** USDT has 6 decimals on BOT Chain. Use [`TOKENS`](/sdk/contracts/constants#tokens) to format amounts.
+- **Paths.** For tokens without a direct pair, route through WBOT, for example `[tokenA, wbot, usdt]`.
+- **Deadlines.** Build the deadline right before you send, in Unix seconds.
+- **Stale quotes.** Quote again right before you swap. See [Slippage and deadlines](/guides/defi/swaps/slippage-and-deadlines).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="BDEX V3" icon="repeat-2" href="/sdk/bdex/v3">
+    Concentrated liquidity pools.
+  </Card>
+  <Card title="Approvals" icon="key-round" href="/sdk/bdex/approvals">
+    Approve before you swap.
+  </Card>
+</CardGroup>

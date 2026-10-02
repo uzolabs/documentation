@@ -1,12 +1,115 @@
 ---
 title: "Install the SDK"
 sidebarTitle: "Installation"
-description: "How you will install @uzolabs/sdk with viem as a peer dependency, and how subpath imports work."
+description: "Install @uzolabs/sdk with viem as a peer dependency, and learn how subpath imports work."
 icon: "download"
 ---
 
-import InDevelopment from "/snippets/status-in-development.mdx";
+import EarlyRelease from "/snippets/status-early-release.mdx";
 
-<InDevelopment />
+You can add `@uzolabs/sdk` to any Node.js or browser project and import only the parts you need.
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+<EarlyRelease />
+
+## Requirements
+
+- Node.js 18 or later.
+- [viem](https://viem.sh) v2. It's a peer dependency, so you install it yourself.
+- TypeScript is optional. The package includes its own types.
+
+## Install
+
+<CodeGroup>
+```bash npm
+npm install @uzolabs/sdk viem
+```
+
+```bash pnpm
+pnpm add @uzolabs/sdk viem
+```
+
+```bash yarn
+yarn add @uzolabs/sdk viem
+```
+
+```bash bun
+bun add @uzolabs/sdk viem
+```
+</CodeGroup>
+
+{/* untested: pnpm, yarn and bun commands; the npm command was tested on 2026-10-02 */}
+
+The SDK is below 1.0, so pin the version:
+
+```bash
+npm install @uzolabs/sdk@0.2.0 viem
+```
+
+## Why viem is a peer dependency
+
+The SDK's chain objects and ABIs are plain viem types. If the SDK bundled its own copy of viem, your app could end up with two copies whose types don't match. Because viem is a peer dependency, it's installed once, at the version you choose. Any version in `^2.0.0` works.
+
+## Subpath imports
+
+Each module has its own entry point. Import from the narrowest one you need, so your bundle includes only that code.
+
+```ts imports.ts
+import { botChain, botChainTestnet } from "@uzolabs/sdk/chains";
+import { getAddresses, bdexV2Router02Abi } from "@uzolabs/sdk/contracts";
+import { createExplorerClient } from "@uzolabs/sdk/explorer";
+
+// The root re-exports everything, including the error classes.
+import { UzoError } from "@uzolabs/sdk";
+```
+
+| Subpath | Gzipped size limit in CI |
+| --- | --- |
+| `@uzolabs/sdk/chains` | 2 KB |
+| `@uzolabs/sdk/contracts`, addresses and constants only | 3 KB |
+| `@uzolabs/sdk/contracts`, all ABIs | 10 KB |
+| `@uzolabs/sdk/explorer` | 4 KB |
+
+These are the limits the SDK's CI enforces, not measured sizes. viem isn't included in them.
+
+The package includes both ES module and CommonJS builds. It's marked as free of side effects, so bundlers can drop any exports you don't use.
+
+## Check it works
+
+```ts check.ts
+import { botChainTestnet } from "@uzolabs/sdk/chains";
+
+console.log(botChainTestnet.id, botChainTestnet.rpcUrls.default.http[0]);
+```
+
+```bash
+npx tsx check.ts
+```
+
+```text Output
+968 https://rpc.bohr.life
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="npm warns about a missing peer dependency">
+    Install viem: `npm install viem`. Any 2.x version works.
+  </Accordion>
+  <Accordion title="Cannot find module '@uzolabs/sdk/chains'">
+    Your TypeScript `moduleResolution` setting may not read package `exports`. In `tsconfig.json`, set it to `"bundler"`, `"node16"` or `"nodenext"`.
+  </Accordion>
+  <Accordion title="ERR_REQUIRE_ESM or a similar module error">
+    Use Node.js 18 or later. The SDK supports both `import` and `require`, so check you aren't using both in the same file.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="SDK quickstart" icon="zap" href="/sdk/quickstart">
+    Make your first read.
+  </Card>
+  <Card title="Use with wagmi" icon="atom" href="/sdk/guides/wagmi">
+    Add BOT Chain to a React app.
+  </Card>
+</CardGroup>

@@ -5,6 +5,89 @@ description: "Reference for the planned getBridgeStatus, getBridgeLimits and get
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
+The planned status and limits functions will tell you whether the bridge is open and how much you can send before you build a deposit. You can read all of it today from the bridge router with viem.
+
 <InDevelopment />
 
-This page is being written. Check back soon, or start with the [quickstart](/get-started/quickstart).
+## Planned functions
+
+The names come from the SDK plan. Parameters and return types aren't final. Each will read from the bridge router at `getAddresses(chainId).bridgeRouter`.
+
+### getBridgeStatus
+
+Will report whether the bridge is paused, from the router's `getBridgePause()`. Don't send a deposit while it returns `true`.
+
+### getBridgeLimits
+
+Will return the limits from the router: `getMinAmountUsd()`, `getMaxAmountUsd()` and `getMinFee()`, which are whole USDT, plus the per-destination fee in basis points from the bridge contract's `chainAndTokenFee`. On 2026-10-02 both networks had a 10 USDT minimum, a 1 USDT minimum fee and a 0.1% fee. The maximum was 50000 USDT on testnet and 30150 USDT on mainnet. Always read the live values.
+
+### getBotGasConfig
+
+Will return the router's "bot gas" settings, from `getBotGasConfig()`. Bot gas is an option for transfers **into** BOT Chain: when it's used, part of the USDT that arrives is swapped for a small, fixed amount of BOT and sent to the recipient, so a new wallet has gas for its first transaction. See [Bot gas](/sdk/bridge/build-deposit#bot-gas) for how it works.
+
+`getBotGasConfig()` returns a config and an `enabled` flag:
+
+<ResponseField name="cfg.destinationChainId" type="uint256">
+  The chain where bot gas is paid out. This is BOT Chain itself: `677` on mainnet, `968` on testnet.
+</ResponseField>
+
+<ResponseField name="cfg.resourceId" type="bytes32">
+  The token bot gas applies to. On both networks it's [`USDT_RESOURCE_ID`](/sdk/contracts/constants#usdt_resource_id).
+</ResponseField>
+
+<ResponseField name="cfg.amount" type="uint256">
+  The BOT paid out, in wei. On 2026-10-02 this was 0.1 BOT on mainnet and 1 tBOT on testnet.
+</ResponseField>
+
+<ResponseField name="cfg.oracle" type="address">
+  The price oracle used to work out how much USDT the BOT costs.
+</ResponseField>
+
+<ResponseField name="cfg.baseToken / cfg.quoteToken" type="address">
+  The pair the oracle prices: WBOT and USDT on both networks.
+</ResponseField>
+
+<ResponseField name="cfg.twapWindow" type="uint32">
+  The time-weighted average price window, in seconds: 1800 on mainnet and 300 on testnet on 2026-10-02.
+</ResponseField>
+
+<ResponseField name="enabled" type="bool">
+  Whether bot gas is switched on. It was `true` on both networks on 2026-10-02.
+</ResponseField>
+
+## Do it today
+
+The [Limits and fees](/guides/bridge/limits-and-fees) guide reads the pause state, limits, fees and destinations in one tested script. To read the bot gas config as well:
+
+{/* untested: node crashes on this machine since 2026-10-02; output values confirmed with cast getBotGasConfig on mainnet */}
+
+```ts bot-gas-config.ts
+import { createPublicClient, formatEther, http } from "viem";
+import { botChain } from "@uzolabs/sdk/chains";
+import { botBridgeAbi, getAddresses } from "@uzolabs/sdk/contracts";
+
+const client = createPublicClient({ chain: botChain, transport: http() });
+const [cfg, enabled] = await client.readContract({
+  address: getAddresses(botChain.id).bridgeRouter,
+  abi: botBridgeAbi,
+  functionName: "getBotGasConfig",
+});
+console.log(`Bot gas ${enabled ? "on" : "off"}: ${formatEther(cfg.amount)} BOT on chain ${cfg.destinationChainId}, TWAP ${cfg.twapWindow}s`);
+```
+
+```text Output
+Bot gas on: 0.1 BOT on chain 677, TWAP 1800s
+```
+
+This only reads data, so it's safe to run against mainnet.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="buildBridgeDeposit" icon="hammer" href="/sdk/bridge/build-deposit">
+    Build the deposit once the checks pass.
+  </Card>
+  <Card title="Limits and fees" icon="gauge" href="/guides/bridge/limits-and-fees">
+    The tested script and fee formula.
+  </Card>
+</CardGroup>
