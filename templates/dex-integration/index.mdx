@@ -41,7 +41,11 @@ npm run frontend
 
 `npm run quote` works without a key. Open `http://localhost:5173`, connect your wallet and pick BOT on top and USDT below.
 
-To send swaps from the scripts, paste your test wallet's key after `PRIVATE_KEY=` in `.env`. There's no USDT faucet, so swap some tBOT for it:
+<Frame>
+  <img src="/images/dex-integration-swap-widget.png" alt="The DEX integration swap widget on BOT Chain testnet, connected to a wallet, with a Swap card for BOT, WBOT and USDT" />
+</Frame>
+
+To send swaps from the scripts, paste your test wallet's key after `PRIVATE_KEY=` in `.env`. To get the USDT that the BDEX pools trade, choose **Test USDT** on the [BOT Chain faucet](https://faucet.botchain.ai/basic), or swap some tBOT for it:
 
 ```bash Terminal
 npm run swap-v2 -- 1 BOT USDT

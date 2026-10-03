@@ -349,6 +349,9 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
     } from "wagmi";
     import { botChainTestnet } from "./wagmi";
     import { counterAbi, counterAddress } from "./counter";
+    import "./App.css";
+
+    const short = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
 
     export default function App() {
       const { address, chainId, isConnected } = useConnection();
@@ -356,6 +359,11 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
       const connect = useConnect();
       const disconnect = useDisconnect();
       const switchChain = useSwitchChain();
+
+      // Wallets that announce themselves (MetaMask, Rabby and so on) show up by name.
+      // The generic "Injected" connector is only a fallback for wallets that don't.
+      const named = connectors.filter((c) => c.id !== "injected");
+      const wallets = named.length > 0 ? named : connectors;
 
       const { data: number, refetch } = useReadContract({
         address: counterAddress,
@@ -371,53 +379,177 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
         if (receipt.isSuccess) refetch();
       }, [receipt.isSuccess, refetch]);
 
+      const onTestnet = chainId === botChainTestnet.id;
+
       return (
-        <main>
-          <h1>Counter on BOT Chain testnet</h1>
-          <p>Current value: {number?.toString() ?? "loading"}</p>
+        <main className="card">
+          <header>
+            <span className="badge">BOT Chain testnet</span>
+            {isConnected && address && (
+              <button className="link" onClick={() => disconnect.mutate()}>
+                {short(address)} · Disconnect
+              </button>
+            )}
+          </header>
+
+          <p className="label">Counter value</p>
+          <p className="value">{number?.toString() ?? "..."}</p>
 
           {!isConnected &&
-            connectors.map((connector) => (
-              <button key={connector.uid} onClick={() => connect.mutate({ connector })}>
-                Connect {connector.name}
+            wallets.map((connector) => (
+              <button key={connector.uid} className="primary" onClick={() => connect.mutate({ connector })}>
+                {connector.icon && <img src={connector.icon} alt="" />}
+                Connect {connector.id === "injected" ? "wallet" : connector.name}
               </button>
             ))}
 
-          {isConnected && chainId !== botChainTestnet.id && (
-            <button onClick={() => switchChain.mutate({ chainId: botChainTestnet.id })}>
+          {isConnected && !onTestnet && (
+            <button className="primary" onClick={() => switchChain.mutate({ chainId: botChainTestnet.id })}>
               Switch to BOT Chain testnet
             </button>
           )}
 
-          {isConnected && chainId === botChainTestnet.id && (
-            <>
-              <p>Connected: {address}</p>
-              <button
-                disabled={write.isPending || receipt.isLoading}
-                onClick={() =>
-                  write.mutate({
-                    address: counterAddress,
-                    abi: counterAbi,
-                    functionName: "increment",
-                  })
-                }
-              >
-                {write.isPending ? "Confirm in your wallet" : receipt.isLoading ? "Waiting for block" : "Increment"}
-              </button>
-              <button onClick={() => disconnect.mutate()}>Disconnect</button>
-            </>
+          {isConnected && onTestnet && (
+            <button
+              className="primary"
+              disabled={write.isPending || receipt.isLoading}
+              onClick={() =>
+                write.mutate({
+                  address: counterAddress,
+                  abi: counterAbi,
+                  functionName: "increment",
+                })
+              }
+            >
+              {write.isPending ? "Confirm in your wallet" : receipt.isLoading ? "Waiting for block" : "Increment"}
+            </button>
           )}
 
           {write.data && (
-            <p>
-              <a href={`${botChainTestnet.blockExplorers.default.url}/tx/${write.data}`} target="_blank" rel="noreferrer">
-                View transaction on BOTScan
-              </a>
-            </p>
+            <a className="link" href={`${botChainTestnet.blockExplorers.default.url}/tx/${write.data}`} target="_blank" rel="noreferrer">
+              View transaction on BOTScan
+            </a>
           )}
-          {write.error && <p>Error: {write.error.message.split("\n")[0]}</p>}
+          {write.error && <p className="error">{write.error.message.split("\n")[0]}</p>}
+
+          <footer>Contract {short(counterAddress)}</footer>
         </main>
       );
+    }
+    ```
+
+    Most browser wallets announce themselves to the page, so wagmi lists each one by name with its icon. If you have two wallets installed, you see two buttons. The generic `injected` connector from `wagmi.ts` only shows, as **Connect wallet**, when no wallet announces itself.
+
+    <Frame>
+      <img src="/images/first-dapp-connect-wallets.png" alt="The counter page before connecting, showing the counter value 2 and two buttons, Connect Phantom and Connect MetaMask" />
+    </Frame>
+
+    Replace `src/App.css` to style the page:
+
+    ```css src/App.css
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #2a2112, #0e0d0b 60%);
+      color: #f4efe6;
+      font-family: system-ui, sans-serif;
+    }
+
+    .card {
+      width: min(360px, calc(100vw - 32px));
+      padding: 24px;
+      border: 1px solid #3a3122;
+      border-radius: 20px;
+      background: #17150f;
+      box-shadow: 0 20px 60px rgb(0 0 0 / 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #2e2615;
+      color: #e8bf6a;
+    }
+
+    .label {
+      margin: 0;
+      color: #a39a8a;
+      font-size: 14px;
+    }
+
+    .value {
+      margin: 0 0 12px;
+      font-size: 72px;
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border: 0;
+      border-radius: 12px;
+      background: #d9a441;
+      color: #17150f;
+      font-weight: 600;
+    }
+
+    .primary:hover:not(:disabled) {
+      background: #e8bf6a;
+    }
+
+    .primary:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .primary img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .link {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #e8bf6a;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .error {
+      margin: 0;
+      color: #f07a6a;
+      font-size: 13px;
+    }
+
+    footer {
+      margin-top: 8px;
+      color: #6f685c;
+      font-size: 12px;
+      text-align: center;
     }
     ```
 
@@ -435,10 +567,12 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
 
 ## Verify it worked
 
-{/* screenshot: the counter-web page in a browser, connected to MetaMask on BOT Chain testnet, showing the current value and the Increment button */}
+<Frame>
+  <img src="/images/first-dapp-connected.png" alt="The counter page connected to a wallet on BOT Chain testnet, showing the counter value 3, the Increment button and a View transaction on BOTScan link" />
+</Frame>
 
 1. The page shows the same counter value that `read.js` printed.
-2. Click **Connect**, then approve in your wallet.
+2. Click **Connect** with your wallet's name, then approve in your wallet.
 3. Click **Increment** and confirm. After about a second the value goes up by one.
 4. The **View transaction on BOTScan** link opens your transaction.
 
@@ -454,8 +588,8 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
   <Accordion title="invalid private key, expected hex or 32 bytes">
     `PRIVATE_KEY` must be 64 hex characters with a `0x` prefix. Copy it again from `cast wallet decrypt-keystore uzo-dev`.
   </Accordion>
-  <Accordion title="Clicking Connect Injected does nothing">
-    The `injected` connector needs a browser wallet extension. Without one, the button still appears but nothing happens when you click it. Install MetaMask or another EVM wallet and reload the page.
+  <Accordion title="Clicking Connect wallet does nothing">
+    That button is the generic `injected` connector, which needs a browser wallet extension. Without one, the button still appears but nothing happens when you click it. Install MetaMask or another EVM wallet and reload the page.
   </Accordion>
   <Accordion title="The wallet shows the wrong network or a chain mismatch warning">
     Click **Switch to BOT Chain testnet**. If your wallet doesn't know chain 968 yet, add it first using the values in [Connect a wallet](/get-started/bot-chain/connect-wallet).

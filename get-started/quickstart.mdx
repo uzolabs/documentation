@@ -206,13 +206,16 @@ Open your contract on BOTScan. Replace the address at the end of this URL with y
 https://scan.bohr.life/address/PASTE_DEPLOYED_ADDRESS_HERE
 ```
 
-{/* screenshot: BOTScan testnet contract page for the deployed Counter, showing the green verified badge and the Contract tab */}
+<Frame>
+  <img src="/images/quickstart-botscan-verified.png" alt="BOTScan testnet Contract tab for the Counter contract, showing Contract Source Code Verified (Exact Match) and the Solidity source" />
+</Frame>
 
 You should see:
 
 - A green check next to **Contract**, which means the source is verified.
-- Two transactions: the deployment and your `increment` call.
-- On the **Contract** tab, a **Read** view showing `number` as `1`.
+- On the **Contract** tab, a **Contract Source Code Verified** banner, the contract name `Counter` and your source code.
+- Under **Transactions**, the deployment and your `increment` call.
+- Under **Read/Write contract**, `number` reads `1`.
 
 ## Troubleshooting
 

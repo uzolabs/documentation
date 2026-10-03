@@ -48,12 +48,18 @@ The faucet and BOTScan show the testnet token as `BOT`. You can use either `tBOT
   <Step title="Open the network settings">
     In MetaMask, open the network menu at the top left and choose **Add a custom network**.
 
-    {/* screenshot: MetaMask network menu with "Add a custom network" highlighted */}
+    <Frame>
+      <img src="/images/connect-wallet-add-network.png" alt="MetaMask Manage networks list with the Add a custom network button at the bottom" />
+    </Frame>
   </Step>
   <Step title="Enter the testnet values">
     Fill in each field from the **Testnet** tab above, then click **Save**.
 
-    {/* screenshot: MetaMask "Add a custom network" form filled with BOT Chain Testnet values */}
+    <Frame>
+      <img src="/images/connect-wallet-network-form.png" alt="MetaMask network form named BOT Chain Testnet with chain ID 968, RPC rpc.bohr.life, symbol tBOT and explorer scan.bohr.life, with MetaMask warnings suggesting the name Datagram and the symbol DGRAM" />
+    </Frame>
+
+    MetaMask shows orange warnings on this form. They're expected; see the note below.
   </Step>
   <Step title="Switch to the network">
     Choose **BOT Chain Testnet** from the network menu. Your balance shows in tBOT.
@@ -61,7 +67,9 @@ The faucet and BOTScan show the testnet token as `BOT`. You can use either `tBOT
 </Steps>
 
 <Warning>
-  Chain ID 968 is registered to a different network, Datagram, on [Chainlist](https://chainlist.org) and in the public chain registry. Don't add testnet through Chainlist. MetaMask may show a warning that the network name or symbol doesn't match chain 968. That's expected for BOT Chain testnet, as long as the RPC URL is exactly `{{testnet-rpc}}`.
+  Chain ID 968 is registered to a different network, Datagram, on [Chainlist](https://chainlist.org) and in the public chain registry. Don't add testnet through Chainlist.
+
+  Because of that, MetaMask warns that the network name may not match chain 968 and suggests **Datagram**. It also warns that the currency symbol doesn't match and suggests **DGRAM**. Ignore both suggestions and keep `BOT Chain Testnet` and `tBOT`. The warnings are safe to dismiss only if the RPC URL is exactly `{{testnet-rpc}}` and the explorer is `{{testnet-explorer}}`. If either is different, stop and check the [Networks](/reference/networks) page.
 </Warning>
 
 ## Add mainnet
@@ -70,9 +78,11 @@ The faucet and BOTScan show the testnet token as `BOT`. You can use either `tBOT
   <Tab title="With Chainlist">
     1. Open [BOT Chain Mainnet on Chainlist](https://chainlist.org/chain/677).
     2. Check that the chain ID is 677 and the explorer is `scan.botchain.ai`.
-    3. Click **Add to MetaMask** and approve the request in MetaMask.
+    3. Click **Connect Wallet** and approve the connection in MetaMask. The button then changes to **Add to MetaMask**. Click it and approve the request.
 
-    {/* screenshot: chainlist.org/chain/677 page with the Add to MetaMask button */}
+    <Frame>
+      <img src="/images/connect-wallet-chainlist.png" alt="Chainlist page for BOT Chain Mainnet showing chain ID 677, currency BOT, explorer scan.botchain.ai and the RPC list" />
+    </Frame>
   </Tab>
   <Tab title="By hand">
     Follow the same steps as testnet, using the values in the **Mainnet** tab above.
@@ -80,7 +90,7 @@ The faucet and BOTScan show the testnet token as `BOT`. You can use either `tBOT
 </Tabs>
 
 <Warning>
-  Mainnet uses real BOT. Practise on testnet first, and never paste a seed phrase or private key into a website.
+  Mainnet uses real BOT. Practise on testnet first, and never paste a seed phrase or private key into a website. See [Security](/reference/security).
 </Warning>
 
 ## Verify it worked

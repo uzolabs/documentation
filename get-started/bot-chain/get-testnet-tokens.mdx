@@ -18,15 +18,17 @@ Send up to 10 tBOT to your wallet address, then check that it arrived.
 
 <Steps>
   <Step title="Open the faucet">
-    Go to the [BOT Chain faucet](https://faucet.botchain.ai/basic). The network should read **BOT Chain Testnet**.
+    Go to the [BOT Chain faucet](https://faucet.botchain.ai/basic). Under **Claim asset**, choose **Test BOT**. The network should read **BOT Chain Testnet**.
 
-    {/* screenshot: faucet.botchain.ai/basic with the network, address field and verification check visible */}
+    <Frame>
+      <img src="/images/get-testnet-tokens-faucet.png" alt="BOT Chain testnet faucet with Test BOT selected, the BOT Chain Testnet network, a wallet address, the verification check and the Send 10 BOT button" />
+    </Frame>
   </Step>
   <Step title="Enter your address">
     Paste your wallet address (it starts with `0x`). Double-check it; tokens sent to the wrong address can't be returned.
   </Step>
   <Step title="Complete the check and claim">
-    Complete the "I am not a robot" check, then click the send button. The faucet shows a transaction hash when it's done.
+    Complete the "I am not a robot" check, then click **Send 10 BOT**. The faucet shows a transaction hash when it's done.
   </Step>
 </Steps>
 
@@ -45,6 +47,10 @@ You should see up to `10.000000000000000000`.
 Each address can claim **up to 10 tBOT every 24 hours** (checked 2026-10-01 on the faucet and in [BOT Chain's faucet guide](https://dev-docs.botchain.ai/docs/Developers/claim-test-tbot-tokens/)).
 
 That's plenty for development. Deploying and calling a small contract costs a tiny fraction of one tBOT. See [Gas and fees](/get-started/bot-chain/gas-and-fees) for how to check costs yourself.
+
+## Test USDT
+
+The same faucet also gives out test USDT. Under **Claim asset**, choose **Test USDT** and claim it the same way. It's the testnet USDT that the BDEX pools trade, so you can use it with the [swap guides](/guides/defi/swaps/bdex-v2) and the [DEX integration template](/templates/dex-integration/index). Its address is in [Contract addresses](/reference/contract-addresses).
 
 ## Uzo Labs faucet
 
