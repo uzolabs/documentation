@@ -130,7 +130,16 @@ Find the error you're seeing, then read its cause and fix. We captured most mess
   </Accordion>
 </AccordionGroup>
 
-{/* TODO: add the template errors once the templates brief is available. */}
+## Templates
+
+Each template's errors are listed next to the steps that cause them:
+
+- **Setup** (`forge: command not found`, npm install failures, faucet waits): [Prerequisites](/templates/prerequisites#troubleshooting).
+- **Running any template** (no tBOT for gas, `PRIVATE_KEY is not set`, RPC 503, verification right after deploy, a stale contract in the web app): [Use a template](/templates/using-templates#troubleshooting).
+- **Token** (override errors, new functions missing from the web app, verify after a constructor change): [Customize the Token template](/templates/token/customize#troubleshooting).
+- **NFT** (`WrongPayment`, artwork JSON decode errors, `supportsInterface` or `_update` compiler errors): [Customize the NFT template](/templates/nft/customize#troubleshooting).
+- **DEX integration** (`EXPIRED`, `INSUFFICIENT_OUTPUT_AMOUNT`, missing pools, empty quotes): [Customize the DEX integration template](/templates/dex-integration/customize#troubleshooting).
+- **Gasless app** (relayer refusals, expired signatures, rate limits, a low relayer balance): [Customize the Gasless app template](/templates/gasless-app/customize#troubleshooting).
 
 ## Still stuck?
 

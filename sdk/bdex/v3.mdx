@@ -25,8 +25,6 @@ Will quote a swap through one pool with QuoterV2's `quoteExactInputSingle`. Quot
 
 The SDK ships `bdexV3FactoryAbi`, `bdexV3QuoterV2Abi` and `bdexV3SwapRouterAbi`, with addresses for both networks.
 
-{/* untested: node crashes on this machine since 2026-10-02; the three pools were confirmed with cast */}
-
 ```ts v3-quote.ts
 import { createPublicClient, formatUnits, http, parseEther, zeroAddress } from "viem";
 import { botChainTestnet } from "@uzolabs/sdk/chains";

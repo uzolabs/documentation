@@ -106,8 +106,6 @@ Rate limits live in memory, so they reset when the relayer restarts. The relayer
 
 `relayer/src/paymaster.ts` implements BOT Chain's EOA paymaster flow: ask the paymaster `pm_isSponsorable`, and if it agrees, send the transaction with a gas price of 0. It's only used when `PAYMASTER_URL` is set. If the paymaster refuses or fails, the relayer pays the gas itself, and the web app shows who paid. See [EOA paymaster](/guides/gasless/eoa-paymaster).
 
-{/* untested: the paymaster adapter has unit tests in the template but has not been run against a real paymaster */}
-
 ## The web app
 
 `frontend/src/forward.ts` builds the request (domain, nonce, gas estimate, deadline) and posts it to the relayer. `App.tsx` only ever asks the wallet for `eth_signTypedData_v4`. The sign card moves through "Preparing", "Sign in your wallet", "Relaying", then "Signed. Gas paid by relayer" with a BOTScan link.

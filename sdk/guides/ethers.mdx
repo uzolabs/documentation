@@ -37,8 +37,6 @@ You lose viem's type inference: ethers returns `any` for contract calls unless y
   <Step title="Create a provider">
     Pass the chain ID and name as a static network, so ethers doesn't need to detect it on every start.
 
-    {/* untested: node crashes on this machine since 2026-10-02 */}
-
     ```ts provider.ts
     import { JsonRpcProvider, Network } from "ethers";
     import { botChainTestnet } from "@uzolabs/sdk/chains";
@@ -52,7 +50,6 @@ You lose viem's type inference: ethers returns `any` for contract calls unless y
   </Step>
 
   <Step title="Read a quote">
-    {/* untested: node crashes on this machine since 2026-10-02; the same call is tested with viem in /guides/defi/swaps/bdex-v2 */}
 
     ```ts ethers-quote.ts
     import { Contract, formatUnits, parseEther } from "ethers";
@@ -71,8 +68,6 @@ You lose viem's type inference: ethers returns `any` for contract calls unless y
 
   <Step title="Send a transaction">
     To write, connect a `Wallet` that reads its key from the environment, and call the contract through it:
-
-    {/* untested: node crashes on this machine since 2026-10-02 */}
 
     ```ts signer.ts
     import { Wallet } from "ethers";

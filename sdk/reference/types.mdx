@@ -29,8 +29,6 @@ type SupportedChainId = 677 | 968;
 
 The chain IDs the SDK accepts: `677` for BOT Chain and `968` for BOT Chain Testnet. `getAddresses` and `createExplorerClient` take this type, so passing another number literal is a compile error. If the value comes from a wallet at runtime, it's a plain `number`, and the SDK checks it and throws [`UnsupportedChainError`](/sdk/reference/errors#unsupportedchainerror).
 
-{/* untested: node crashes on this machine since 2026-10-02 */}
-
 ```ts is-supported.ts
 import type { SupportedChainId } from "@uzolabs/sdk";
 

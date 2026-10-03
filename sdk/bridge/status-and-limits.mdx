@@ -59,8 +59,6 @@ Will return the router's "bot gas" settings, from `getBotGasConfig()`. Bot gas i
 
 The [Limits and fees](/guides/bridge/limits-and-fees) guide reads the pause state, limits, fees and destinations in one tested script. To read the bot gas config as well:
 
-{/* untested: node crashes on this machine since 2026-10-02; output values confirmed with cast getBotGasConfig on mainnet */}
-
 ```ts bot-gas-config.ts
 import { createPublicClient, formatEther, http } from "viem";
 import { botChain } from "@uzolabs/sdk/chains";

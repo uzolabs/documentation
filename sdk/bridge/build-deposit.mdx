@@ -38,8 +38,6 @@ So because v1 only supports BOT Chain as the source, `buildBridgeDeposit` will b
 
 [Bridge USDT out](/guides/bridge/bridge-out) is a tested script that does everything `buildBridgeDeposit` will do: read limits, approve and call `deposit`. The core of it:
 
-{/* untested: node crashes on this machine since 2026-10-02; the full deposit flow is tested in /guides/bridge/bridge-out */}
-
 ```ts deposit-call.ts
 import { encodeFunctionData, parseUnits } from "viem";
 import { botBridgeAbi, getAddresses, TOKENS, USDT_RESOURCE_ID } from "@uzolabs/sdk/contracts";

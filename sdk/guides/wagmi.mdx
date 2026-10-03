@@ -55,8 +55,6 @@ A wagmi config for BOT Chain testnet and mainnet, and a component that reads a t
   <Step title="Look up addresses for the connected chain">
     `getAddresses(chainId)` takes `677` or `968`, the two IDs in the config. Pair it with `useChainId` so the component follows the user's network.
 
-    {/* untested: needs a running React app; the same config is tested in /guides/frontend/wagmi-setup */}
-
     ```tsx src/UsdtBalance.tsx
     import { erc20Abi, formatUnits } from "viem";
     import { useAccount, useChainId, useReadContract } from "wagmi";
@@ -83,8 +81,6 @@ A wagmi config for BOT Chain testnet and mainnet, and a component that reads a t
 
   <Step title="Use the SDK's ABIs for BDEX and the bridge">
     The SDK's ABIs are `as const` arrays, so wagmi infers function names, arguments and return types from them:
-
-    {/* untested: needs a running React app */}
 
     ```tsx src/useQuote.ts
     import { parseEther } from "viem";

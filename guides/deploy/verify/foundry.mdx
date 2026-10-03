@@ -71,8 +71,6 @@ Open `https://scan.bohr.life/address/0xYOUR_CONTRACT#code`. You should see a ver
   Use the mainnet explorer URL and chain ID. Verifying is free, but double-check the address so you don't publish source against the wrong contract.
 </Warning>
 
-{/* untested: mainnet verification was not run for these docs */}
-
 ```bash
 forge verify-contract 0xYOUR_CONTRACT src/Counter.sol:Counter --chain 677 --verifier blockscout --verifier-url https://scan.botchain.ai/api/ --watch
 ```

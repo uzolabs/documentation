@@ -24,8 +24,6 @@ Like the swap builders, they'll return an unsigned transaction for you to sign.
 
 Check the allowance first, and approve only what you need:
 
-{/* untested: node crashes on this machine since 2026-10-02; the same read returned 0 with cast */}
-
 ```ts erc20-approval.ts
 import { createPublicClient, erc20Abi, http, parseEther } from "viem";
 import { botChainTestnet } from "@uzolabs/sdk/chains";
@@ -49,8 +47,6 @@ If it says an approval is needed, send `approve(router, amountIn)` with a wallet
 ## Do it today: Permit2
 
 Permit2 keeps a second allowance for each owner, token and spender. Read it with `permit2Abi`:
-
-{/* untested: node crashes on this machine since 2026-10-02; the same read returned 0,0,0 with cast */}
 
 ```ts permit2-allowance.ts
 import { createPublicClient, http } from "viem";

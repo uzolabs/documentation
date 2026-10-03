@@ -38,8 +38,6 @@ A Next.js page that shows the testnet USDT contract's verified name, read on the
   <Step title="Read on the server">
     A server component can be `async`, so call the SDK directly:
 
-    {/* untested: node crashes on this machine since 2026-10-02; getContract is tested in /sdk/explorer/get-contract */}
-
     ```tsx app/page.tsx
     import { createExplorerClient } from "@uzolabs/sdk/explorer";
     import { getAddresses } from "@uzolabs/sdk/contracts";
@@ -65,8 +63,6 @@ A Next.js page that shows the testnet USDT contract's verified name, read on the
   <Step title="Add the wagmi providers">
     wagmi hooks need a client boundary. Save the config from [Use with wagmi](/sdk/guides/wagmi#steps) as `app/wagmi.ts`, then create the providers in a file marked `"use client"`:
 
-    {/* untested: needs a running Next.js app */}
-
     ```tsx app/providers.tsx
     "use client";
 
@@ -90,7 +86,6 @@ A Next.js page that shows the testnet USDT contract's verified name, read on the
   </Step>
 
   <Step title="Read the wallet on the client">
-    {/* untested: needs a running Next.js app */}
 
     ```tsx app/balance.tsx
     "use client";

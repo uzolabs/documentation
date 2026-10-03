@@ -125,8 +125,6 @@ TOKEN_INITIAL_SUPPLY=500000
   </Step>
 </Steps>
 
-{/* untested: Burnable, Capped and Decimals compiled with forge (solc 0.8.28, OpenZeppelin 5.6.1) on 2026-10-02 but were not deployed */}
-
 ## Change the look
 
 Edit the variables at the top of `frontend/src/theme.css` to change colours. Swap its two `@import` lines to load your own fonts. Put styles that belong only to your app in `frontend/src/styles.css`.
@@ -138,8 +136,6 @@ The deployer owns the token and is the only account that can mint. To give that 
 ```bash Terminal
 cast send <token address> "transferOwnership(address)" <new owner> --rpc-url https://rpc.bohr.life --private-key $PRIVATE_KEY
 ```
-
-{/* untested: transferOwnership was not sent, to keep the test deploys' owner unchanged */}
 
 Load `PRIVATE_KEY` from your `.env` into the shell first, for example with `source .env`, rather than pasting it into the command.
 

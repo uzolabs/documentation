@@ -59,8 +59,6 @@ BOT Chain's docs say it returns `Sponsorable` (a boolean) and `SponsorPolicy` (t
 
 Here is how a script would use it, if your provider gives you an endpoint:
 
-{/* untested: no paymaster endpoint is available for BOT Chain; typechecked against viem 2.57.2 only */}
-
 ```ts paymaster.ts
 import { createPublicClient, encodeFunctionData, http, numberToHex, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";

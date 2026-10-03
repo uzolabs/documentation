@@ -127,8 +127,6 @@ An updated `agent.ts` that pays small amounts on its own and asks in the termina
 
 ## Verify it worked
 
-{/* untested: the real Claude call wasn't run because no API key was available; this agent.ts ran on testnet on 2026-10-02 with a scripted test model from ai/test in place of Claude, and the tool results were logged */}
-
 In a test run, a 0.001 USDT payment went through with no prompt ([transaction on BOTScan](https://scan.bohr.life/tx/0xe87c0b97e8b01fab3cd6a4338043bd7f92504c85c6f1f2b9acc2e8146165cbe4)). A 0.8 USDT payment stopped at the prompt. With `n`, the tool didn't run and the model received:
 
 ```text Output
