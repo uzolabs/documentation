@@ -22,7 +22,7 @@ This template uses the BDEX pools that are already live, so there's nothing to d
 | `npm run find-pools` | Lists the V2 pair and the V3 pool for each fee tier (0.01%, 0.05%, 0.3%, 1%) and what each holds |
 | `npm run quote` | Prices a swap on every route and marks the best one. Needs no key |
 | `npm run wrap` | Turns BOT into WBOT and back, always 1:1 |
-| `npm run swap-v2`, `npm run swap-v3` | Approve, then swap, with 0.5% slippage and a 20 minute deadline by default. Both accept BOT in or out |
+| `npm run swap-v2`, `npm run swap-v3` | Approve, then swap, with 0.5% slippage and a 20-minute deadline by default. Both accept BOT in or out |
 | `npm run add-liquidity-v2` | Adds to a V2 pair, creating it if needed |
 
 The widget quotes every route as you type, labels the best, and walks you through approve and swap. Every script prints your balances before and after, with a BOTScan link for each transaction.
@@ -69,7 +69,7 @@ The [walkthrough](/templates/dex-integration/walkthrough) explains BOT and WBOT,
 
 ## Tested on testnet
 
-Every script was run against the live BDEX pools on BOT Chain Testnet on 1 October 2026, with the default 0.5% slippage. The widget was then used with MetaMask to quote and send a swap.
+Every script was run against the live BDEX pools on BOT Chain Testnet on October 1, 2026, with the default 0.5% slippage. The widget was then used with MetaMask to quote and send a swap.
 
 | Command | Result | Transactions |
 | --- | --- | --- |

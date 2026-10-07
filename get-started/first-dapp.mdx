@@ -28,7 +28,7 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
 
 <Steps>
   <Step title="Create the project">
-    ```bash
+    ```bash Terminal
     mkdir counter-script
     cd counter-script
     npm init -y
@@ -104,7 +104,7 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
 
     Export the private key of your `uzo-dev` testnet wallet. Cast asks for the keystore password:
 
-    ```bash
+    ```bash Terminal
     cast wallet decrypt-keystore uzo-dev
     ```
 
@@ -118,7 +118,7 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
     <Warning>
       Only ever put a **testnet** key in a `.env` file. Add `.env` to your `.gitignore` before your first commit, so the key never reaches GitHub:
 
-      ```bash
+      ```bash Terminal
       echo ".env" >> .gitignore
       ```
     </Warning>
@@ -150,7 +150,7 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
 
     Run it. The `--env-file` flag loads your `.env` file:
 
-    ```bash
+    ```bash Terminal
     node --env-file=.env read.js
     ```
 
@@ -202,7 +202,7 @@ BOT Chain is not in viem's built-in chain list, so you'll define it yourself wit
     console.log("Counter value:", number);
     ```
 
-    ```bash
+    ```bash Terminal
     node --env-file=.env write.js
     ```
 
@@ -222,7 +222,7 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
 
 <Steps>
   <Step title="Create a React app">
-    ```bash
+    ```bash Terminal
     npm create vite@latest counter-web -- --template react-ts
     cd counter-web
     npm install
@@ -557,7 +557,7 @@ Now give the contract a user interface. Visitors connect their own wallet, so th
   </Step>
 
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     npm run dev
     ```
 

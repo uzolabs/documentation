@@ -32,7 +32,7 @@ The `sendUsdt` tool follows four rules that apply to any tool that moves funds:
 
 <Steps>
   <Step title="Create the project">
-    ```bash
+    ```bash Terminal
     mkdir bot-agent
     cd bot-agent
     npm init -y
@@ -43,7 +43,7 @@ The `sendUsdt` tool follows four rules that apply to any tool that moves funds:
   </Step>
 
   <Step title="Add your keys and rules">
-    `AGENT_ALLOWED_RECIPIENTS` is a comma separated list of addresses the agent may pay.
+    `AGENT_ALLOWED_RECIPIENTS` is a comma-separated list of addresses the agent may pay.
 
     ```bash .env
     ANTHROPIC_API_KEY=your-anthropic-key
@@ -161,7 +161,7 @@ The `sendUsdt` tool follows four rules that apply to any tool that moves funds:
   </Step>
 
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env agent.ts "Check my balance, then send 0.001 USDT to 0xFirstAddress"
     ```
   </Step>

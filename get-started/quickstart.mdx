@@ -10,6 +10,10 @@ In this quickstart you deploy a smart contract to BOT Chain testnet, verify its 
 
 <TestnetOnly />
 
+<Tip>
+  Prefer no setup? Deploy a token from your browser with [Uzo Deploy](/deploy/quickstart).
+</Tip>
+
 ## What you'll build
 
 You'll build a `Counter` contract that stores a number. You can increment the number and read it back. You will:
@@ -34,19 +38,19 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   <Step title="Install Foundry">
     Install `foundryup`, then use it to install `forge`, `cast` and `anvil`.
 
-    ```bash
+    ```bash Terminal
     curl -L https://foundry.paradigm.xyz | bash
     ```
 
     Open a new terminal so your `PATH` updates, then run:
 
-    ```bash
+    ```bash Terminal
     foundryup
     ```
 
     Check that it worked:
 
-    ```bash
+    ```bash Terminal
     forge --version
     ```
 
@@ -56,13 +60,13 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   <Step title="Create a wallet">
     Create a new key and save it as an encrypted keystore named `uzo-dev`. Cast asks you for a password. Pick one you'll remember, because you'll type it each time you send a transaction.
 
-    ```bash
+    ```bash Terminal
     cast wallet new uzo-dev
     ```
 
     The keystore is saved in `~/.foundry/keystores/uzo-dev`. Cast prints your new address. You can print it again at any time:
 
-    ```bash
+    ```bash Terminal
     cast wallet address --account uzo-dev
     ```
 
@@ -76,7 +80,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
     2. Paste your address, complete the check and claim.
     3. Wait a few seconds, then check your balance:
 
-    ```bash
+    ```bash Terminal
     cast balance --ether YOUR_ADDRESS --rpc-url https://rpc.bohr.life
     ```
 
@@ -84,7 +88,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   </Step>
 
   <Step title="Create a project">
-    ```bash
+    ```bash Terminal
     forge init hello-bot
     cd hello-bot
     ```
@@ -128,7 +132,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
 
     Build and run the tests:
 
-    ```bash
+    ```bash Terminal
     forge build
     forge test
     ```
@@ -137,13 +141,13 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   </Step>
 
   <Step title="Deploy the contract">
-    ```bash
+    ```bash Terminal
     forge create src/Counter.sol:Counter --rpc-url bot_testnet --account uzo-dev --broadcast
     ```
 
     Enter your keystore password when asked. The output ends like this, with your own addresses and hash:
 
-    ```text
+    ```text Output
     Deployer: 0xEc526474F4F9De027942d5f7118A9613266B0C4c
     Deployed to: 0x8ef544af3CE913Bb5eC12ba2F34fe7FA29225c0b
     Transaction hash: 0xccc49942d944c87f72490f4337c09957a0613ab202e5f633c6bfa1d3a6e8c26e
@@ -153,7 +157,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
 
     Copy the `Deployed to` address and save it in a shell variable so the next steps can use it:
 
-    ```bash
+    ```bash Terminal
     export COUNTER=PASTE_DEPLOYED_ADDRESS_HERE
     ```
   </Step>
@@ -161,7 +165,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   <Step title="Verify the source on BOTScan">
     BOTScan runs on Blockscout, so use Foundry's Blockscout verifier. No API key is needed.
 
-    ```bash
+    ```bash Terminal
     forge verify-contract $COUNTER src/Counter.sol:Counter \
       --chain 968 \
       --verifier blockscout \
@@ -171,7 +175,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
 
     `--watch` makes Foundry wait for the result. Verification usually finishes in a few seconds. The output ends like this:
 
-    ```text
+    ```text Output
     Contract verification status:
     Response: `OK`
     Details: `Pass - Verified`
@@ -184,13 +188,13 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
   <Step title="Call the contract">
     Send a transaction that increments the counter:
 
-    ```bash
+    ```bash Terminal
     cast send $COUNTER "increment()" --rpc-url bot_testnet --account uzo-dev
     ```
 
     Then read the value back. Reads are free and need no wallet:
 
-    ```bash
+    ```bash Terminal
     cast call $COUNTER "number()(uint256)" --rpc-url bot_testnet
     ```
 
@@ -202,7 +206,7 @@ You don't need MetaMask for this page. If you want to see your balance in a brow
 
 Open your contract on BOTScan. Replace the address at the end of this URL with yours:
 
-```text
+```text BOTScan URL
 https://scan.bohr.life/address/PASTE_DEPLOYED_ADDRESS_HERE
 ```
 

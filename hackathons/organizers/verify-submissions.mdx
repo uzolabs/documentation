@@ -95,7 +95,7 @@ See [Explorer API](/reference/explorer-api) for more endpoints.
     ```
   </Step>
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     python check_submissions.py submissions.csv
     ```
   </Step>
@@ -133,7 +133,7 @@ Open any address at `https://scan.bohr.life/address/ADDRESS` to read the source 
 
 <AccordionGroup>
   <Accordion title="HTTP Error 429 or timeouts">
-    The public API is being rate limited or is slow. Increase the `time.sleep` value to 1 or 2 seconds and run again.
+    The public API is being rate-limited or is slow. Increase the `time.sleep` value to 1 or 2 seconds and run again.
   </Accordion>
   <Accordion title="KeyError: 'address' or 'team'">
     The CSV header must be exactly `team,address`. Rename the columns in your export.

@@ -1,0 +1,46 @@
+---
+title: "Agent Vault template in Uzo Deploy"
+sidebarTitle: "Agent Vault"
+description: "Learn what the planned Agent Vault template in Uzo Deploy will do, and how to build an agent vault on BOT Chain today."
+icon: "bot"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import Planned from "/snippets/status-planned.mdx";
+
+<DeployStatus />
+
+<Planned />
+
+Learn what the Agent Vault template will do, and what you can use today.
+
+## What it will do
+
+The Agent Vault template will deploy a vault that holds BOT and USDT for an AI agent. The agent can spend from it, but only within limits you set:
+
+- a maximum amount per transaction,
+- a maximum amount per day,
+- a list of addresses the agent is allowed to pay,
+- a pause switch the owner can use at any time,
+- withdrawal of the funds by the owner.
+
+Unlike the other templates, this one will hold funds.
+
+## Why limits go in the contract
+
+An AI agent follows instructions from its prompt, and prompts can be tricked. A limit written in the prompt ("never spend more than 10 USDT") can be talked around. A limit written in the contract can't: the chain rejects any transaction that breaks it, whatever the agent was told.
+
+So the safe design is to give the agent a key that can only spend through the vault, and to put every limit in the vault.
+
+## What you can use today
+
+You don't have to wait for the template. You can build and deploy an agent vault with your own toolchain:
+
+<CardGroup cols={2}>
+  <Card title="Agent vaults guide" icon="vault" href="/guides/ai-agents/agent-vaults">
+    Build a vault with spending limits.
+  </Card>
+  <Card title="AI agent template: security model" icon="shield" href="/templates/ai-agent/security-model">
+    How the AI agent template keeps an agent's spending in check.
+  </Card>
+</CardGroup>

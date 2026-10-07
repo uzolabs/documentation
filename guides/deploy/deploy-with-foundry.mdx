@@ -44,7 +44,7 @@ A `Greeter` contract on testnet, deployed and verified on BOTScan in one command
   <Step title="Option 1: deploy with forge create">
     `forge create` deploys one contract. Put `--constructor-args` last, because it takes every value after it.
 
-    ```bash
+    ```bash Terminal
     forge create src/Greeter.sol:Greeter --rpc-url bot_testnet --account uzo-dev --broadcast --constructor-args "Hello from forge create"
     ```
 
@@ -82,7 +82,7 @@ A `Greeter` contract on testnet, deployed and verified on BOTScan in one command
 
     Run it, and verify on BOTScan in the same command:
 
-    ```bash
+    ```bash Terminal
     forge script script/DeployGreeter.s.sol --rpc-url bot_testnet --account uzo-dev --broadcast --verify --verifier blockscout --verifier-url https://scan.bohr.life/api/
     ```
 
@@ -94,7 +94,7 @@ A `Greeter` contract on testnet, deployed and verified on BOTScan in one command
 
 Read the greeting back from the chain:
 
-```bash
+```bash Terminal
 cast call 0xYOUR_GREETER "greeting()(string)" --rpc-url bot_testnet
 ```
 
@@ -108,7 +108,7 @@ You should see the string you deployed with. Open `https://scan.bohr.life/addres
 
 Swap the RPC alias and the verifier URL:
 
-```bash
+```bash Terminal
 forge script script/DeployGreeter.s.sol --rpc-url bot_mainnet --account YOUR_MAINNET_ACCOUNT --broadcast --verify --verifier blockscout --verifier-url https://scan.botchain.ai/api/
 ```
 

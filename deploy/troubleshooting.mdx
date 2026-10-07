@@ -1,0 +1,82 @@
+---
+title: "Uzo Deploy troubleshooting"
+sidebarTitle: "Troubleshooting"
+description: "Fixes for common Uzo Deploy problems on BOT Chain: wallet connection, wrong network, gas, verification and USDT decimals."
+icon: "wrench"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Find the cause and fix for common Uzo Deploy problems. Select a problem to open it.
+
+<AccordionGroup>
+  <Accordion title="My wallet won't connect">
+    **Cause:** the wallet extension is locked, blocked by the browser, or the connection request was closed.
+
+    **Fix:** unlock your wallet and reload the page. Select **Connect** again and pick your wallet from the list. On a phone, use **WalletConnect** or open the app inside your wallet's own browser. See [Connect a wallet](/get-started/bot-chain/connect-wallet) if BOT Chain isn't in your wallet yet.
+  </Accordion>
+  <Accordion title="The app says to switch networks">
+    **Cause:** your wallet is on a different network from the one selected in the app.
+
+    **Fix:** check the **Testnet / Mainnet** switch in the top bar, then switch your wallet to the same network. On the tip page, select the **Switch to** button. If your wallet doesn't know BOT Chain Testnet, add it with the values on [Networks](/reference/networks).
+  </Accordion>
+  <Accordion title="Your balance is too low for this deploy">
+    **Cause:** you don't have enough tBOT (or BOT on mainnet) to pay for gas. Wallets may call this "insufficient funds for gas".
+
+    **Fix:** on testnet, get free tBOT from the [faucet](https://faucet.botchain.ai/basic), wait for it to arrive, then go back to **Review**. The Review step shows the estimated cost and your balance.
+  </Accordion>
+  <Accordion title="The network rejected the estimate">
+    **Cause:** the gas estimate failed. This usually means a setting is invalid or your balance is too low.
+
+    **Fix:** select **Edit settings** and check each field against the template page, such as [Token](/deploy/templates/token). Check your balance, then try **Review** again.
+  </Accordion>
+  <Accordion title="You rejected the request in your wallet">
+    **Cause:** the wallet prompt was closed or rejected. Nothing was sent and nothing was deployed.
+
+    **Fix:** select **Try again** and approve the request in your wallet.
+  </Accordion>
+  <Accordion title="The transaction is pending for a long time">
+    **Cause:** the transaction hasn't been included in a block yet, or the app lost track of it.
+
+    **Fix:** don't sign the deploy again yet. Open the transaction hash on BOTScan. If it succeeded, your contract is there and will show up in [My contracts](/deploy/my-deployments). If BOTScan doesn't know the hash after a few minutes, check your wallet's activity list. Some wallets let you speed up or cancel a stuck transaction.
+  </Accordion>
+  <Accordion title="The transaction was included but reverted">
+    **Cause:** the transaction ran but failed, so nothing was deployed. You still paid gas for it.
+
+    **Fix:** open the transaction on BOTScan to see the reason. Check your settings, then select **Back to review** and try again.
+  </Accordion>
+  <Accordion title="Verification failed or is taking a long time">
+    **Cause:** BOTScan can take a while to index a new contract, or the verification service can't reach it. The app may show "BOTScan is still processing. Try again in a minute."
+
+    **Fix:** wait a minute and select **Try again**. If you see "Too many verification requests. Try again in N seconds.", wait that long first: the service accepts 10 requests per 10 minutes. If it still fails, use the manual steps on [Verification](/deploy/verification). Your contract works whether or not it's verified.
+  </Accordion>
+  <Accordion title="My token isn't showing in my wallet">
+    **Cause:** wallets only show tokens they've been told about.
+
+    **Fix:** on the final deploy step, select **Add to wallet**. If your wallet doesn't add it, import the token by hand with its contract address and symbol. Check your wallet is on the network you deployed on.
+  </Accordion>
+  <Accordion title="A USDT tip failed or asked for two signatures">
+    **Cause:** USDT tips need two transactions. The first lets the jar move exactly your tip amount. The second sends the tip. If you rejected or skipped the first, the second fails.
+
+    **Fix:** select **Step 1 of 2: allow** and approve, wait for it to confirm, then select **Step 2 of 2: send**. You also need a little BOT for gas on both. See [Tip pages](/deploy/tip-pages#send-a-tip).
+  </Accordion>
+  <Accordion title="The USDT amount looks wrong">
+    **Cause:** USDT on BOT Chain uses 6 decimals, not 18. A raw value of `5000000` is 5 USDT.
+
+    **Fix:** the app handles decimals for you, so enter whole amounts like `5`. If you read amounts in your own code, see [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+  </Accordion>
+  <Accordion title="My contract isn't in My contracts yet">
+    **Cause:** the list is built from on-chain events, which the server reads in batches and caches briefly.
+
+    **Fix:** wait a minute and reload. Check you're connected with the wallet that signed the deploy, and that the **Testnet / Mainnet** switch matches. See [My contracts](/deploy/my-deployments).
+  </Accordion>
+  <Accordion title="The tip page says &quot;This is not a Uzo tip jar&quot;">
+    **Cause:** the address in the link wasn't created by the Uzo tip jar factory on that network, or the link is wrong.
+
+    **Fix:** don't send anything to that address. Ask the person for their link again. If the jar is on mainnet, the link needs `?network=mainnet` at the end.
+  </Accordion>
+</AccordionGroup>
+
+Still stuck? See [BOT Chain known limitations](/get-started/bot-chain/known-limitations), or open an issue in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy/issues). For security problems, follow [Report a vulnerability](/deploy/security#report-a-vulnerability) instead.

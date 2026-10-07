@@ -7,7 +7,7 @@ icon: "log-out"
 This guide shows you how to send USDT from BOT Chain to another network from a script: check the live limits, approve the bridge router, and call `deposit`. You rehearse on testnet first, then run the same script on mainnet.
 
 <Warning>
-  **The mainnet run moves real USDT.** A transfer can't be cancelled once the deposit lands.
+  **The mainnet run moves real USDT.** A transfer can't be canceled once the deposit lands.
 
   - Run the whole guide on testnet before you touch mainnet.
   - On mainnet, send a small amount first, just above the minimum, and confirm it arrives before you send more.
@@ -111,7 +111,7 @@ A viem script that sends 11 USDT from BOT Chain to your own address. By default 
   </Step>
 
   <Step title="Run it on testnet">
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env bridge-out.ts
     ```
   </Step>
@@ -128,7 +128,7 @@ A viem script that sends 11 USDT from BOT Chain to your own address. By default 
 
     Add `.env.mainnet` to `.gitignore`. Never commit or share it. Then run:
 
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env.mainnet bridge-out.ts
     ```
   </Step>

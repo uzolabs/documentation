@@ -54,7 +54,7 @@ A viem script that swaps 0.001 WBOT for USDT through the BDEX V2 Router02 at `0x
       console.log(`Approved: ${explorer}/tx/${approveHash}`);
     }
 
-    // 3. Simulate, then send the swap with a 20 minute deadline.
+    // 3. Simulate, then send the swap with a 20-minute deadline.
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
     const { request } = await publicClient.simulateContract({
       account,
@@ -81,7 +81,7 @@ A viem script that swaps 0.001 WBOT for USDT through the BDEX V2 Router02 at `0x
   </Step>
 
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env swap-v2.ts
     ```
   </Step>

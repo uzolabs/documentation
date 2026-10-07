@@ -10,6 +10,10 @@ Follow the token template file by file, from the contract to the web app, so you
 
 <StatusTemplateReady />
 
+<Tip>
+  Just need the standard version? Deploy it from your browser with [Uzo Deploy](/deploy/templates/token).
+</Tip>
+
 ## Project layout
 
 ```text Project layout
@@ -94,7 +98,7 @@ npm run transfer -- 0xRecipientAddress 25
 | --- | --- |
 | `frontend/src/wagmi.ts` | Sets up wagmi with the injected connector. With more than one wallet extension, "Connect wallet" lists each by name (EIP-6963) |
 | `frontend/src/App.tsx` | Reads name, symbol, total supply, owner and your balance in one batched call, every 10 seconds, and sends transfers |
-| `frontend/src/theme.css` | The Uzo Labs look: colours, cards and buttons in plain CSS |
+| `frontend/src/theme.css` | The Uzo Labs look: colors, cards and buttons in plain CSS |
 | `frontend/src/styles.css` | Styles for this app only |
 
 Each transaction shows "confirm in wallet", then "pending" with a BOTScan link, then "confirmed" or a readable error. Status lines sit in an `aria-live` region so screen readers announce them.

@@ -10,6 +10,10 @@ Follow the NFT template file by file: the mint rules, the artwork the contract d
 
 <StatusTemplateReady />
 
+<Tip>
+  Just need the standard version? Deploy it from your browser with [Uzo Deploy](/deploy/templates/nft).
+</Tip>
+
 ## Project layout
 
 ```text Project layout
@@ -70,7 +74,7 @@ Wallets, explorers and marketplaces read this format. The contract stores nothin
 
 ## Tests
 
-`test/UzoNFT.t.sol` holds 28 tests. They cover payment and supply rules, owner functions, and decode the JSON and SVG that `tokenURI` returns.
+`test/UzoNFT.t.sol` holds 28 tests. They cover the payment and supply rules and the owner functions, and they decode the JSON and SVG that `tokenURI` returns.
 
 ```bash Terminal
 npm test

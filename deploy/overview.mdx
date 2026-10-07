@@ -1,0 +1,73 @@
+---
+title: "Uzo Deploy overview"
+sidebarTitle: "Overview"
+description: "Deploy a verified token, NFT collection or tip jar to BOT Chain from your browser with Uzo Deploy."
+icon: "rocket"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import NotAffiliated from "/snippets/not-affiliated.mdx";
+
+<DeployStatus />
+
+Uzo Deploy lets you deploy a verified contract to BOT Chain from your browser in a few minutes. You pick a tested template, fill in a short form, sign one transaction from your own wallet, and the app verifies the new contract on BOTScan for you.
+
+The app is at [deploy.uzolabs.xyz](https://deploy.uzolabs.xyz). It is built on BOT Chain by Uzo Labs.
+
+## Who it's for
+
+- **Developers** who want a standard token or NFT contract on testnet without setting up a toolchain.
+- **Hackathon teams** who need a working contract in the first hour and will write their own code on top.
+- **Creators** who want a tip link that takes USDT or BOT and sends it straight to their wallet.
+
+## What Uzo promises
+
+These match the footer of the app:
+
+- **No fees.** Uzo charges nothing. You pay only the network's gas.
+- **No custody.** Uzo never holds your funds. Tips go straight to the recipient in the same transaction.
+- **No admin keys.** Uzo keeps no keys over what you deploy. Nobody at Uzo can pause, upgrade or change your contract.
+
+The templates are tested, not audited. Read [Security](/deploy/security) before you deploy anything that will hold real value.
+
+## Templates
+
+| Template | What you get | Holds funds | Status |
+| --- | --- | --- | --- |
+| [Token](/deploy/templates/token) | A fixed-supply ERC-20 with permit and burn. No owner, no minting after deployment. | No | Live on testnet |
+| [NFT Collection](/deploy/templates/nft) | An ERC-721 with a capped supply, owner minting, optional royalties and freezable metadata. | No | Live on testnet |
+| [Tip Jar](/deploy/templates/tip-jar) | A contract and a shareable page that take tips in USDT or BOT and forward them to you. | No, every tip is forwarded at once | Live on testnet |
+| [Agent Vault](/deploy/templates/agent-vault) | A vault an AI agent can spend from, within limits. | Yes | Planned |
+
+## Uzo Deploy or the templates repo?
+
+Both give you working contracts on BOT Chain. They suit different jobs.
+
+| | Uzo Deploy | [Templates repo](/templates/overview) |
+| --- | --- | --- |
+| Where you work | In the browser | In your editor and terminal |
+| Setup | A wallet and some test tBOT | Node, Foundry and a clone of the repo |
+| What you can change | The form fields only | Anything: the contracts, the frontend, the tests |
+| Verification | Automatic | You run the verify command |
+| Best for | A standard contract, fast | A project you will build on and customize |
+
+If you need to change how the contract behaves, use the templates repo or your own toolchain. See [Deploy with Foundry](/guides/deploy/deploy-with-foundry).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="zap" href="/deploy/quickstart">
+    Deploy your first token on testnet.
+  </Card>
+  <Card title="Templates" icon="layout-grid" href="/deploy/templates/token">
+    See what each template does and what you can set.
+  </Card>
+  <Card title="How it works" icon="workflow" href="/deploy/how-it-works">
+    Factories, CREATE2 and automatic verification.
+  </Card>
+  <Card title="Security" icon="shield" href="/deploy/security">
+    What Uzo can and can't do, and how to report a problem.
+  </Card>
+</CardGroup>
+
+<NotAffiliated />

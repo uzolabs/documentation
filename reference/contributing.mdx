@@ -25,7 +25,7 @@ Each page's file path matches its URL. For example, `/get-started/quickstart` is
   <Step title="Run the site locally">
     You need Node.js 20.17 or newer.
 
-    ```bash terminal
+    ```bash Terminal
     npm i -g mint
     mint dev
     ```
@@ -38,7 +38,7 @@ Each page's file path matches its URL. For example, `/get-started/quickstart` is
   <Step title="Run the checks">
     CI runs the same checks:
 
-    ```bash terminal
+    ```bash Terminal
     mint validate
     mint broken-links
     ```
@@ -56,6 +56,7 @@ Each page's file path matches its URL. For example, `/get-started/quickstart` is
 - Use "you". Keep sentences short, with one idea per paragraph.
 - Start each page with what the reader will be able to do.
 - No marketing language, such as "blazing fast" or "seamless".
+- Use American spelling, such as "color" and "behavior".
 - **No em dashes anywhere**, including code comments and alt text. Use commas, colons, full stops or parentheses.
 
 ### Frontmatter
@@ -72,7 +73,7 @@ Every page needs a `title` (short, sentence case) and a `description` (one sente
 
 ### Code
 
-- Give every code block a language and, where useful, a filename.
+- Give every code block a language and a title, such as a filename or `Terminal`.
 - Show alternatives with `<CodeGroup>`.
 - Examples must run on testnet as written, with no `...` gaps.
 - Use testnet values. Show mainnet only on production pages, with a warning.
@@ -93,6 +94,6 @@ Use root-relative internal links without the extension, such as `/get-started/qu
 
 Never put a private key, mnemonic or API key in a page, an example or a commit. Examples read secrets from environment variables. If you commit a secret by mistake, treat it as leaked: move any funds and replace the key. See [Security](/reference/security) for what to do next.
 
-## Licence
+## License
 
 Text is licensed under CC BY 4.0 and code snippets under MIT. See the [LICENSE](https://github.com/uzolabs/documentation/blob/main/LICENSE) file.

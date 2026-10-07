@@ -1,0 +1,53 @@
+---
+title: "Tip Jar template in Uzo Deploy"
+sidebarTitle: "Tip Jar"
+description: "Deploy a tip jar to BOT Chain with Uzo Deploy and get a tip page that forwards USDT or BOT straight to your wallet."
+icon: "hand-coins"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import TestedNotAudited from "/snippets/tested-not-audited.mdx";
+
+<DeployStatus />
+
+<TestedNotAudited />
+
+Deploy a tip jar and get a link people can use to tip you in USDT or BOT, with a short message. To share it and see tips, read [Tip pages](/deploy/tip-pages).
+
+## What it does
+
+- Every tip goes **directly to the recipient in the same transaction**. The contract never holds a balance.
+- Tips can be in **USDT** or **BOT** (tBOT on testnet).
+- Each tip can carry a public **message** of up to 140 bytes. It's stored on chain for anyone to read.
+- The jar has **no owner**. Nobody, including you, can change the title or the recipient after deployment.
+- Plain transfers to the jar's address are rejected. Tips have to go through the tip page, or a call to `tipNative` or `tipToken`.
+
+## Form fields
+
+| Field | What it means | Rules |
+| --- | --- | --- |
+| Title (optional) | The name shown on your tip page, such as `Coffee for Ada`. | Up to 64 bytes. Most letters are 1 byte each. Some characters, such as emoji, use more. |
+| Recipient | The address every tip is forwarded to. | A valid address, not the zero address. Starts as your connected wallet. Can't be changed later. |
+
+Check the recipient on the **Review** step. If it's wrong, deploy a new jar.
+
+## How a USDT tip works
+
+USDT on BOT Chain doesn't support signature approvals (permit), so a USDT tip takes two transactions:
+
+1. **Allow.** The tipper approves the jar to move exactly the tip amount. The app never asks for an open-ended approval.
+2. **Tip.** The jar moves the USDT from the tipper to the recipient.
+
+A BOT tip takes one transaction.
+
+USDT has 6 decimals, not 18. The tip page handles this for you. If you read tip amounts yourself, see [USDT and decimals](/guides/defi/tokens/usdt-and-decimals).
+
+Testnet USDT comes from the [faucet](https://faucet.botchain.ai/basic). See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+## After you deploy
+
+The final step shows your tip link with a copy button. Open the jar's [Manage page](/deploy/manage#tip-jar) for a QR code and the tips you've received.
+
+## Source
+
+The contract is `UzoTipJar.sol` in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy/tree/main/contracts/src/templates), built on OpenZeppelin Contracts.

@@ -56,7 +56,7 @@ Don't use `block.prevrandao` (or the older `block.difficulty`) for randomness. O
 
 Ask the node for the latest block and look at the fields. `baseFeePerGas` shows EIP-1559, `blobGasUsed` and `excessBlobGas` show EIP-4844, and `requestsHash` shows Prague.
 
-```bash
+```bash Terminal
 cast block latest --rpc-url https://rpc.bohr.life
 ```
 

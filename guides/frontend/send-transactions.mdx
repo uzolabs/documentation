@@ -19,7 +19,7 @@ The guest book is deployed at `0x7962412A92E5553E66C794c3a352422DEB7BAc27` on te
 ## Prerequisites
 
 - A React app with wagmi set up and a wallet connected. See [Set up wagmi](/guides/frontend/wagmi-setup) and [Connect a wallet](/guides/frontend/connect-wallet).
-- A little testnet BOT for gas. See [Get testnet BOT](/get-started/bot-chain/get-testnet-tokens).
+- A little tBOT for gas. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
 
 ## Steps
 
@@ -132,7 +132,7 @@ The most common errors, and what `errorMessage` shows:
 
 <AccordionGroup>
   <Accordion title="The transaction is stuck as pending">
-    BOT Chain needs a gas price of at least 20 gwei. Most wallets read it from the RPC, but if yours set a lower price by hand, the transaction won't be picked up. Send it again with the default gas settings.
+    BOT Chain needs a gas price of at least 20 gwei. Most wallets read it from the RPC, but if you set a lower price by hand, the transaction won't be picked up. Send it again with the default gas settings.
   </Accordion>
   <Accordion title="The receipt never arrives">
     The public RPC sometimes drops requests. wagmi retries, but if it gives up, open the BOTScan link to check the status, and call `receipt.refetch()` to try again.

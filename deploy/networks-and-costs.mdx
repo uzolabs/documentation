@@ -1,0 +1,58 @@
+---
+title: "Uzo Deploy networks and costs"
+sidebarTitle: "Networks and costs"
+description: "Which BOT Chain networks Uzo Deploy supports, how to switch between them, and how much gas each template uses."
+icon: "network"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import TestedNotAudited from "/snippets/tested-not-audited.mdx";
+
+<DeployStatus />
+
+Learn which network Uzo Deploy uses, how to switch, and what a deployment costs in gas.
+
+## Testnet is the default
+
+New visitors start on BOT Chain Testnet (chain `{{testnet-chain-id}}`). Testnet gas is paid in tBOT, which is free from the [faucet](https://faucet.botchain.ai/basic) and has no value. Uzo charges no fee on either network.
+
+Use testnet to try a template, check the settings and practice the flow before you think about mainnet.
+
+## Switch networks
+
+The **Testnet / Mainnet** switch is in the app's top bar on every page. The choice applies to the whole app: the templates you see, the factory contracts it uses and the explorer links.
+
+Your wallet has its own network setting. When the app and your wallet disagree, the app asks you to switch your wallet before you can sign. See [Connect a wallet](/get-started/bot-chain/connect-wallet) if BOT Chain Testnet isn't in your wallet yet.
+
+## Mainnet
+
+Mainnet (chain `{{mainnet-chain-id}}`) is not enabled yet. When you switch to **Mainnet**, the app shows "0 of 3" templates available and tells you to switch back to testnet. No Uzo factory contracts are deployed on mainnet. See [Contracts](/deploy/contracts).
+
+<TestedNotAudited />
+
+When mainnet is enabled, you'll need real BOT to pay for gas. The app shows the estimated cost and your balance before you sign. To learn about BOT, see [botchain.ai](https://botchain.ai). Uzo doesn't recommend any exchange.
+
+## Gas per template
+
+These are the gas amounts used by one deployment of each template, measured by the Uzo team on testnet on October 6, 2026.
+
+| Template | Gas used |
+| --- | --- |
+| Token | 914,765 |
+| NFT Collection | 1,421,154 |
+| Tip Jar | 468,234 |
+
+Your number will differ a little. Gas depends on what you enter, such as the length of the name or the metadata link. The cost in tBOT or BOT is the gas used times the gas price at the time.
+
+The app shows a live estimate for your exact settings on the **Review** step, before you sign. If it can't get an estimate, it shows the typical figure from this table instead. See [Gas and fees](/get-started/bot-chain/gas-and-fees) for how gas pricing works on BOT Chain.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Get testnet tokens" icon="droplet" href="/get-started/bot-chain/get-testnet-tokens">
+    Get free tBOT for gas.
+  </Card>
+  <Card title="Quickstart" icon="zap" href="/deploy/quickstart">
+    Deploy a token on testnet.
+  </Card>
+</CardGroup>

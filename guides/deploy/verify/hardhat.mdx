@@ -47,7 +47,7 @@ A verified `Counter` contract on BOTScan testnet, with its source on the **Code*
   <Step title="Run verify">
     Pass the deployed address. Use the `blockscout` subtask so Hardhat doesn't ask for an Etherscan key.
 
-    ```bash
+    ```bash Terminal
     npx hardhat verify blockscout --network botTestnet 0xYOUR_CONTRACT
     ```
 
@@ -71,7 +71,7 @@ A verified `Counter` contract on BOTScan testnet, with its source on the **Code*
   <Step title="Pass constructor arguments, if any">
     If your contract has a constructor with arguments, list them after the address in the same order:
 
-    ```bash
+    ```bash Terminal
     npx hardhat verify blockscout --network botTestnet 0xYOUR_GREETER "Hello"
     ```
 

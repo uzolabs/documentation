@@ -1,0 +1,65 @@
+---
+title: "Contract verification in Uzo Deploy"
+sidebarTitle: "Verification"
+description: "How Uzo Deploy verifies your new contract on BOTScan automatically, how to check it, and how to verify it by hand if that fails."
+icon: "badge-check"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Check that your contract is verified on BOTScan, and verify it yourself if the app couldn't.
+
+**Verification** means publishing a contract's source code on BOTScan so anyone can read it and check that it matches the code on chain. See the [glossary](/reference/glossary).
+
+## What happens automatically
+
+After your deploy transaction lands, the app moves to the **Verify** step and sends the contract's source to BOTScan for you. You don't need an API key or any files.
+
+The app's server never accepts source code from your browser. It checks that the address was created by one of the [Uzo factories](/deploy/contracts) before it submits anything. It works out the constructor arguments from your deploy transaction, so it can't be tricked into verifying a contract that doesn't match.
+
+BOTScan sometimes needs a while to index a new contract. The app keeps asking for about a minute. In the Uzo team's testnet runs, verification finished in under 10 seconds.
+
+## Check it worked
+
+1. On the **Verify** step, look for the verified status next to your contract address.
+2. Open the BOTScan link for your contract.
+3. On BOTScan, the contract page should show the source code and a verified badge.
+
+You can also open `{{testnet-explorer}}/address/YOUR_CONTRACT_ADDRESS` directly.
+
+## If verification fails
+
+If the app shows **Not verified yet** with a message such as "BOTScan is still processing. Try again in a minute.", wait a minute and select **Try again**.
+
+If it still fails, verify it by hand with the script in the uzo-deploy repo. The app shows this exact command, with your address filled in, under the **Try again** button. You need [Node.js](https://nodejs.org) 20 or later and [pnpm](https://pnpm.io).
+
+```bash Terminal
+git clone --recurse-submodules https://github.com/uzolabs/uzo-deploy
+cd uzo-deploy/contracts
+pnpm install
+export CONTRACT_ADDRESS=0xYourContractAddress
+node script/verify-instance.mjs testnet "$CONTRACT_ADDRESS"
+```
+
+Replace `0xYourContractAddress` with your contract's address. You can also pass the creation transaction hash as a third argument, which saves the script a lookup.
+
+The script:
+
+1. Finds the transaction that created your contract.
+2. Checks it was created by a factory listed in the repo's `config/deployments.json`.
+3. Checks the contract reports the template the factory says it deployed.
+4. Rebuilds the constructor arguments from the factory call.
+5. Submits the source to BOTScan and waits until BOTScan reports it verified.
+
+Factory-created contracts need this script because their constructor arguments come from the factory call, not from a deploy transaction of their own. For contracts you deploy yourself, use the general guides:
+
+<CardGroup cols={2}>
+  <Card title="Verify with Foundry" icon="hammer" href="/guides/deploy/verify/foundry">
+    Verify a contract from the command line.
+  </Card>
+  <Card title="Verify in the BOTScan UI" icon="globe" href="/guides/deploy/verify/botscan-ui">
+    Upload source code in the browser.
+  </Card>
+</CardGroup>

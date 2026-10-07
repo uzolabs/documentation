@@ -1,0 +1,60 @@
+---
+title: "Uzo Deploy factory contracts"
+sidebarTitle: "Contracts"
+description: "Uzo Deploy factory addresses per BOT Chain network, the Deployed event and the uzoTemplate() values for each template."
+icon: "file-code"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+The addresses of the Uzo Deploy factory contracts on each BOT Chain network, and the values that identify a Uzo contract.
+
+<Warning>
+  Always confirm a factory address on BOTScan before signing. Your wallet shows the address it's about to call: it should match this table.
+</Warning>
+
+## Factory addresses
+
+Read from `config/deployments.json` in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy). Verified status checked on BOTScan on October 7, 2026.
+
+### BOT Chain Testnet (chain ID 968)
+
+| Template | Version | Factory | Address | Verified |
+| --- | --- | --- | --- | --- |
+| Token | 1 | `UzoTokenFactory` | [`0x37370F4504d0703c40c90E31bEB536CD1D772c7e`](https://scan.bohr.life/address/0x37370F4504d0703c40c90E31bEB536CD1D772c7e) | Yes |
+| NFT Collection | 1 | `UzoNFTFactory` | [`0xd41186A5c7414d4AA0E306bfD59d70CAc0ABCD78`](https://scan.bohr.life/address/0xd41186A5c7414d4AA0E306bfD59d70CAc0ABCD78) | Yes |
+| Tip Jar | 1 | `UzoTipJarFactory` | [`0xfd947C6d9e521b51377652040D239781BEE5775a`](https://scan.bohr.life/address/0xfd947C6d9e521b51377652040D239781BEE5775a) | Yes |
+
+### BOT Chain mainnet (chain ID 677)
+
+Not deployed on mainnet yet.
+
+## The Deployed event
+
+Every factory emits this event for each contract it creates. See [How it works](/deploy/how-it-works#the-deployed-event) for what each field means.
+
+```solidity Deployed event
+event Deployed(address indexed deployer, address indexed instance, bytes32 indexed templateId, uint16 version);
+```
+
+## uzoTemplate values
+
+Every contract a Uzo factory creates returns its template ID and version from `uzoTemplate()`. The ID is a short string stored as `bytes32`, and it's the same value as `templateId` in the `Deployed` event.
+
+```solidity Template contracts
+function uzoTemplate() external pure returns (bytes32 id, uint16 version);
+```
+
+| Template | Contract | `id` | `version` |
+| --- | --- | --- | --- |
+| Token | `UzoToken` | `uzo.token` | 1 |
+| NFT Collection | `UzoNFT` | `uzo.nft` | 1 |
+| Tip Jar | `UzoTipJar` | `uzo.tipjar` | 1 |
+
+Any contract can return these values. To be sure a contract came from Uzo, check that one of the factories above emitted a `Deployed` event with it as the `instance`.
+
+## Source code
+
+The factory and template sources are in [`contracts/src`](https://github.com/uzolabs/uzo-deploy/tree/main/contracts/src) in the uzo-deploy repo, under the MIT license.

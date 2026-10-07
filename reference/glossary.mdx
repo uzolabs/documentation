@@ -18,8 +18,10 @@ Short definitions of terms used across these docs, in alphabetical order.
 | **BOTScan** | BOT Chain's block explorer, built on Blockscout. See [Explorer API](/reference/explorer-api). |
 | **Bridge** | The BOT Chain service that moves assets, such as USDT, between BOT Chain and other chains. See the [bridge guide](/guides/bridge/overview). |
 | **Chain ID** | A number that identifies a network and stops a transaction signed for one network being replayed on another. |
+| **CREATE2** | An EVM opcode that creates a contract at an address worked out from the creator, a salt and the code, so the address is known before deployment. See [How Uzo Deploy works](/deploy/how-it-works#create2-your-address-before-you-sign). |
 | **EOA** | Externally owned account. An account controlled by a private key, as opposed to a contract. |
 | **EVM version** | The set of opcodes a compiler targets, named after Ethereum upgrades such as `cancun` and `prague`. |
+| **Factory contract** | A contract whose job is to deploy copies of another contract. Uzo Deploy uses one factory per template. See [Uzo Deploy contracts](/deploy/contracts). |
 | **Faucet** | A site that gives out free testnet tokens. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens). |
 | **FFG** | Friendly finality gadget. The voting process that finalizes blocks on BOT Chain. |
 | **Finalized block** | A block that can't be reverted without a large share of validators breaking the rules. See [Consensus and finality](/get-started/bot-chain/consensus-and-finality). |
@@ -39,9 +41,11 @@ Short definitions of terms used across these docs, in alphabetical order.
 | **Sidecar** | The blob data that travels with a blob transaction. |
 | **tBOT** | The native token of BOT Chain testnet. Free from the faucet, with no real-world value. BOTScan and the faucet show its symbol as `BOT`. |
 | **Testnet** | A network for testing, with free tokens. BOT Chain's testnet is chain 968. |
+| **Tip jar** | A Uzo Deploy contract that takes tips in USDT or BOT and forwards each one to a fixed recipient in the same transaction. See [Tip pages](/deploy/tip-pages). |
 | **Uzo** | Igbo for road, path or way. Also the name of these docs and the tools built around them. |
+| **Uzo Deploy** | A Uzo web app that deploys tested contracts to BOT Chain from the browser. See [Uzo Deploy overview](/deploy/overview). |
 | **Uzo Index** | A planned Uzo service for indexed events. See [Uzo Index](/infrastructure/index/overview). |
 | **Uzo RPC** | A planned Uzo RPC service. See [Uzo RPC](/infrastructure/rpc/overview). |
 | **Validator** | A node that produces and votes on blocks. |
-| **Verification** | Publishing a contract's source code on BOTScan so anyone can read it and check it matches the deployed code. |
+| **Verification** | Publishing a contract's source code on BOTScan so anyone can read it and check it matches the deployed code. Uzo Deploy verifies its contracts for you. See [Verification](/deploy/verification). |
 | **WBOT** | Wrapped BOT. An ERC-20 token backed one to one by BOT, at `0xD5452816194a3784dBa983426cCe7c122F4abd30` on both networks. |

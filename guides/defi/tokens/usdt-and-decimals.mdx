@@ -33,7 +33,7 @@ The USDT addresses are in [Contract addresses](/reference/contract-addresses): `
 
 <Steps>
   <Step title="Create the project">
-    ```bash
+    ```bash Terminal
     mkdir bot-defi
     cd bot-defi
     npm init -y
@@ -74,7 +74,7 @@ The USDT addresses are in [Contract addresses](/reference/contract-addresses): `
   </Step>
 
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     npx tsx usdt-decimals.ts
     ```
   </Step>
@@ -93,7 +93,7 @@ The last line shows the bug: an 18-decimal conversion asks for a trillion times 
 
 ## Common mistakes
 
-- **Hardcoding 18.** `parseEther` and `formatEther` assume 18 decimals. Never use them for USDT.
+- **Hard-coding 18.** `parseEther` and `formatEther` assume 18 decimals. Never use them for USDT.
 - **Using JavaScript numbers.** `Number(balance) / 1e6` loses precision for large values. Keep amounts as `bigint` and format at the end.
 - **Mixing tokens in math.** A V2 quote for WBOT to USDT returns USDT base units (6 decimals) for an input in WBOT base units (18 decimals). Format each side with its own decimals.
 - **Assuming USDT has the same decimals everywhere.** USDT on BNB Smart Chain has 18 decimals. Ethereum and Tron use 6. Convert when you bridge. See [Bridge overview](/guides/bridge/overview).

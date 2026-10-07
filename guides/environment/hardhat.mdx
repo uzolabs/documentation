@@ -29,7 +29,7 @@ A TypeScript Hardhat 3 project with:
 
 <Steps>
   <Step title="Create the project">
-    ```bash
+    ```bash Terminal
     mkdir hello-hardhat
     cd hello-hardhat
     npm init -y
@@ -165,13 +165,13 @@ A TypeScript Hardhat 3 project with:
 
     **Option 1: the Hardhat keystore (recommended).** The key is stored encrypted on your machine and Hardhat asks for the password when it needs it.
 
-    ```bash
+    ```bash Terminal
     npx hardhat keystore set BOT_PRIVATE_KEY
     ```
 
     **Option 2: an environment variable** for the current terminal session only.
 
-    ```bash
+    ```bash Terminal
     export BOT_PRIVATE_KEY=0xYOUR_TEST_KEY
     ```
 
@@ -197,7 +197,7 @@ A TypeScript Hardhat 3 project with:
     }
     ```
 
-    ```bash
+    ```bash Terminal
     npx hardhat build
     ```
   </Step>
@@ -223,7 +223,7 @@ console.log(`Account:  ${wallet.account.address}`);
 console.log(`Balance:  ${formatEther(balance)} tBOT`);
 ```
 
-```bash
+```bash Terminal
 npx hardhat run scripts/check-network.ts --network botTestnet
 ```
 

@@ -63,13 +63,13 @@ sequenceDiagram
   F->>G: sign(message) + signer address
 ```
 
-The forwarder appends the signer's address to the calldata. `GuestBook` reads it through `_msgSender()`, so the entry's author is the person who signed. Each request has a nonce and a 10 minute deadline, so it works once only.
+The forwarder appends the signer's address to the calldata. `GuestBook` reads it through `_msgSender()`, so the entry's author is the person who signed. Each request has a nonce and a 10-minute deadline, so it works once only.
 
 The [walkthrough](/templates/gasless-app/walkthrough) covers each check the relayer makes.
 
 ## Tested on testnet
 
-Both toolchains were run on BOT Chain Testnet on 1 October 2026, with a separate relayer wallet holding 10 tBOT. Each deploy used 1,455,763 gas for both contracts (0.02911526 tBOT at 20 gwei). Each relayed message used between 96,439 and 136,073 gas, all paid by the relayer. A second wallet also signed two messages from the web app, and its balance and transaction count didn't change.
+Both toolchains were run on BOT Chain Testnet on October 1, 2026, with a separate relayer wallet holding 10 tBOT. Each deploy used 1,455,763 gas for both contracts (0.02911526 tBOT at 20 gwei). Each relayed message used between 96,439 and 136,073 gas, all paid by the relayer. A second wallet also signed two messages from the web app, and its balance and transaction count didn't change.
 
 | Toolchain | UzoForwarder | GuestBook |
 | --- | --- | --- |

@@ -1,0 +1,44 @@
+---
+title: "Find your Uzo Deploy contracts"
+sidebarTitle: "My contracts"
+description: "Find every contract your wallet deployed with Uzo Deploy on BOT Chain, and learn why a new one can take a moment to appear."
+icon: "list"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Find every contract your wallet deployed with Uzo Deploy, and open its manage page.
+
+## Open My contracts
+
+1. Go to [deploy.uzolabs.xyz/my](https://deploy.uzolabs.xyz/my). On a computer, **My contracts** appears in the top bar once a wallet is connected.
+2. Connect the wallet you deployed from.
+3. Check the **Testnet / Mainnet** switch. The list shows contracts on the selected network only.
+
+Each card shows the contract's name, or its address if it has none, and a short summary:
+
+- **Token:** the total supply.
+- **NFT Collection:** how many are minted out of the maximum.
+- **Tip Jar:** the address tips go to.
+
+Select a card to open its [manage page](/deploy/manage). Each card also has BOTScan links.
+
+{/* screenshot: the My contracts page with a token, an NFT collection and a tip jar */}
+
+## Where the list comes from
+
+There's no account and no database of users. The list comes from the chain itself. Every time a Uzo factory creates a contract, it records a `Deployed` event with the deployer's address. The app reads these events from BOT Chain and shows the ones for your wallet. See [How it works](/deploy/how-it-works).
+
+The app reads the events on its server, not in your browser. Reading events needs the `eth_getLogs` RPC method, which BOT Chain documents as disabled on its public RPC. The server reads events in bounded chunks and falls back to BOTScan's API when the RPC doesn't answer. If you build your own app that reads events, see [Events without getLogs](/guides/frontend/events-without-getlogs).
+
+## A new contract isn't there yet
+
+The server keeps a short-lived copy of the events and reads new blocks in batches. A contract you deployed a moment ago can take a short while to appear. Wait a minute and reload the page.
+
+If it still isn't there:
+
+- Check you're connected with the wallet that signed the deploy.
+- Check the **Testnet / Mainnet** switch matches the network you deployed on.
+- Open the deploy transaction on BOTScan and confirm it succeeded.

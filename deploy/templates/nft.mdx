@@ -1,0 +1,61 @@
+---
+title: "NFT Collection template in Uzo Deploy"
+sidebarTitle: "NFT Collection"
+description: "Deploy an ERC-721 NFT collection to BOT Chain with Uzo Deploy, with a capped supply, owner minting and optional royalties."
+icon: "image"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import TestedNotAudited from "/snippets/tested-not-audited.mdx";
+
+<DeployStatus />
+
+<TestedNotAudited />
+
+Deploy an NFT collection contract, then mint tokens, set the metadata link and freeze it from the [Manage page](/deploy/manage#nft-collection).
+
+## What you get
+
+- An **ERC-721** collection. It starts empty.
+- **Owner minting.** Only the owner can mint, one at a time with `mint` or several at once with `mintBatch`.
+- A **fixed maximum supply**. It can't be raised later.
+- A **metadata link** (base URI). Token 1 reads its metadata from the link followed by `1`, token 2 from the link followed by `2`, and so on.
+- **Freezable metadata.** `freezeMetadata` locks the metadata link forever.
+- Optional **ERC-2981 royalties**, up to 10%.
+- **Two-step ownership transfer.** The new owner has to accept before ownership moves.
+
+The contract has no sale or payment function, so it never holds funds.
+
+## Form fields
+
+| Field | What it means | Rules |
+| --- | --- | --- |
+| Collection name | The name shown on BOTScan and in marketplaces. | 1 to 64 characters. |
+| Symbol | The short ticker for the collection. | 1 to 11 characters, letters and numbers only. |
+| Metadata link (optional) | The base URI for token metadata, such as an IPFS folder. You can set it later. | Up to 256 characters. Must start with `ipfs://`, `ar://` or `https://`. |
+| Maximum supply | The most tokens that can ever exist. | 1 to 1,000,000. Defaults to 1,000. Can't be raised later. |
+| Owner | The address that can mint, change the metadata link and freeze it. | A valid address, not the zero address. Starts as your connected wallet. |
+| Royalty (%) | The suggested royalty on resales. Marketplaces may ignore it. | 0 to 10, such as `5` or `2.5`. Use 0 for none. Defaults to 0. |
+| Royalty receiver | The address that should receive royalties. | Required when the royalty is above 0. |
+
+## Images and metadata
+
+Uzo Deploy does not upload images or metadata. Upload your metadata files first (for example to an IPFS folder), then use that folder's link as the metadata link.
+
+If the link is `ipfs://YOUR_FOLDER_CID/`, token 1 reads `ipfs://YOUR_FOLDER_CID/1`. Make sure each file is named by its token number.
+
+## Freezing is permanent
+
+Freezing stops anyone, including the owner, from changing the metadata link again. It can't be undone.
+
+It only locks the link. It does not lock whatever the link points to. If the link is an `https://` URL, whoever runs that server can still change the files. Content-addressed links like `ipfs://` don't have that problem.
+
+## After you deploy
+
+Open the collection's [Manage page](/deploy/manage#nft-collection) to mint, set or change the metadata link, freeze it, or transfer ownership.
+
+## Source and customizing
+
+The contract is `UzoNFT.sol` in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy/tree/main/contracts/src/templates), built on OpenZeppelin Contracts.
+
+To add a public mint, a price or anything else, use the templates repo. See the [NFT walkthrough](/templates/nft/walkthrough).

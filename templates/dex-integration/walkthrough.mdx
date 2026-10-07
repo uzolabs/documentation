@@ -20,7 +20,7 @@ scripts/swap-v2.ts             approve, then swap through Router02
 scripts/swap-v3.ts             approve, then swap through SwapRouter
 scripts/add-liquidity-v2.ts    approve both tokens, then addLiquidity
 scripts/lib/                   arguments, balances, network selection, mainnet guard, approve and send
-frontend/src/dex/              routes, quotes, slippage maths, transaction building, failure reasons
+frontend/src/dex/              routes, quotes, slippage math, transaction building, failure reasons
 frontend/src/SwapResult.tsx    the window that reports whether a transaction worked
 frontend/                      Vite + React + wagmi swap widget
 ```
@@ -47,7 +47,7 @@ BDEX V3
   1%     0xe564401644E10B1829e19E1B2b2e6e90be79B631
 ```
 
-This output is from 1 October 2026. The script calls `getPair` on the V2 factory and `getPool` on the V3 factory once per fee tier. Not every tier has a pool, and some hold very little.
+This output is from October 1, 2026. The script calls `getPair` on the V2 factory and `getPool` on the V3 factory once per fee tier. Not every tier has a pool, and some hold very little.
 
 ## Quotes
 

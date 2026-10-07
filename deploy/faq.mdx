@@ -1,0 +1,48 @@
+---
+title: "Uzo Deploy FAQ"
+sidebarTitle: "FAQ"
+description: "Answers to common questions about Uzo Deploy: fees, custody, audits, wallets, open source and how it relates to BOT Chain."
+icon: "circle-help"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Short answers to the questions people ask most about Uzo Deploy.
+
+## Does Uzo charge fees?
+
+No. Uzo takes nothing. You pay only the network's gas, and the app shows the estimated cost before you sign. On testnet, gas is paid in free tBOT. See [Networks and costs](/deploy/networks-and-costs).
+
+## Can Uzo take my tokens or change my contract?
+
+No. The factories and templates have no admin keys, no pause and no upgrade path, so nobody at Uzo can change a contract after it's deployed or move what it holds. The tip jar never holds funds at all. See [Security](/deploy/security#what-uzo-cant-do).
+
+## Is it audited?
+
+No. The contracts are tested, not audited. They have 86 tests, 100% coverage and static analysis, and the results are public in the repo. No independent audit has been done yet. Don't use them for large amounts until one is. See [Security](/deploy/security#what-was-checked).
+
+## Is Uzo Deploy part of BOT Chain?
+
+No. Uzo Deploy is an independent project by Uzo Labs, built on BOT Chain. Uzo Labs isn't affiliated with BOT Chain.
+
+## Can I deploy something that isn't in the list?
+
+Not in Uzo Deploy. It only deploys its own templates. To change a template or deploy your own contract, use the [templates repo](/templates/overview), or set up [Foundry](/guides/deploy/deploy-with-foundry) or [Hardhat](/guides/deploy/deploy-with-hardhat) yourself.
+
+## Can I launch a token with liquidity here?
+
+No. Uzo Deploy is a developer tool, not a launchpad. It creates the token contract and nothing else: no liquidity, no trading pairs and no promotion. If you want to work with liquidity yourself, see the [BDEX guides](/guides/defi/liquidity/v2).
+
+## Which wallets work?
+
+The app connects through a standard wallet picker that lists Rainbow, Base, MetaMask and WalletConnect. Any wallet that can add a custom EVM network should work. None has been formally tested yet, so if one doesn't work, [open an issue](https://github.com/uzolabs/uzo-deploy/issues).
+
+## Is the code open source?
+
+Yes. The app and the contracts are public in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy) under the MIT license.
+
+## Does it work on mainnet?
+
+Not yet. The factories are deployed on BOT Chain Testnet only. See [Contracts](/deploy/contracts).

@@ -1,0 +1,78 @@
+---
+title: "Tip pages in Uzo Deploy"
+sidebarTitle: "Tip pages"
+description: "Create a tip jar on BOT Chain, share its tip page and QR code, and learn how people send you tips in USDT or BOT."
+icon: "heart"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Share a tip page that takes USDT or BOT, and learn what your tippers see. Tips go directly to the recipient's wallet. Uzo never holds them.
+
+## For recipients
+
+### Create a tip jar
+
+Deploy the [Tip Jar template](/deploy/templates/tip-jar). Set a title, such as `Coffee for Ada`, and the recipient address that should receive every tip. The recipient can't be changed later.
+
+### Share the link
+
+Your tip page is at `{{deploy-url}}/tip/` followed by your jar's address. The last step of the deploy shows the link with a copy button.
+
+For more ways to share, open the jar's [manage page](/deploy/manage#tip-jar). It has:
+
+- a QR code people can scan with their phone,
+- a copy button for the tip link,
+- **Open tip page**, to see what tippers see,
+- a **Share** button, where your browser supports sharing.
+
+{/* screenshot: the tip jar manage page showing the QR code and the copy link button */}
+
+### See tips received
+
+The manage page also shows the tips you've received: the total, the number of tips and tipping addresses, and recent tips with their messages. It updates every 30 seconds, and a new tip can take a minute to appear.
+
+Tips arrive in your wallet at once, in the same transaction. The list is only a record.
+
+## For tippers
+
+### What you need
+
+- A wallet that can connect to BOT Chain. See [Connect a wallet](/get-started/bot-chain/connect-wallet).
+- USDT or BOT on the same network as the jar, plus a little BOT for gas. On testnet, both come free from the [faucet](https://faucet.botchain.ai/basic).
+
+The tip page says when a jar is on testnet. Test coins have no value.
+
+### Send a tip
+
+1. Open the tip link you were given.
+2. Check the recipient address shown under the title (see the safety note below).
+3. Under **Pay with**, choose **USDT** or **BOT**.
+4. Pick 1, 5 or 10, or enter your own amount.
+5. Add a message if you like. It's optional and public, up to 140 characters (bytes), and stored on chain for anyone to read.
+6. Connect your wallet. If it's on the wrong network, select **Switch to** the network shown.
+7. Send the tip:
+   - **BOT:** select **Send** (the button shows the amount) and approve one transaction.
+   - **USDT:** select **Step 1 of 2: allow** and approve. This lets the jar move exactly this amount, nothing more. Then select **Step 2 of 2: send** and approve again.
+8. When it's done, the page shows **Tip sent** and a link to the transaction.
+
+{/* screenshot: the tip page on a phone with USDT selected and the 5 amount chosen */}
+
+<Warning>
+  **Check the recipient.** The tip page shows the address every tip goes to. Before you send, make sure it's the person you mean to tip. Anyone can deploy a tip jar with any title, so trust the address, not the title.
+</Warning>
+
+If a link doesn't open a tip page and shows "This is not a Uzo tip jar", the address wasn't created by the Uzo tip jar factory. Don't send anything to it.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Tip Jar template" icon="hand-coins" href="/deploy/templates/tip-jar">
+    How the contract works and what you can set.
+  </Card>
+  <Card title="USDT and decimals" icon="hash" href="/guides/defi/tokens/usdt-and-decimals">
+    Why USDT uses 6 decimals.
+  </Card>
+</CardGroup>

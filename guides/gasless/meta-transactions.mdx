@@ -35,7 +35,7 @@ The forwarder checks the signature, the user's nonce and the deadline, then call
   <Step title="Install OpenZeppelin">
     In your Foundry project:
 
-    ```bash
+    ```bash Terminal
     forge install OpenZeppelin/openzeppelin-contracts
     ```
 
@@ -88,7 +88,7 @@ The forwarder checks the signature, the user's nonce and the deadline, then call
   </Step>
 
   <Step title="Deploy both">
-    ```bash
+    ```bash Terminal
     forge create src/Forwarder.sol:Forwarder --rpc-url bot_testnet --account uzo-dev --broadcast
     forge create src/Notes.sol:Notes --rpc-url bot_testnet --account uzo-dev --broadcast --constructor-args YOUR_FORWARDER_ADDRESS
     ```
@@ -195,7 +195,7 @@ The forwarder checks the signature, the user's nonce and the deadline, then call
   </Step>
 
   <Step title="Run it">
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env meta-tx.ts
     ```
   </Step>

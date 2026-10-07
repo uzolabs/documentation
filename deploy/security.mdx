@@ -1,0 +1,69 @@
+---
+title: "Uzo Deploy security"
+sidebarTitle: "Security"
+description: "What Uzo Deploy can and cannot do with your contracts, how the templates were tested, and how to report a vulnerability."
+icon: "shield"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import TestedNotAudited from "/snippets/tested-not-audited.mdx";
+import NotAffiliated from "/snippets/not-affiliated.mdx";
+
+<DeployStatus />
+
+<TestedNotAudited />
+
+<NotAffiliated />
+
+Learn what Uzo can and can't do with the contracts you deploy, how the templates were tested, and how to report a problem.
+
+## What Uzo can't do
+
+The factories and templates are immutable and have no admin keys. Once your contract is deployed, Uzo Labs:
+
+- can't pause, upgrade or change it,
+- can't move your tokens, NFTs or funds,
+- can't take a fee from it.
+
+No factory has an owner. Only the NFT Collection template has an owner, and that's the address you choose in the form. The tip jar never holds funds: each tip goes to the recipient in the same transaction.
+
+If a template has a bug, Uzo will publish a warning, stop offering that template in the app and release a fixed version. Contracts that are already deployed stay as they are, because nobody can change them.
+
+## What was checked
+
+The details are in [`contracts/REVIEWS.md`](https://github.com/uzolabs/uzo-deploy/blob/main/contracts/REVIEWS.md) in the uzo-deploy repo. In short:
+
+- **Base code:** OpenZeppelin Contracts v5.7.0, Solidity 0.8.28.
+- **Tests:** 86 tests in Foundry, including fuzz tests at 10,000 runs, invariant tests and fork tests against testnet USDT.
+- **Coverage:** 100% of lines, statements, branches and functions in the contract sources.
+- **Static analysis:** Slither 0.11.6 reported 4 informational results. Each is explained in REVIEWS.md. `forge lint` is clean.
+
+No independent review or audit is listed yet. REVIEWS.md says not to use the contracts for large amounts until an independent audit is done.
+
+## Known limitations
+
+- The tip jar accepts only the USDT set in its factory, plus BOT. Tokens with transfer fees or rebasing aren't supported.
+- NFT metadata hosting is the owner's job. Freezing metadata stops changes to the base URI, not to whatever that URI serves. See [NFT Collection](/deploy/templates/nft#freezing-is-permanent).
+
+## Other people's contracts
+
+Anyone can deploy a contract with Uzo Deploy. Uzo Labs doesn't review, endorse or promote contracts other people deploy. A token made with Uzo Deploy isn't a sign that anyone trusts it. Uzo's no-admin-key promise covers the template code, not what the deployer does with their own supply or their NFT owner rights.
+
+## What you should do
+
+- **Start on testnet.** Deploy and try everything there first.
+- **Check the factory address.** Before you sign, compare the address your wallet shows with [Contracts](/deploy/contracts).
+- **Check the network.** Make sure the app and your wallet are on the network you mean to use.
+- **Keep your keys safe.** Uzo never asks for your seed phrase or private key. Anyone who does is trying to steal from you.
+
+## Report a vulnerability
+
+Report security issues privately through GitHub. Don't open a public issue.
+
+1. Go to the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy).
+2. Open the **Security** tab and select **Report a vulnerability**.
+3. Include the contract or page affected and the network, the steps to reproduce it or a proof of concept, and what an attacker could do with it.
+
+Uzo Labs will reply within 72 hours, keep you updated, and credit you when the fix is public unless you ask not to be named.
+
+In scope: the contracts in `contracts/src`, the scripts in `contracts/script` and the web app at [deploy.uzolabs.xyz](https://deploy.uzolabs.xyz). Out of scope: BOT Chain itself, BOTScan, wallets and third-party tokens such as USDT.

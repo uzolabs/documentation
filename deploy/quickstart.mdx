@@ -1,0 +1,103 @@
+---
+title: "Deploy your first token with Uzo Deploy"
+sidebarTitle: "Quickstart"
+description: "Deploy a verified ERC-20 token to BOT Chain testnet from your browser with Uzo Deploy, then add it to your wallet."
+icon: "zap"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Deploy your first token on testnet. By the end you'll have an ERC-20 token contract on BOT Chain Testnet, verified on BOTScan, with the whole supply in your wallet.
+
+## Prerequisites
+
+- A browser wallet, such as MetaMask. See [Connect a wallet](/get-started/bot-chain/connect-wallet) to add BOT Chain Testnet to it.
+- Some test tBOT for gas. It's free from the faucet. See [Get testnet tokens](/get-started/bot-chain/get-testnet-tokens).
+
+Test tokens have no value, so nothing on this page costs real money.
+
+## Steps
+
+<Steps>
+  <Step title="Open Uzo Deploy">
+    Go to [deploy.uzolabs.xyz](https://deploy.uzolabs.xyz) and select **Start deploying**.
+
+    {/* screenshot: the Uzo Deploy home page with the "Start deploying" button */}
+  </Step>
+  <Step title="Check you're on testnet">
+    The **Testnet / Mainnet** switch is in the top bar. Make sure **Testnet** is selected. New visitors start on testnet.
+
+    {/* screenshot: the top bar with the Testnet / Mainnet switch set to Testnet */}
+  </Step>
+  <Step title="Connect your wallet">
+    Select **Connect** and pick your wallet. Approve the connection in the wallet.
+
+    If your wallet is on a different network, the **Review** step tells you to switch it to BOT Chain Testnet before you can sign. Switch networks in your wallet.
+  </Step>
+  <Step title="Get tBOT if you need it">
+    If your balance is empty, get tBOT from the [faucet](https://faucet.botchain.ai/basic). The app also links to it when your balance is too low for the deploy.
+  </Step>
+  <Step title="Pick the Token template">
+    Choose **Token**. The form opens on the **Configure** step.
+  </Step>
+  <Step title="Fill in the form">
+    Enter a token name (for example `My Token`) and a symbol (for example `MTK`). Keep the total supply at the default or enter your own, in whole tokens. **Send the supply to** starts as your connected wallet.
+
+    The supply is fixed. Nobody can mint more later, including you. See [Token template](/deploy/templates/token) for every field and its rules.
+
+    Select **Review**.
+
+    {/* screenshot: the Token form filled in with My Token, MTK and the default supply */}
+  </Step>
+  <Step title="Review the cost and your contract address">
+    The **Review** step shows:
+
+    - **Your contract address**: the address your token will have. It is worked out before you sign (see [How it works](/deploy/how-it-works)).
+    - **Estimated gas**, **Estimated cost** and **Your balance**.
+
+    If the app says "Not verified on BOTScan. Do not continue.", stop. It means the factory contract it would use is not verified. Check [Contracts](/deploy/contracts) and report it.
+
+    {/* screenshot: the Review step showing the predicted contract address and the estimated cost */}
+  </Step>
+  <Step title="Sign and deploy">
+    Select **Sign and deploy** and approve the transaction in your wallet. The app waits for the network, then shows **Deployed** with your contract address. It should say "Matches the address shown on review."
+
+    {/* screenshot: the Sign step after deployment, showing "Matches the address shown on review." */}
+  </Step>
+  <Step title="Wait for verification">
+    The app sends your contract's source to BOTScan for you. This is called verification. It usually finishes on its own. If BOTScan is slow, the app shows a **Try again** button. See [Verification](/deploy/verification).
+
+    {/* screenshot: the Verify step showing the contract as verified */}
+  </Step>
+  <Step title="Add the token to your wallet">
+    Your wallet may open an "add token" prompt as soon as the deploy lands. If you dismissed it, select **Add to wallet** and approve it.
+  </Step>
+  <Step title="View it on BOTScan">
+    Open the BOTScan link on the final step. You should see your token's name, symbol and total supply, and a verified source code tab.
+  </Step>
+</Steps>
+
+You're done when BOTScan shows your token as a verified contract and your wallet shows the full supply.
+
+## Troubleshooting
+
+If a step didn't work, see [Troubleshooting](/deploy/troubleshooting). The most common problems are the wrong network in your wallet and an empty tBOT balance.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Manage your token" icon="settings-2" href="/deploy/manage">
+    Burn tokens and see your token's details.
+  </Card>
+  <Card title="Deploy a tip jar" icon="hand-coins" href="/deploy/tip-pages">
+    Get a link people can use to tip you in USDT or BOT.
+  </Card>
+  <Card title="My contracts" icon="list" href="/deploy/my-deployments">
+    Find everything your wallet deployed.
+  </Card>
+  <Card title="Customize the code" icon="code" href="/templates/token/walkthrough">
+    Change the token contract with the templates repo.
+  </Card>
+</CardGroup>

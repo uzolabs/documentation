@@ -1,0 +1,58 @@
+---
+title: "Token template in Uzo Deploy"
+sidebarTitle: "Token"
+description: "Deploy a fixed-supply ERC-20 token contract to BOT Chain with Uzo Deploy: what you get, every form field, and what comes after."
+icon: "coins"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+import TestedNotAudited from "/snippets/tested-not-audited.mdx";
+
+<DeployStatus />
+
+<TestedNotAudited />
+
+Deploy a token contract with a fixed supply, then add it to your wallet or burn some of it. For a step-by-step first deploy, follow the [Quickstart](/deploy/quickstart).
+
+## What you get
+
+- An **ERC-20** token with **18 decimals**.
+- **ERC20Permit**: holders can approve spending with a signature instead of a transaction.
+- **ERC20Burnable**: any holder can destroy tokens from their own balance.
+- A **fixed supply**. The whole supply is created when the contract is deployed and sent to one address. There is no mint function after that.
+- **No owner**. Nobody, including you, can mint more, pause transfers or change the token.
+
+The contract never holds funds.
+
+## Form fields
+
+| Field | What it means | Rules |
+| --- | --- | --- |
+| Token name | The name shown in wallets and on BOTScan. | 1 to 64 characters. |
+| Symbol | The short ticker, such as `MTK`. | 1 to 11 characters, letters and numbers only. |
+| Total supply | How many tokens to create, in whole tokens. The app adds the 18 decimals for you. | A whole number of at least 1. Commas, spaces and underscores are ignored. Defaults to 1,000,000. |
+| Send the supply to | The address that receives every token. | A valid address, not the zero address. Starts as your connected wallet. |
+
+The supply can't be changed after deployment, so check the number on the **Review** step.
+
+## After you deploy
+
+- **Add to wallet.** The final step opens your wallet's "add token" prompt. If you dismissed it, select **Add to wallet** again, or import the token by hand with its address, symbol and 18 decimals.
+- **Burn.** On the token's [Manage page](/deploy/manage#token), you can burn tokens from your own balance. Burning lowers the total supply and can't be undone.
+- **View on BOTScan.** The contract is verified automatically. See [Verification](/deploy/verification).
+
+## What it does not do
+
+Uzo Deploy deploys a token contract. That's all. It does not:
+
+- add liquidity or create a trading pool,
+- put the token on any exchange or list,
+- promote the token, or give it any value.
+
+A token deployed with Uzo Deploy is not reviewed or endorsed by Uzo Labs. See [Security](/deploy/security).
+
+## Source and customizing
+
+The contract is `UzoToken.sol` in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy/tree/main/contracts/src/templates), built on OpenZeppelin Contracts.
+
+To change how the token works (for example an owner who can mint), use the templates repo instead. See the [token walkthrough](/templates/token/walkthrough).

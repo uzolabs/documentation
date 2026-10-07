@@ -41,7 +41,7 @@ Sponsors set **policies** that decide what they pay for, for example which sende
 
 ## Why you can't send a 0 gas price to the public RPC
 
-The bundle has to reach a builder that accepts it. A normal node rejects a transaction with a gas price of 0. We tested this on testnet on 2026-10-02: sending a 0 gas price transaction from a new wallet to `https://rpc.bohr.life` failed with `gasPrice too low`. So the paymaster needs its own endpoint and a path to builders, which is the part not confirmed for BOT Chain.
+The bundle has to reach a builder that accepts it. A normal node rejects a transaction with a gas price of 0. We tested this on testnet on 2026-10-02: sending a transaction with a gas price of 0 from a new wallet to `https://rpc.bohr.life` failed with `gasPrice too low`. So the paymaster needs its own endpoint and a path to builders, which is the part not confirmed for BOT Chain.
 
 ## The API
 

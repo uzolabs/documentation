@@ -85,7 +85,7 @@ This script sends the same amount to every address in a file. It skips blank lin
   <Step title="Run it">
     Use a dedicated testnet-only organizer wallet. Read the key without echoing it, so it doesn't end up in your shell history:
 
-    ```bash
+    ```bash Terminal
     read -rs PRIVATE_KEY && export PRIVATE_KEY
     chmod +x fund-wallets.sh
     AMOUNT=0.5 ./fund-wallets.sh addresses.txt

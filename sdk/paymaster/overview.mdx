@@ -6,7 +6,7 @@ icon: "fuel"
 
 import InDevelopment from "/snippets/status-in-development.mdx";
 
-The planned paymaster module will let your app ask an EOA paymaster whether it will pay for a transaction, then send a 0 gas price transaction to it. No paymaster endpoint is confirmed for BOT Chain, so you'll always pass the URL yourself.
+The planned paymaster module will let your app ask an EOA paymaster whether it will pay for a transaction, then send it a transaction with a gas price of 0. No paymaster endpoint is confirmed for BOT Chain, so you'll always pass the URL yourself.
 
 <InDevelopment />
 
@@ -21,7 +21,7 @@ The planned paymaster module will let your app ask an EOA paymaster whether it w
 | Step | Call | Sent to |
 | --- | --- | --- |
 | Ask whether the paymaster will pay | `pm_isSponsorable` | The paymaster URL |
-| Send the signed 0 gas price transaction | `eth_sendRawTransaction` | The paymaster URL, never the public RPC |
+| Send the signed transaction with a gas price of 0 | `eth_sendRawTransaction` | The paymaster URL, never the public RPC |
 
 ```mermaid
 flowchart LR

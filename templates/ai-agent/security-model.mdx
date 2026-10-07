@@ -11,6 +11,8 @@ Understand how the planned AI agent template limits what an agent can do with fu
 
 <TemplateInDevelopment />
 
+A browser version, [Agent Vault in Uzo Deploy](/deploy/templates/agent-vault), is also planned.
+
 ## Summary
 
 The agent never holds the money. A vault contract does, and it only lets the agent act inside rules that a person sets. If the model is wrong or tricked, or its key leaks, the most it can lose is what's left of one day's limit.
@@ -32,7 +34,7 @@ On top of the contract:
 
 1. **The operator key holds no funds.** It only needs gas.
 2. **Every send is simulated first,** so a call that would revert never reaches the chain.
-3. **A person approves** payments and larger swaps in the terminal. This is a second line of defence, not the main one.
+3. **A person approves** payments and larger swaps in the terminal. This is a second line of defense, not the main one.
 
 ```mermaid
 flowchart TD

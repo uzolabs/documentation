@@ -1,0 +1,40 @@
+---
+title: "Uzo Deploy stats page"
+sidebarTitle: "Stats"
+description: "What the Uzo Deploy stats page counts, where its numbers come from, and how team activity on BOT Chain is kept apart."
+icon: "chart-column"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+The stats page at [deploy.uzolabs.xyz/stats](https://deploy.uzolabs.xyz/stats) shows how Uzo Deploy is used. This page explains what it counts. For the current numbers, open the stats page itself.
+
+## What it shows
+
+Each network (testnet and mainnet) has its own set of numbers.
+
+| Figure | What it counts |
+| --- | --- |
+| Contracts deployed | Every contract created by a Uzo factory on that network. |
+| Per template | Contracts deployed for each template: Tokens, NFT Collections and Tip Jars. |
+| Unique deployers | Different wallets that deployed at least one contract. |
+| Tips sent | Tips sent through Uzo tip jars. |
+| Unique tippers | Different wallets that sent at least one tip. |
+| Deployments per day | A daily chart of deployments. |
+| Tips per day | A daily chart of tips. |
+
+## Where the numbers come from
+
+All numbers come from on-chain data: the `Deployed` events from the [Uzo factories](/deploy/contracts) and the tip events from Uzo tip jars.
+
+Counts refresh every five minutes, and days are in UTC. Counting can take up to half a minute when the page first loads.
+
+## Counts only
+
+The stats page shows counts. It never lists the tokens, collections or tip jars people deployed, and it doesn't rank them. A contract deployed with Uzo Deploy isn't promoted or endorsed by Uzo Labs.
+
+## Team activity
+
+Contracts and tips from Uzo team wallets, such as test deployments, are left out of the counts. A line under the charts says how many deployments and tips were left out, and from how many team wallets. The team addresses are listed in `config/team-addresses.json` in the [uzo-deploy repo](https://github.com/uzolabs/uzo-deploy).

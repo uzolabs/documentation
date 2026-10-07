@@ -10,6 +10,8 @@ In this guide you deploy a vault that holds USDT for an AI agent, give the agent
 
 <TestnetOnly />
 
+A browser version, [Agent Vault in Uzo Deploy](/deploy/templates/agent-vault), is also planned.
+
 ## How it works
 
 The vault has two roles, and they use different keys.
@@ -50,7 +52,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
   <Step title="Install OpenZeppelin">
     In your Foundry project:
 
-    ```bash
+    ```bash Terminal
     forge install OpenZeppelin/openzeppelin-contracts
     ```
 
@@ -332,7 +334,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
       ```
     </Accordion>
 
-    ```bash
+    ```bash Terminal
     forge test --match-contract AgentVaultTest
     ```
 
@@ -352,7 +354,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
   <Step title="Create the agent's key">
     The agent needs its own key, separate from yours. Create one and import it into a keystore:
 
-    ```bash
+    ```bash Terminal
     cast wallet new
     cast wallet import uzo-agent --interactive
     ```
@@ -363,7 +365,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
   <Step title="Deploy the vault">
     The constructor takes the owner, the operator, the token and the daily limit in token units. `1000000` is 1 USDT.
 
-    ```bash
+    ```bash Terminal
     forge create src/AgentVault.sol:AgentVault \
       --rpc-url bot_testnet --account uzo-dev --broadcast \
       --constructor-args YOUR_OWNER_ADDRESS YOUR_AGENT_ADDRESS 0x75edC9335175Fc0552D51D48439F229c10420fe3 1000000
@@ -375,7 +377,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
   <Step title="Fund the vault and allow a recipient">
     Run these from the owner wallet. The first sends 0.02 USDT to the vault. The second lets the agent pay one address. The third gives the agent a little tBOT for gas.
 
-    ```bash
+    ```bash Terminal
     cast send 0x75edC9335175Fc0552D51D48439F229c10420fe3 "transfer(address,uint256)" YOUR_VAULT_ADDRESS 20000 \
       --rpc-url bot_testnet --account uzo-dev
     cast send YOUR_VAULT_ADDRESS "setRecipientAllowed(address,bool)" YOUR_RECIPIENT_ADDRESS true \
@@ -386,7 +388,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
 
     Check what's left to spend today:
 
-    ```bash
+    ```bash Terminal
     cast call YOUR_VAULT_ADDRESS "remainingToday()(uint256)" --rpc-url bot_testnet
     ```
   </Step>
@@ -452,7 +454,7 @@ This contract isn't audited. Use it to learn the pattern, and get it reviewed be
 
     The script reads the vault's state first, then simulates `pay`. If the vault would refuse, the simulation fails, nothing is sent, and you see the contract's error name and arguments.
 
-    ```bash
+    ```bash Terminal
     AMOUNT=0.006 npx tsx --env-file=.env vault-pay.ts
     ```
   </Step>
@@ -484,7 +486,7 @@ To try the vault without spending tBOT, run it against a local fork with `anvil 
 
 ## Manage the vault as the owner
 
-```bash
+```bash Terminal
 # Stop the agent at once
 cast send YOUR_VAULT_ADDRESS "pause()" --rpc-url bot_testnet --account uzo-dev
 

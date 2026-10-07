@@ -157,13 +157,13 @@ It uses Node's built-in `http` module and viem, so there's nothing else to insta
   </Step>
 
   <Step title="Start it">
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env.relayer relayer.ts
     ```
 
     In another terminal, check its balance:
 
-    ```bash
+    ```bash Terminal
     curl http://localhost:8787/health
     ```
   </Step>
@@ -238,7 +238,7 @@ It uses Node's built-in `http` module and viem, so there's nothing else to insta
     TARGET=0x7962412A92E5553E66C794c3a352422DEB7BAc27
     ```
 
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env.client sign-and-relay.ts
     ```
   </Step>

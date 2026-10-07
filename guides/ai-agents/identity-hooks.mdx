@@ -212,7 +212,7 @@ To use a real registry, attestation service or reputation system, you write a sm
     }
     ```
 
-    ```bash
+    ```bash Terminal
     forge test --match-contract IdentityHooksTest
     ```
   </Step>
@@ -220,7 +220,7 @@ To use a real registry, attestation service or reputation system, you write a sm
   <Step title="Connect it to your vault">
     Deploy the trust list, add a recipient, then point the vault at it from the owner wallet:
 
-    ```bash
+    ```bash Terminal
     forge create src/TrustList.sol:TrustList --rpc-url bot_testnet --account uzo-dev --broadcast \
       --constructor-args YOUR_OWNER_ADDRESS
     cast send YOUR_TRUST_LIST_ADDRESS "setTrusted(address,bool)" YOUR_RECIPIENT_ADDRESS true \

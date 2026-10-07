@@ -1,0 +1,75 @@
+---
+title: "Manage a contract in Uzo Deploy"
+sidebarTitle: "Manage"
+description: "Use the Uzo Deploy manage page to burn tokens, mint NFTs, freeze metadata, transfer ownership or share a tip jar on BOT Chain."
+icon: "settings-2"
+---
+
+import DeployStatus from "/snippets/deploy-status.mdx";
+
+<DeployStatus />
+
+Use the manage page to see a contract's details and take the actions its template allows.
+
+## Open the manage page
+
+There are three ways in:
+
+- Select **Manage** on the last step of a deploy.
+- Open [My contracts](/deploy/my-deployments) and select a contract.
+- Go to `{{deploy-url}}/manage/` followed by the contract address.
+
+The page only works for contracts created by a [Uzo factory](/deploy/contracts). For any other address it shows "Not a Uzo template".
+
+Anyone can open a manage page and read it. Actions that change the contract need the right wallet, as listed below.
+
+## Token
+
+The token page shows the name, symbol, total supply, your balance, the contract address and the decimals (18). It also says the token has no owner: nobody can mint more, pause it or change it.
+
+| Action | Who can do it | What it does |
+| --- | --- | --- |
+| Add to wallet | Anyone | Opens your wallet's "add token" prompt. |
+| Burn | Any holder, from their own balance | Destroys tokens and lowers the total supply. |
+
+<Warning>
+  Burning can't be undone. The tokens are gone for good.
+</Warning>
+
+## NFT Collection
+
+The collection page shows the name, symbol, how many are minted out of the maximum, the royalty, the owner, the contract, the metadata link and whether it's frozen.
+
+| Action | Who can do it | What it does |
+| --- | --- | --- |
+| Mint | Owner | Mints new tokens to an address you choose. One at a time, or up to 100 per transaction. You can't go past the maximum supply. |
+| Metadata link | Owner | Sets or changes the base URI. End it with a slash. Hidden once the metadata is frozen. |
+| Freeze metadata | Owner | Locks the metadata link forever. You type the collection symbol to confirm. |
+| Transfer ownership | Owner | Offers the collection to a new address. See below. |
+| Accept ownership | The address being offered the collection | Makes that wallet the owner. |
+
+If your wallet isn't the owner, the page says "Only the owner can mint or change settings."
+
+<Warning>
+  Freezing the metadata can't be undone. It locks the link only, not the files the link points to. See [NFT Collection](/deploy/templates/nft#freezing-is-permanent).
+</Warning>
+
+### Transfer ownership
+
+Ownership moves in two steps, so a typo can't send your collection to an address nobody controls:
+
+1. The owner enters the new owner's address and signs.
+2. The new owner opens the same manage page with their wallet and selects **Accept ownership**.
+
+Until the new owner accepts, you're still the owner, and you can select **Cancel pending transfer**. Once they accept, you lose every owner action.
+
+## Tip Jar
+
+The tip jar page shows the title, the recipient and the contract. It also says the jar has no owner: tips go straight to the recipient, and nobody can change the title or the recipient.
+
+| Section | Who can see it | What it does |
+| --- | --- | --- |
+| Share | Anyone | Shows a QR code, a copy button for the tip link, **Open tip page**, and a **Share** button on phones. |
+| Tips received | Anyone | Shows totals, the number of tips and tippers, and recent tips with their messages. |
+
+Tips received updates every 30 seconds. A new tip can take a minute to appear. There are no owner actions, because the jar has no owner. See [Tip pages](/deploy/tip-pages).

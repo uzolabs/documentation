@@ -47,6 +47,11 @@
   "navbar": {
     "links": [
       {
+        "label": "Uzo Deploy",
+        "icon": "rocket",
+        "href": "https://deploy.uzolabs.xyz"
+      },
+      {
         "label": "GitHub",
         "icon": "github",
         "href": "https://github.com/uzolabs"
@@ -77,7 +82,8 @@
     "mainnet-explorer": "https://scan.botchain.ai",
     "testnet-explorer": "https://scan.bohr.life",
     "faucet-url": "https://faucet.botchain.ai/basic",
-    "sdk-package": "@uzolabs/sdk"
+    "sdk-package": "@uzolabs/sdk",
+    "deploy-url": "https://deploy.uzolabs.xyz"
   },
   "navigation": {
     "global": {
@@ -419,6 +425,54 @@
         ]
       },
       {
+        "tab": "Deploy",
+        "icon": "rocket",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "deploy/overview",
+              "deploy/quickstart",
+              "deploy/networks-and-costs"
+            ]
+          },
+          {
+            "group": "Templates",
+            "pages": [
+              "deploy/templates/token",
+              "deploy/templates/nft",
+              "deploy/templates/tip-jar",
+              "deploy/templates/agent-vault"
+            ]
+          },
+          {
+            "group": "Using Uzo Deploy",
+            "pages": [
+              "deploy/verification",
+              "deploy/manage",
+              "deploy/my-deployments",
+              "deploy/tip-pages",
+              "deploy/stats"
+            ]
+          },
+          {
+            "group": "Under the hood",
+            "pages": [
+              "deploy/how-it-works",
+              "deploy/contracts",
+              "deploy/security"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "deploy/troubleshooting",
+              "deploy/faq"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Infrastructure",
         "icon": "server",
         "groups": [
@@ -540,7 +594,8 @@
         "items": [
           { "label": "Quickstart", "href": "https://docs.uzolabs.xyz/get-started/quickstart" },
           { "label": "SDK", "href": "https://docs.uzolabs.xyz/sdk/overview" },
-          { "label": "Templates", "href": "https://docs.uzolabs.xyz/templates/overview" }
+          { "label": "Templates", "href": "https://docs.uzolabs.xyz/templates/overview" },
+          { "label": "Uzo Deploy", "href": "https://deploy.uzolabs.xyz" }
         ]
       },
       {

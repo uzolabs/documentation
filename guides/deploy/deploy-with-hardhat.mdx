@@ -39,7 +39,7 @@ An Ignition module that deploys `Counter`, a record of the deployment in your pr
   </Step>
 
   <Step title="Deploy to testnet">
-    ```bash
+    ```bash Terminal
     npx hardhat ignition deploy ignition/modules/Counter.ts --network botTestnet
     ```
 
@@ -68,7 +68,7 @@ An Ignition module that deploys `Counter`, a record of the deployment in your pr
     console.log(`count is ${await counter.read.count()}`);
     ```
 
-    ```bash
+    ```bash Terminal
     COUNTER_ADDRESS=0xYOUR_COUNTER npx hardhat run scripts/read-counter.ts --network botTestnet
     ```
 
@@ -91,7 +91,7 @@ Next, [verify the source](/guides/deploy/verify/hardhat) so others can read it o
 
 Use the same module with the mainnet network:
 
-```bash
+```bash Terminal
 npx hardhat ignition deploy ignition/modules/Counter.ts --network botMainnet
 ```
 

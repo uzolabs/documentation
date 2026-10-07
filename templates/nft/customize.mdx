@@ -44,7 +44,7 @@ NFT_MAX_SUPPLY=500
 
         - Use single quotes inside the SVG. The SVG sits inside a JSON string, and double quotes would break it.
         - Keep it small. Every byte adds to the deploy cost.
-        - If you need a different colour per token, reuse `_hue`, which gives the same ID the same hue every time.
+        - If you need a different color per token, reuse `_hue`, which gives the same ID the same hue every time.
       </Tab>
       <Tab title="More traits">
         Add entries to the `attributes` array in `tokenURI`. Each entry is a `{"trait_type":"...","value":...}` object. Keep the commas between entries, because the contract builds the JSON by joining strings.
@@ -125,7 +125,7 @@ NFT_MAX_SUPPLY=500
 
 ## Change the look
 
-Edit the variables at the top of `frontend/src/theme.css` for colours and fonts, and `frontend/src/styles.css` for styles that belong only to this app.
+Edit the variables at the top of `frontend/src/theme.css` for colors and fonts, and `frontend/src/styles.css` for styles that belong only to this app.
 
 ## Hand over ownership
 

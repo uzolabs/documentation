@@ -28,7 +28,7 @@ A Foundry project with:
 
 <Steps>
   <Step title="Create a project">
-    ```bash
+    ```bash Terminal
     forge init hello-foundry
     cd hello-foundry
     ```
@@ -61,19 +61,19 @@ A Foundry project with:
   <Step title="Create a keystore wallet">
     Create a new key and save it encrypted under the name `uzo-dev`. Cast asks you for a password.
 
-    ```bash
+    ```bash Terminal
     cast wallet new uzo-dev
     ```
 
     To use a key you already have instead, import it. Cast prompts for the key, so it never appears in your shell history:
 
-    ```bash
+    ```bash Terminal
     cast wallet import uzo-dev --interactive
     ```
 
     Keystores live in `~/.foundry/keystores/`. List them and print the address:
 
-    ```bash
+    ```bash Terminal
     cast wallet list
     cast wallet address --account uzo-dev
     ```
@@ -90,14 +90,14 @@ A Foundry project with:
 
 Check that both aliases reach the right chain:
 
-```bash
+```bash Terminal
 cast chain-id --rpc-url bot_testnet
 cast chain-id --rpc-url bot_mainnet
 ```
 
 You should see `968` and then `677`. Then check your balance and build:
 
-```bash
+```bash Terminal
 cast balance --ether $(cast wallet address --account uzo-dev) --rpc-url bot_testnet
 forge build
 ```

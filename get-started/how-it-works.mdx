@@ -19,6 +19,7 @@ flowchart LR
   Templates[Templates] --> App
   SDK["@uzolabs/sdk"] --> App
   Templates --> SDK
+  Deploy[Uzo Deploy] --> Chain
   App --> RPC[Public RPC or Uzo RPC]
   App --> Explorer[BOTScan API or Uzo Index]
   RPC --> Chain[(BOT Chain)]
@@ -28,6 +29,7 @@ flowchart LR
 - **Docs** (this site) explain each task and give you tested values and code.
 - **SDK** gives your TypeScript code chain definitions, contract addresses, ABIs and a BOTScan API client. Helpers for BDEX, the bridge and the paymaster are planned. It is built on [viem](https://viem.sh).
 - **Templates** are starter projects (contracts, scripts and a frontend) that use the SDK. You clone one and change it.
+- **Uzo Deploy** is a web app that deploys tested contracts (a token, an NFT collection or a tip jar) from your browser, with no setup. Use it when the standard contract is enough. Use the SDK and templates when you need to write or change code.
 - **Infrastructure** covers Uzo RPC, an endpoint with log queries and WebSockets, and Uzo Index, an event indexer. Until they exist, your app talks to the public RPC and the BOTScan API directly.
 
 ## Status of each part
@@ -37,6 +39,7 @@ flowchart LR
 | Docs | Live | You're reading them. |
 | [SDK](/sdk/overview) | Early release: `@uzolabs/sdk` 0.2.0 on [npm](https://www.npmjs.com/package/@uzolabs/sdk). Chains, contracts and explorer modules are available. BDEX, bridge and paymaster modules are planned. | `npm install @uzolabs/sdk viem`, or define the chain yourself with viem's `defineChain` as in [Build your first dApp](/get-started/first-dapp). |
 | [Templates](/templates/overview) | Partly available. The [templates repo](https://github.com/uzolabs/templates) marks `token`, `nft`, `dex-integration` and `gasless-app` as ready. `bridge-integration` and `ai-agent` are planned. | Copy a ready template, or follow the [Guides](/guides/environment/choose-a-toolchain), which do the same work by hand. |
+| [Uzo Deploy](/deploy/overview) | Testnet beta: live on BOT Chain Testnet. Mainnet is not enabled yet. | Deploy a token, NFT collection or tip jar at [deploy.uzolabs.xyz](https://deploy.uzolabs.xyz). |
 | [Uzo RPC](/infrastructure/rpc/overview) | Planned | Use the public RPC URLs in [Networks](/reference/networks). |
 | [Uzo Index](/infrastructure/index/overview) | Planned | Use the [BOTScan explorer API](/reference/explorer-api). |
 | [Hackathon kit](/hackathons/overview) | Planned for the UNN event (late January 2027) | The participant pages already work as a checklist. |

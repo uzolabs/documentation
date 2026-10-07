@@ -25,9 +25,9 @@ This page explains how the agent vault caps daily spending and limits who the ag
 
 <Steps>
   <Step title="Choose the limit in token units">
-    The vault stores the limit in the token's smallest unit. USDT on BOT Chain has 6 decimals, so 1 USDT is `1000000`. Converting by hand is error prone, so let a tool do it:
+    The vault stores the limit in the token's smallest unit. USDT on BOT Chain has 6 decimals, so 1 USDT is `1000000`. Converting by hand is error-prone, so let a tool do it:
 
-    ```bash
+    ```bash Terminal
     cast format-units 5000000 6
     cast parse-units 5 6
     ```
@@ -61,7 +61,7 @@ This page explains how the agent vault caps daily spending and limits who the ag
     `remaining` is computed with a check instead of plain subtraction. If the owner lowers the limit below what's already spent today, `remaining` is 0 instead of the call reverting with an underflow.
 
     <Note>
-    A calendar day is simple and cheap, but it allows up to twice the limit in a short span: the full limit at 23:59 UTC and again at 00:00 UTC. If that matters, set the limit to half of what you're willing to lose in one burst, or use a rolling 24 hour window, which needs more storage per payment.
+    A calendar day is simple and cheap, but it allows up to twice the limit in a short span: the full limit at 23:59 UTC and again at 00:00 UTC. If that matters, set the limit to half of what you're willing to lose in one burst, or use a rolling 24-hour window, which needs more storage per payment.
     </Note>
   </Step>
 
@@ -116,7 +116,7 @@ This page explains how the agent vault caps daily spending and limits who the ag
 
     The vault in these tests has a 10 USDT limit. Run them:
 
-    ```bash
+    ```bash Terminal
     forge test --match-contract AgentVaultTest --match-test "Limit|Recipient"
     ```
   </Step>
@@ -154,7 +154,7 @@ This page explains how the agent vault caps daily spending and limits who the ag
     console.log(`Resets at: ${new Date(Number(resetsAt) * 1000).toISOString()}`);
     ```
 
-    ```bash
+    ```bash Terminal
     npx tsx --env-file=.env vault-status.ts
     ```
 
